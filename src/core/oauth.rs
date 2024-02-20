@@ -1,0 +1,127 @@
+use std::time::Duration;
+
+use base64::{engine::general_purpose::STANDARD, Engine};
+use serde::{Deserialize, Serialize};
+
+use crate::components::main::alert::Alert;
+
+use super::http::{self, HttpRequest};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OAuthCodeRequest {
+    pub client_id: String,
+    pub redirect_uri: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum OAuthResponse {
+    Granted(OAuthGrant),
+    Error { error: ErrorType },
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct OAuthGrant {
+    pub access_token: String,
+    pub token_type: String,
+    pub expires_in: u64,
+    pub refresh_token: Option<String>,
+    pub scope: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ErrorType {
+    #[serde(rename = "invalid_grant")]
+    InvalidGrant,
+    #[serde(rename = "invalid_client")]
+    InvalidClient,
+    #[serde(rename = "invalid_scope")]
+    InvalidScope,
+    #[serde(rename = "invalid_request")]
+    InvalidRequest,
+    #[serde(rename = "unauthorized_client")]
+    UnauthorizedClient,
+    #[serde(rename = "unsupported_grant_type")]
+    UnsupportedGrantType,
+    #[serde(rename = "authorization_pending")]
+    AuthorizationPending,
+    #[serde(rename = "slow_down")]
+    SlowDown,
+    #[serde(rename = "access_denied")]
+    AccessDenied,
+    #[serde(rename = "expired_token")]
+    ExpiredToken,
+}
+
+pub async fn oauth_authenticate(user: &str, password: &str) -> Result<OAuthGrant, Alert> {
+    match HttpRequest::post("https://127.0.0.1/api/oauth/code")
+        .with_header(
+            "Authorization",
+            format!(
+                "Basic {}",
+                STANDARD.encode(format!("{}:{}", user, password).as_bytes())
+            ),
+        )
+        .with_body(OAuthCodeRequest {
+            client_id: "webadmin".to_string(),
+            redirect_uri: None,
+        })
+        .unwrap()
+        .send::<String>()
+        .await
+    {
+        Ok(code) => {
+            match HttpRequest::post("https://127.0.0.1/auth/token")
+                .with_raw_body(
+                    form_urlencoded::Serializer::new(String::with_capacity(code.len() + 64))
+                        .append_pair("grant_type", "authorization_code")
+                        .append_pair("client_id", "webadmin")
+                        .append_pair("code", &code)
+                        .append_pair("redirect_uri", "")
+                        .finish(),
+                )
+                .send_raw()
+                .await
+                .and_then(|response| {
+                    serde_json::from_slice::<OAuthResponse>(response.as_bytes()).map_err(Into::into)
+                }) {
+                Ok(OAuthResponse::Granted(grant)) => Ok(grant),
+                Ok(OAuthResponse::Error { error }) => Err(Alert::error("OAuth failure")
+                    .with_details(format!("Server returned error code {error:?}"))),
+                Err(err) => Err(Alert::from(err)),
+            }
+        }
+        Err(http::Error::Unauthorized) => {
+            Err(Alert::warning("Incorrect username or password")
+                .with_timeout(Duration::from_secs(3)))
+        }
+        Err(err) => Err(Alert::from(err)),
+    }
+}
+
+pub async fn oauth_refresh_token(refresh_token: &str) -> Option<OAuthGrant> {
+    log::debug!("Refreshing OAuth token");
+
+    match HttpRequest::post("https://127.0.0.1/auth/token")
+        .with_raw_body(
+            form_urlencoded::Serializer::new(String::with_capacity(refresh_token.len() + 64))
+                .append_pair("grant_type", "refresh_token")
+                .append_pair("refresh_token", refresh_token)
+                .finish(),
+        )
+        .send_raw()
+        .await
+        .and_then(|response| {
+            serde_json::from_slice::<OAuthResponse>(response.as_bytes()).map_err(Into::into)
+        }) {
+        Ok(OAuthResponse::Granted(grant)) => Some(grant),
+        Ok(OAuthResponse::Error { error }) => {
+            log::error!("OAuth failure: Server returned error code {error:?}");
+            None
+        }
+        Err(err) => {
+            log::error!("OAuth failure: {err:?}");
+            None
+        }
+    }
+}

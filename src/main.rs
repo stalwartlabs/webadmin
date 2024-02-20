@@ -1,20 +1,35 @@
+use std::{sync::Arc, time::Duration};
+
+use gloo_storage::{SessionStorage, Storage};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use serde::{Deserialize, Serialize};
 use thaw::*;
 
 use crate::{
-    components::main::{manage::ManagePage, notfound::NotFound},
-    pages::directory::accounts::list::AccountList,
+    components::main::manage::ManagePage,
+    core::oauth::oauth_refresh_token,
+    pages::{directory::accounts::list::AccountList, login::Login, notfound::NotFound},
 };
 
 pub mod components;
 pub mod core;
 pub mod pages;
 
+pub const STATE_STORAGE_KEY: &str = "webadmin_state";
+pub const STATE_LOGIN_NAME_KEY: &str = "webadmin_login_name";
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GlobalState {
+    pub access_token: Arc<String>,
+    pub refresh_token: Arc<String>,
+    pub is_valid: bool,
+}
+
 fn main() {
     console_error_panic_hook::set_once();
-
+    _ = console_log::init_with_level(log::Level::Debug);
     leptos::mount_to_body(|| view! { <App/> })
 }
 
@@ -24,19 +39,56 @@ pub fn App() -> impl IntoView {
     let set_is_routing = SignalSetter::map(move |is_routing_data| {
         is_routing.set(is_routing_data);
     });
+
+    let state =
+        create_rw_signal(SessionStorage::get::<GlobalState>(STATE_STORAGE_KEY).unwrap_or_default());
     provide_meta_context();
+    provide_context(state);
+
+    let _refresh_token_resource = create_resource(state, move |changed_state| {
+        let changed_state = changed_state.clone();
+
+        async move {
+            if !changed_state.is_valid && !changed_state.refresh_token.is_empty() {
+                if let Some(grant) = oauth_refresh_token(&changed_state.refresh_token).await {
+                    let refresh_token = grant.refresh_token.unwrap_or_default();
+                    state.update(|state| {
+                        state.access_token = grant.access_token.into();
+                        state.refresh_token = refresh_token.clone().into();
+                        state.is_valid = true;
+
+                        if let Err(err) = SessionStorage::set(STATE_STORAGE_KEY, state.clone()) {
+                            log::error!("Failed to save state to session storage: {}", err);
+                        }
+                    });
+                    // Set timer to refresh token
+                    if grant.expires_in > 0 && !refresh_token.is_empty() {
+                        log::debug!("Next OAuth token refresh in {} seconds.", grant.expires_in);
+                        set_timeout(
+                            move || {
+                                state.update(|state| {
+                                    state.is_valid = false;
+                                });
+                            },
+                            Duration::from_secs(grant.expires_in),
+                        );
+                    }
+                }
+            }
+        }
+    });
 
     view! {
         <Router set_is_routing>
             <TheProvider>
-                <TheRouter is_routing/>
+                <TheRouter state is_routing/>
             </TheProvider>
         </Router>
     }
 }
 
 #[component]
-fn TheRouter(is_routing: RwSignal<bool>) -> impl IntoView {
+fn TheRouter(state: RwSignal<GlobalState>, is_routing: RwSignal<bool>) -> impl IntoView {
     let loading_bar = use_loading_bar();
     _ = is_routing.watch(move |is_routing| {
         if *is_routing {
@@ -45,15 +97,27 @@ fn TheRouter(is_routing: RwSignal<bool>) -> impl IntoView {
             loading_bar.finish();
         }
     });
+    let is_logged_in = move || state.get().is_logged_in();
 
     view! {
         <Routes>
-            <Route path="/" view=NotFound/>
-            <Route path="/404" view=move || view! { <NotFound/> }/>
-            <Route path="/manage" view=ManagePage>
-                <Route path="/accounts" view=AccountList/>
+            <ProtectedRoute
+                path="/manage"
+                view=ManagePage
+                redirect_path="/login"
+                condition=is_logged_in
+            >
+                <ProtectedRoute
+                    path="/accounts"
+                    view=AccountList
+                    redirect_path="/login"
+                    condition=is_logged_in
+                />
 
-            </Route>
+            </ProtectedRoute>
+            <Route path="/" view=Login/>
+            <Route path="/login" view=Login/>
+            <Route path="/*any" view=NotFound/>
         </Routes>
     }
 }
@@ -76,34 +140,26 @@ fn TheProvider(children: Children) -> impl IntoView {
     let theme = create_rw_signal(theme);
 
     view! {
-        <ThemeProvider theme>
-            <GlobalStyle/>
-            <MessageProvider>
-                <LoadingBarProvider>{children()}</LoadingBarProvider>
-            </MessageProvider>
-        </ThemeProvider>
+        <div id="root">
+            <ThemeProvider theme>
+                <GlobalStyle/>
+                <MessageProvider>
+                    <LoadingBarProvider>{children()}</LoadingBarProvider>
+                </MessageProvider>
+            </ThemeProvider>
+        </div>
+        <div id="portal_root"></div>
     }
 }
 
-#[component]
-fn Home() -> impl IntoView {
-    let (count, set_count) = create_signal(0);
+impl GlobalState {
+    pub fn is_logged_in(&self) -> bool {
+        !self.access_token.is_empty()
+    }
+}
 
-    view! {
-        <div class="my-0 mx-auto max-w-3xl text-center">
-            <h2 class="p-6 text-4xl">"Welcome to Leptos with Tailwind"</h2>
-            <p class="px-10 pb-10 text-left">
-                "Tailwind will scan your Rust files for Tailwind class names and compile them into a CSS file."
-            </p>
-            <button
-                class="bg-amber-600 hover:bg-sky-700 px-5 py-3 text-white rounded-lg"
-                on:click=move |_| set_count.update(|count| *count += 1)
-            >
-                "Something's here | "
-                {move || if count() == 0 { "Click me!".to_string() } else { count().to_string() }}
-
-                " | Some more text"
-            </button>
-        </div>
+impl AsRef<GlobalState> for GlobalState {
+    fn as_ref(&self) -> &GlobalState {
+        self
     }
 }

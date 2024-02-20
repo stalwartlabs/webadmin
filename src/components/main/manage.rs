@@ -3,7 +3,7 @@ use leptos_meta::Style;
 use leptos_router::{use_location, use_navigate, Outlet};
 use thaw::*;
 
-use crate::components::main::header::SiteHeader;
+use crate::components::main::{alert::Alerts, header::SiteHeader};
 
 #[component]
 pub fn ManagePage() -> impl IntoView {
@@ -56,6 +56,8 @@ pub fn ManagePage() -> impl IntoView {
             }
             "
         </Style>
+        <crate::components::main::modal::Modal></crate::components::main::modal::Modal>
+
         <Layout position=LayoutPosition::Absolute>
             <SiteHeader/>
             <Layout has_sider=true position=LayoutPosition::Absolute style="top: 64px;">

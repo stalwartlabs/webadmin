@@ -1,9 +1,13 @@
 use gloo_net::http::{Headers, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use crate::GlobalState;
+
+use super::url::UrlBuilder;
+
 pub struct HttpRequest {
     method: Method,
-    url: form_urlencoded::Serializer<'static, String>,
+    url: UrlBuilder,
     headers: Headers,
     body: Option<String>,
 }
@@ -18,6 +22,7 @@ pub enum Response<T> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Error {
     Unauthorized,
+    NotFound,
     Network(String),
     Serializer { error: String, response: String },
     Server { error: String, details: String },
@@ -26,37 +31,37 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl<'x> HttpRequest {
-    pub fn new(method: Method, url: impl Into<String>) -> Self {
+    pub fn new(method: Method, url: impl AsRef<str>) -> Self {
         Self {
             method,
-            url: form_urlencoded::Serializer::new(url.into()),
+            url: UrlBuilder::new(url),
             headers: Headers::new(),
             body: None,
         }
     }
 
-    pub fn get(url: impl Into<String>) -> Self {
+    pub fn get(url: impl AsRef<str>) -> Self {
         Self::new(Method::GET, url)
     }
 
-    pub fn post(url: impl Into<String>) -> Self {
+    pub fn post(url: impl AsRef<str>) -> Self {
         Self::new(Method::POST, url)
     }
 
-    pub fn put(url: impl Into<String>) -> Self {
+    pub fn put(url: impl AsRef<str>) -> Self {
         Self::new(Method::PUT, url)
     }
 
-    pub fn delete(url: impl Into<String>) -> Self {
+    pub fn delete(url: impl AsRef<str>) -> Self {
         Self::new(Method::DELETE, url)
     }
 
-    pub fn patch(url: impl Into<String>) -> Self {
+    pub fn patch(url: impl AsRef<str>) -> Self {
         Self::new(Method::PATCH, url)
     }
 
     pub fn with_parameter(mut self, key: impl AsRef<str>, value: impl AsRef<str>) -> Self {
-        self.url.append_pair(key.as_ref(), value.as_ref());
+        self.url = self.url.with_parameter(key, value);
         self
     }
 
@@ -65,10 +70,15 @@ impl<'x> HttpRequest {
         key: impl AsRef<str>,
         value: Option<impl AsRef<str>>,
     ) -> Self {
-        if let Some(value) = value {
-            self.url.append_pair(key.as_ref(), value.as_ref());
-        }
+        self.url = self.url.with_optional_parameter(key, value);
         self
+    }
+
+    pub fn with_state(self, state: impl AsRef<GlobalState>) -> Self {
+        self.with_header(
+            "Authorization",
+            format!("Bearer {}", state.as_ref().access_token),
+        )
     }
 
     pub fn with_header(self, name: impl AsRef<str>, value: impl AsRef<str>) -> Self {
@@ -109,7 +119,7 @@ impl<'x> HttpRequest {
         }
     }
 
-    pub async fn send_raw(mut self) -> Result<String> {
+    pub async fn send_raw(self) -> Result<String> {
         let abort_controller = web_sys::AbortController::new().ok();
         let abort_signal = abort_controller.as_ref().map(|a| a.signal());
 
@@ -135,6 +145,7 @@ impl<'x> HttpRequest {
         match response.status() {
             200..=299 => response.text().await.map_err(Into::into),
             401 => Err(Error::Unauthorized),
+            404 => Err(Error::NotFound),
             code => Err(Error::Server {
                 error: format!("Invalid response code {code}"),
                 details: response.status_text(),
@@ -146,5 +157,14 @@ impl<'x> HttpRequest {
 impl From<gloo_net::Error> for Error {
     fn from(err: gloo_net::Error) -> Self {
         Error::Network(format!("HTTP request failed: {err}"))
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        Error::Serializer {
+            error: err.to_string(),
+            response: String::new(),
+        }
     }
 }
