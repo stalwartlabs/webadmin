@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{Deserialize, Serialize};
@@ -6,6 +6,13 @@ use serde::{Deserialize, Serialize};
 use crate::components::main::alert::Alert;
 
 use super::http::{self, HttpRequest};
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuthToken {
+    pub access_token: Arc<String>,
+    pub refresh_token: Arc<String>,
+    pub is_valid: bool,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OAuthCodeRequest {
@@ -123,5 +130,17 @@ pub async fn oauth_refresh_token(refresh_token: &str) -> Option<OAuthGrant> {
             log::error!("OAuth failure: {err:?}");
             None
         }
+    }
+}
+
+impl AuthToken {
+    pub fn is_logged_in(&self) -> bool {
+        !self.access_token.is_empty()
+    }
+}
+
+impl AsRef<AuthToken> for AuthToken {
+    fn as_ref(&self) -> &AuthToken {
+        self
     }
 }

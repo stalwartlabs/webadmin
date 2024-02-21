@@ -7,8 +7,8 @@ use leptos_router::use_navigate;
 
 use crate::{
     components::main::alert::{Alert, Alerts},
-    core::oauth::oauth_authenticate,
-    GlobalState, STATE_LOGIN_NAME_KEY, STATE_STORAGE_KEY,
+    core::oauth::{oauth_authenticate, AuthToken},
+    STATE_LOGIN_NAME_KEY, STATE_STORAGE_KEY,
 };
 
 #[derive(Clone, Default)]
@@ -28,7 +28,7 @@ pub fn Login() -> impl IntoView {
         ..Default::default()
     });
     let alert = create_rw_signal(Alert::disabled());
-    let state = use_context::<RwSignal<GlobalState>>().unwrap();
+    let state = use_context::<RwSignal<AuthToken>>().unwrap();
 
     let login_action = create_action(move |(user, password): &(String, String)| {
         let user = user.clone();

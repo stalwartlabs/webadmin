@@ -1,15 +1,14 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
+use components::layout::MenuItem;
 use gloo_storage::{SessionStorage, Storage};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use serde::{Deserialize, Serialize};
-use thaw::*;
 
 use crate::{
-    components::main::manage::ManagePage,
-    core::oauth::oauth_refresh_token,
+    components::layout::Layout,
+    core::oauth::{oauth_refresh_token, AuthToken},
     pages::{directory::accounts::list::AccountList, login::Login, notfound::NotFound},
 };
 
@@ -20,13 +19,6 @@ pub mod pages;
 pub const STATE_STORAGE_KEY: &str = "webadmin_state";
 pub const STATE_LOGIN_NAME_KEY: &str = "webadmin_login_name";
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GlobalState {
-    pub access_token: Arc<String>,
-    pub refresh_token: Arc<String>,
-    pub is_valid: bool,
-}
-
 fn main() {
     console_error_panic_hook::set_once();
     _ = console_log::init_with_level(log::Level::Debug);
@@ -35,30 +27,37 @@ fn main() {
 
 #[component]
 pub fn App() -> impl IntoView {
-    let is_routing = create_rw_signal(false);
-    let set_is_routing = SignalSetter::map(move |is_routing_data| {
-        is_routing.set(is_routing_data);
-    });
-
-    let state =
-        create_rw_signal(SessionStorage::get::<GlobalState>(STATE_STORAGE_KEY).unwrap_or_default());
+    let auth_token = create_rw_signal(
+        SessionStorage::get::<AuthToken>(STATE_STORAGE_KEY)
+            .map(|mut t| {
+                // Force token refresh on reload
+                t.is_valid = false;
+                t
+            })
+            .unwrap_or_default(),
+    );
     provide_meta_context();
-    provide_context(state);
+    provide_context(auth_token);
 
-    let _refresh_token_resource = create_resource(state, move |changed_state| {
-        let changed_state = changed_state.clone();
+    // Create a resource to refresh the OAuth token
+    let _refresh_token_resource = create_resource(auth_token, move |changed_auth_token| {
+        let changed_auth_token = changed_auth_token.clone();
 
         async move {
-            if !changed_state.is_valid && !changed_state.refresh_token.is_empty() {
-                if let Some(grant) = oauth_refresh_token(&changed_state.refresh_token).await {
+            if !changed_auth_token.is_valid && !changed_auth_token.refresh_token.is_empty() {
+                if let Some(grant) = oauth_refresh_token(&changed_auth_token.refresh_token).await {
                     let refresh_token = grant.refresh_token.unwrap_or_default();
-                    state.update(|state| {
-                        state.access_token = grant.access_token.into();
-                        state.refresh_token = refresh_token.clone().into();
-                        state.is_valid = true;
+                    auth_token.update(|auth_token| {
+                        auth_token.access_token = grant.access_token.into();
+                        auth_token.refresh_token = refresh_token.clone().into();
+                        auth_token.is_valid = true;
 
-                        if let Err(err) = SessionStorage::set(STATE_STORAGE_KEY, state.clone()) {
-                            log::error!("Failed to save state to session storage: {}", err);
+                        if let Err(err) = SessionStorage::set(STATE_STORAGE_KEY, auth_token.clone())
+                        {
+                            log::error!(
+                                "Failed to save authorization token to session storage: {}",
+                                err
+                            );
                         }
                     });
                     // Set timer to refresh token
@@ -66,8 +65,8 @@ pub fn App() -> impl IntoView {
                         log::debug!("Next OAuth token refresh in {} seconds.", grant.expires_in);
                         set_timeout(
                             move || {
-                                state.update(|state| {
-                                    state.is_valid = false;
+                                auth_token.update(|auth_token| {
+                                    auth_token.is_valid = false;
                                 });
                             },
                             Duration::from_secs(grant.expires_in),
@@ -78,88 +77,84 @@ pub fn App() -> impl IntoView {
         }
     });
 
-    view! {
-        <Router set_is_routing>
-            <TheProvider>
-                <TheRouter state is_routing/>
-            </TheProvider>
-        </Router>
-    }
-}
-
-#[component]
-fn TheRouter(state: RwSignal<GlobalState>, is_routing: RwSignal<bool>) -> impl IntoView {
-    let loading_bar = use_loading_bar();
-    _ = is_routing.watch(move |is_routing| {
-        if *is_routing {
-            loading_bar.start();
-        } else {
-            loading_bar.finish();
-        }
-    });
-    let is_logged_in = move || state.get().is_logged_in();
+    let is_logged_in = move || auth_token.get().is_logged_in();
 
     view! {
-        <Routes>
-            <ProtectedRoute
-                path="/manage"
-                view=ManagePage
-                redirect_path="/login"
-                condition=is_logged_in
-            >
+        <Router>
+            <Routes>
                 <ProtectedRoute
-                    path="/accounts"
-                    view=AccountList
+                    path="/manage"
+                    view=|| {
+                        view! { <Layout menu_items=menu_items()/> }
+                    }
+
                     redirect_path="/login"
                     condition=is_logged_in
-                />
+                >
+                    <ProtectedRoute
+                        path="/accounts"
+                        view=AccountList
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
 
-            </ProtectedRoute>
-            <Route path="/" view=Login/>
-            <Route path="/login" view=Login/>
-            <Route path="/*any" view=NotFound/>
-        </Routes>
-    }
-}
-
-#[component]
-fn TheProvider(children: Children) -> impl IntoView {
-    fn use_query_value(key: &str) -> Option<String> {
-        let query_map = use_query_map();
-        query_map.with_untracked(|query| query.get(key).cloned())
-    }
-    let theme = use_query_value("theme").map_or_else(Theme::light, |name| {
-        if name == "light" {
-            Theme::light()
-        } else if name == "dark" {
-            Theme::dark()
-        } else {
-            Theme::light()
-        }
-    });
-    let theme = create_rw_signal(theme);
-
-    view! {
-        <div id="root">
-            <ThemeProvider theme>
-                <GlobalStyle/>
-                <MessageProvider>
-                    <LoadingBarProvider>{children()}</LoadingBarProvider>
-                </MessageProvider>
-            </ThemeProvider>
-        </div>
+                </ProtectedRoute>
+                <Route path="/" view=Login/>
+                <Route path="/login" view=Login/>
+                <Route path="/*any" view=NotFound/>
+            </Routes>
+        </Router>
         <div id="portal_root"></div>
     }
 }
 
-impl GlobalState {
-    pub fn is_logged_in(&self) -> bool {
-        !self.access_token.is_empty()
-    }
-}
-
-impl AsRef<GlobalState> for GlobalState {
-    fn as_ref(&self) -> &GlobalState {
-        self
-    }
+pub(crate) fn menu_items() -> Vec<MenuItem> {
+    vec![
+        MenuItem::parent_with_icon(
+            "Directory",
+            "users",
+            vec![
+                MenuItem::child("Accounts", "/manage/accounts"),
+                MenuItem::child("Groups", "/manage/groups"),
+                MenuItem::child("Lists", "/manage/lists"),
+                MenuItem::child("Domains", "/manage/domains"),
+            ],
+        ),
+        MenuItem::parent_with_icon(
+            "Queues",
+            "queue",
+            vec![
+                MenuItem::child("Messages", "/manage/messages"),
+                MenuItem::child("Reports", "/manage/reports"),
+            ],
+        ),
+        MenuItem::parent_with_icon(
+            "Nested Test",
+            "test",
+            vec![
+                MenuItem::parent(
+                    "Test 1",
+                    vec![
+                        MenuItem::child("Test 1.1", "/manage/test1"),
+                        MenuItem::child("Test 1.2", "/manage/test2"),
+                    ],
+                ),
+                MenuItem::parent(
+                    "Test 2",
+                    vec![
+                        MenuItem::child("Test 2.1", "/manage/test3"),
+                        MenuItem::child("Test 2.2", "/manage/test4"),
+                    ],
+                ),
+                MenuItem::parent(
+                    "Test 3",
+                    vec![
+                        MenuItem::child("Test 3.1", "/manage/test5"),
+                        MenuItem::child("Test 3.2", "/manage/test6"),
+                    ],
+                ),
+            ],
+        ),
+        MenuItem::child_with_icon("Documentation", "test", "/test"),
+    ]
 }

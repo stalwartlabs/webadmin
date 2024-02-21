@@ -4,17 +4,17 @@
 <head>
     <meta charset="utf-8">
     <link data-trunk rel="rust" data-wasm-opt="z" />
-    <link rel="icon" type="image/ico" href="/favicon.ico" />
+    <link data-trunk rel="icon" type="image/ico" href="./src/assets/favicon.ico" />
     <link data-trunk rel="css" href="/style/output.css" />
     <link data-trunk rel="copy-file" href="./src/assets/logo.svg" />
-    <link data-trunk rel="copy-file" href="./src/assets/favicon.ico" />
+    <link data-trunk rel="copy-dir" href="./src/assets/icons" data-target-path="icons" />
+    <!--link data-trunk rel="copy-file" href="./src/assets/favicon.ico" /-->
 
     <title>Stalwart Management</title>
 </head>
 
 <body>
-    <!--script data-trunk src="./node_modules/preline/dist/preline.js"></script>
-    <script data-trunk src="/public/js/darkmode.js"></script-->
+    <!--script data-trunk rel="copy-file" src="./node_modules/preline/dist/preline.js"></script-->
 </body>
 
 </html>

@@ -11,13 +11,13 @@ use crate::{
     },
     core::{
         http::{self, HttpRequest},
+        oauth::AuthToken,
         url::UrlBuilder,
     },
     pages::{
         directory::{List, Principal, Type},
         maybe_plural,
     },
-    GlobalState,
 };
 
 const PAGE_SIZE: u64 = 10;
@@ -43,7 +43,7 @@ pub fn AccountList() -> impl IntoView {
         })
     };
 
-    let state = use_context::<RwSignal<GlobalState>>().unwrap();
+    let auth_token = use_context::<RwSignal<AuthToken>>().unwrap();
     let alert = create_rw_signal(Alert::disabled());
     let set_modal = use_context::<WriteSignal<Modal>>().unwrap();
     let (pending, set_pending) = create_signal(false);
@@ -53,11 +53,11 @@ pub fn AccountList() -> impl IntoView {
     let principals = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
-            let state = state.get();
+            let auth_token = auth_token.get();
 
             async move {
                 let account_names = HttpRequest::get("https://127.0.0.1/api/principal")
-                    .with_state(&state)
+                    .with_authorization(&auth_token)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
                     .with_parameter("type", "individual")
@@ -69,7 +69,7 @@ pub fn AccountList() -> impl IntoView {
                 for name in account_names.items {
                     items.push(
                         HttpRequest::get(format!("https://127.0.0.1/api/principal/{}", name))
-                            .with_state(&state)
+                            .with_authorization(&auth_token)
                             .send::<Principal>()
                             .await?,
                     );
@@ -85,12 +85,12 @@ pub fn AccountList() -> impl IntoView {
 
     let delete_action = create_action(move |items: &Arc<HashSet<String>>| {
         let items = items.clone();
-        let state = state.get();
+        let auth_token = auth_token.get();
 
         async move {
             for item in items.iter() {
                 if let Err(err) = HttpRequest::get("https://127.0.0.1/blah?")
-                    .with_state(&state)
+                    .with_authorization(&auth_token)
                     .send::<String>()
                     .await
                 {

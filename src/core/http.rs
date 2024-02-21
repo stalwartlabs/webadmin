@@ -1,9 +1,7 @@
 use gloo_net::http::{Headers, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::GlobalState;
-
-use super::url::UrlBuilder;
+use super::{oauth::AuthToken, url::UrlBuilder};
 
 pub struct HttpRequest {
     method: Method,
@@ -74,7 +72,7 @@ impl<'x> HttpRequest {
         self
     }
 
-    pub fn with_state(self, state: impl AsRef<GlobalState>) -> Self {
+    pub fn with_authorization(self, state: impl AsRef<AuthToken>) -> Self {
         self.with_header(
             "Authorization",
             format!("Bearer {}", state.as_ref().access_token),
