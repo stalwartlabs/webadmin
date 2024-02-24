@@ -1,9 +1,10 @@
 use std::{sync::Arc, time::Duration};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
+use leptos::{expect_context, RwSignal};
 use serde::{Deserialize, Serialize};
 
-use crate::components::main::alert::Alert;
+use crate::components::messages::alert::Alert;
 
 use super::http::{self, HttpRequest};
 
@@ -131,6 +132,10 @@ pub async fn oauth_refresh_token(refresh_token: &str) -> Option<OAuthGrant> {
             None
         }
     }
+}
+
+pub fn use_authorization() -> RwSignal<AuthToken> {
+    expect_context::<RwSignal<AuthToken>>()
 }
 
 impl AuthToken {

@@ -10,7 +10,7 @@ use leptos_router::Outlet;
 
 use crate::components::{
     layout::{header::Header, sidebar::SideBar, toggle::ToggleNavigation},
-    main::modal::Modal,
+    messages::modal::Modal,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]

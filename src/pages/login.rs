@@ -6,7 +6,7 @@ use leptos_meta::*;
 use leptos_router::use_navigate;
 
 use crate::{
-    components::main::alert::{Alert, Alerts},
+    components::messages::alert::{use_alerts, Alerts},
     core::oauth::{oauth_authenticate, AuthToken},
     STATE_LOGIN_NAME_KEY, STATE_STORAGE_KEY,
 };
@@ -27,7 +27,7 @@ pub fn Login() -> impl IntoView {
         email: stored_login_name.clone(),
         ..Default::default()
     });
-    let alert = create_rw_signal(Alert::disabled());
+    let alert = use_alerts();
     let state = use_context::<RwSignal<AuthToken>>().unwrap();
 
     let login_action = create_action(move |(user, password): &(String, String)| {
@@ -84,7 +84,7 @@ pub fn Login() -> impl IntoView {
                     </div>
 
                     <div class="mt-5">
-                        <Alerts alert/>
+                        <Alerts/>
                         <form on:submit=|ev| ev.prevent_default()>
                             <div class="grid gap-y-4">
                                 <div>

@@ -1,3 +1,4 @@
+#![allow(unstable_name_collisions)]
 use std::time::Duration;
 
 use components::layout::MenuItem;
@@ -7,9 +8,13 @@ use leptos_meta::*;
 use leptos_router::*;
 
 use crate::{
-    components::layout::Layout,
+    components::{layout::Layout, messages::alert::init_alerts},
     core::oauth::{oauth_refresh_token, AuthToken},
-    pages::{directory::accounts::list::AccountList, login::Login, notfound::NotFound},
+    pages::{
+        directory::accounts::{edit::AccountEdit, list::AccountList},
+        login::Login,
+        notfound::NotFound,
+    },
 };
 
 pub mod components;
@@ -38,6 +43,7 @@ pub fn App() -> impl IntoView {
     );
     provide_meta_context();
     provide_context(auth_token);
+    init_alerts();
 
     // Create a resource to refresh the OAuth token
     let _refresh_token_resource = create_resource(auth_token, move |changed_auth_token| {
@@ -94,6 +100,18 @@ pub fn App() -> impl IntoView {
                     <ProtectedRoute
                         path="/accounts"
                         view=AccountList
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/account/:id"
+                        view=AccountEdit
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/account"
+                        view=AccountEdit
                         redirect_path="/login"
                         condition=is_logged_in
                     />

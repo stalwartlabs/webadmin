@@ -13,8 +13,8 @@ pub struct HttpRequest {
 #[derive(Deserialize)]
 #[serde(untagged)]
 pub enum Response<T> {
-    Data { data: T },
     Error { error: String, details: String },
+    Data { data: T },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

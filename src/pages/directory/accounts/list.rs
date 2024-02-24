@@ -5,13 +5,16 @@ use leptos_router::*;
 use web_sys::wasm_bindgen::JsCast;
 
 use crate::{
-    components::main::{
-        alert::{Alert, Alerts},
-        modal::Modal,
+    components::{
+        messages::{
+            alert::{use_alerts, Alert, Alerts},
+            modal::Modal,
+        },
+        skeleton::Skeleton,
     },
     core::{
         http::{self, HttpRequest},
-        oauth::AuthToken,
+        oauth::use_authorization,
         url::UrlBuilder,
     },
     pages::{
@@ -43,8 +46,8 @@ pub fn AccountList() -> impl IntoView {
         })
     };
 
-    let auth_token = use_context::<RwSignal<AuthToken>>().unwrap();
-    let alert = create_rw_signal(Alert::disabled());
+    let auth = use_authorization();
+    let alert = use_alerts();
     let set_modal = use_context::<WriteSignal<Modal>>().unwrap();
     let (pending, set_pending) = create_signal(false);
     let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
@@ -53,11 +56,11 @@ pub fn AccountList() -> impl IntoView {
     let principals = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
-            let auth_token = auth_token.get();
+            let auth = auth.get();
 
             async move {
                 let account_names = HttpRequest::get("https://127.0.0.1/api/principal")
-                    .with_authorization(&auth_token)
+                    .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
                     .with_parameter("type", "individual")
@@ -69,7 +72,7 @@ pub fn AccountList() -> impl IntoView {
                 for name in account_names.items {
                     items.push(
                         HttpRequest::get(format!("https://127.0.0.1/api/principal/{}", name))
-                            .with_authorization(&auth_token)
+                            .with_authorization(&auth)
                             .send::<Principal>()
                             .await?,
                     );
@@ -85,19 +88,21 @@ pub fn AccountList() -> impl IntoView {
 
     let delete_action = create_action(move |items: &Arc<HashSet<String>>| {
         let items = items.clone();
-        let auth_token = auth_token.get();
+        let auth = auth.get();
 
         async move {
             for item in items.iter() {
-                if let Err(err) = HttpRequest::get("https://127.0.0.1/blah?")
-                    .with_authorization(&auth_token)
-                    .send::<String>()
-                    .await
+                if let Err(err) =
+                    HttpRequest::delete(format!("https://127.0.0.1/api/principal/{item}"))
+                        .with_authorization(&auth)
+                        .send::<()>()
+                        .await
                 {
                     alert.set(Alert::from(err));
                     return;
                 }
             }
+            principals.refetch();
             alert.set(Alert::success(format!(
                 "Deleted {}.",
                 maybe_plural(items.len(), "account", "accounts")
@@ -119,7 +124,7 @@ pub fn AccountList() -> impl IntoView {
 
     view! {
         <div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
-            <Alerts alert/>
+            <Alerts/>
             <div class="flex flex-col">
                 <div class="-m-1.5 overflow-x-auto">
                     <div class="p-1.5 min-w-full inline-block align-middle">
@@ -243,7 +248,7 @@ pub fn AccountList() -> impl IntoView {
 
                                         <a
                                             class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                                            href="#"
+                                            href="/manage/account"
                                         >
                                             <svg
                                                 class="flex-shrink-0 size-3"
@@ -326,21 +331,16 @@ pub fn AccountList() -> impl IntoView {
                                         <th scope="col" class="px-6 py-3 text-end"></th>
                                     </tr>
                                 </thead>
-                                <Transition
-                                    fallback=move || view! { <p>"Loading..."</p> }
-                                    set_pending
-                                >
+                                <Transition fallback=Skeleton set_pending>
                                     {move || match principals.get() {
                                         None => None,
                                         Some(Err(http::Error::Unauthorized)) => {
                                             use_navigate()("/login", Default::default());
-                                            Some(view! { <p>"Unauthorized."</p> }.into_any())
+                                            Some(view! { <div></div> }.into_any())
                                         }
                                         Some(Err(err)) => {
                                             alert.set(Alert::from(err));
-                                            Some(
-                                                view! { <p>"Error loading principals."</p> }.into_any(),
-                                            )
+                                            Some(view! { <div></div> }.into_any())
                                         }
                                         Some(Ok(principals)) if !principals.items.is_empty() => {
                                             Some(
@@ -527,6 +527,7 @@ pub fn AccountItem(principal: Principal) -> impl IntoView {
     let principal_id = principal.name.as_deref().unwrap_or_default().to_string();
     let principal_id2 = principal.name.as_deref().unwrap_or_default().to_string();
     let checkbox_id = format!("chk_{principal_id}");
+    let manage_url = format!("/manage/account/{}", principal_id);
 
     view! {
         <tr>
@@ -619,7 +620,7 @@ pub fn AccountItem(principal: Principal) -> impl IntoView {
                 <div class="px-6 py-1.5">
                     <a
                         class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                        href="#"
+                        href=manage_url
                     >
                         Edit
                     </a>
