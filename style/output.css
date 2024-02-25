@@ -1015,6 +1015,11 @@ select {
   height: 38px;
 }
 
+.size-\[46px\] {
+  width: 46px;
+  height: 46px;
+}
+
 .size-full {
   width: 100%;
   height: 100%;
@@ -1039,6 +1044,10 @@ select {
 
 .h-px {
   height: 1px;
+}
+
+.min-h-\[400px\] {
+  min-height: 400px;
 }
 
 .min-h-\[calc\(100\%-3\.5rem\)\] {
@@ -2440,6 +2449,10 @@ select {
 
   .sm\:block {
     display: block;
+  }
+
+  .sm\:flex {
+    display: flex;
   }
 
   .sm\:hidden {

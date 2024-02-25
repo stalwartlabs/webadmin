@@ -6,8 +6,8 @@ pub mod accounts;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct List<T> {
-    items: Vec<T>,
-    total: u64,
+    pub items: Vec<T>,
+    pub total: u64,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

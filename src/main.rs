@@ -8,7 +8,10 @@ use leptos_meta::*;
 use leptos_router::*;
 
 use crate::{
-    components::{layout::Layout, messages::alert::init_alerts},
+    components::{
+        layout::Layout,
+        messages::{alert::init_alerts, modal::init_modals},
+    },
     core::oauth::{oauth_refresh_token, AuthToken},
     pages::{
         directory::accounts::{edit::AccountEdit, list::AccountList},
@@ -44,6 +47,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
     provide_context(auth_token);
     init_alerts();
+    init_modals();
 
     // Create a resource to refresh the OAuth token
     let _refresh_token_resource = create_resource(auth_token, move |changed_auth_token| {

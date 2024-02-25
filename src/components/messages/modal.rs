@@ -14,23 +14,25 @@ pub struct Modal {
     pub on_confirm: Arc<dyn Fn()>,
 }
 
+pub fn init_modals() {
+    provide_context(create_rw_signal(Modal::default()));
+}
+
+pub fn use_modals() -> RwSignal<Modal> {
+    let signal = expect_context::<RwSignal<Modal>>();
+    signal.set(Modal::default());
+    signal
+}
+
 #[component]
 pub fn Modal() -> impl IntoView {
-    let (modal, set_modal) = create_signal(Modal {
-        is_open: false,
-        title: String::new(),
-        message: String::new(),
-        button_text: "Confirm".to_string(),
-        danger: false,
-        on_confirm: Arc::new(|| {}),
-    });
+    let modal = expect_context::<RwSignal<Modal>>();
     let (processing, set_processing) = create_signal(false);
-    provide_context(set_modal);
 
     // Dismiss modal when "Escape" (or 'q') key is pressed
     let dismiss_modal_with_keyboard = window_event_listener(ev::keydown, move |ev| {
         if ev.key() == "Escape" || ev.key() == "q" || ev.key() == "Q" {
-            set_modal.update(|modal| {
+            modal.update(|modal| {
                 modal.is_open = false;
             });
         }
@@ -40,7 +42,7 @@ pub fn Modal() -> impl IntoView {
     // Click outside modal to dismiss
     let modal_target: NodeRef<Div> = create_node_ref::<Div>();
     on_cleanup(on_click_outside(modal_target, move |_| {
-        set_modal.update(|modal| {
+        modal.update(|modal| {
             modal.is_open = false;
         });
     }));
@@ -68,7 +70,7 @@ pub fn Modal() -> impl IntoView {
                                         type="button"
                                         class="flex justify-center items-center size-7 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                                         on:click=move |_| {
-                                            set_modal
+                                            modal
                                                 .update(|modal| {
                                                     modal.is_open = false;
                                                 });
@@ -103,7 +105,7 @@ pub fn Modal() -> impl IntoView {
                                         type="button"
                                         class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-white dark:hover:bg-gray-800 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                                         on:click=move |_| {
-                                            set_modal
+                                            modal
                                                 .update(|modal| {
                                                     modal.is_open = false;
                                                 });
@@ -123,7 +125,7 @@ pub fn Modal() -> impl IntoView {
                                         }
 
                                         on:click=move |_| {
-                                            set_modal
+                                            modal
                                                 .update(|modal| {
                                                     set_processing.set(true);
                                                     (modal.on_confirm)();
@@ -178,5 +180,18 @@ impl Modal {
         self.danger = false;
         self.on_confirm = Arc::new(on_confirm);
         self
+    }
+}
+
+impl Default for Modal {
+    fn default() -> Self {
+        Modal {
+            is_open: false,
+            title: String::new(),
+            message: String::new(),
+            button_text: "Confirm".to_string(),
+            danger: false,
+            on_confirm: Arc::new(|| {}),
+        }
     }
 }
