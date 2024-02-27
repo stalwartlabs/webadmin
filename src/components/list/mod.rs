@@ -21,13 +21,16 @@ pub struct Footer {
 pub fn ListSection(
     #[prop(into)] title: MaybeSignal<String>,
     #[prop(into)] subtitle: MaybeSignal<String>,
+    #[prop(optional)] disable_alerts: bool,
     children: Children,
     toolbar: Toolbar,
     footer: Footer,
 ) -> impl IntoView {
     view! {
         <div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
-            <Alerts/>
+            <Show when=move || { !disable_alerts }>
+                <Alerts/>
+            </Show>
             <div class="flex flex-col">
                 <div class="-m-1.5 overflow-x-auto">
                     <div class="p-1.5 min-w-full inline-block align-middle">
@@ -57,6 +60,19 @@ pub fn ListSection(
                 </div>
             </div>
         </div>
+    }
+}
+
+#[component]
+pub fn ListItem(
+    #[prop(into, optional)] class: Option<String>,
+    #[prop(into, optional)] subclass: Option<String>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+        <td class=class.unwrap_or_else(|| "size-px whitespace-nowrap".to_string())>
+            <div class=subclass.unwrap_or_else(|| "ps-6 py-3".to_string())>{children()}</div>
+        </td>
     }
 }
 

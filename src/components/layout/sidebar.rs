@@ -5,6 +5,8 @@ use super::MenuItem;
 
 #[component]
 pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl IntoView {
+    let current_route = create_memo(move |_| use_location().pathname.get());
+
     view! {
         <div
             id="application-sidebar"
@@ -31,35 +33,42 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                     <For each=move || menu_items.clone() key=|item| item.id() let:item>
 
                         {if !item.children.is_empty() {
-                            let current_route = use_location().pathname.get();
-                            let is_active = create_rw_signal(
-                                item
-                                    .children
-                                    .iter()
-                                    .any(|i| {
-                                        i.route.as_ref().map_or(false, |f| &current_route == f)
-                                            || i
-                                                .children
-                                                .iter()
-                                                .any(|i| {
-                                                    i.route.as_ref().map_or(false, |f| &current_route == f)
-                                                })
-                                    }),
-                            );
                             let has_sub_children = item
                                 .children
                                 .first()
                                 .unwrap()
                                 .children
                                 .is_empty();
+                            let children = item.children.clone();
+                            let is_displayed = create_rw_signal(false);
+                            let is_active = create_memo(move |_| {
+                                is_displayed.get()
+                                    || children
+                                        .iter()
+                                        .any(|i| {
+                                            i
+                                                .match_route
+                                                .as_ref()
+                                                .map_or(false, |f| current_route.get().starts_with(f))
+                                                || i
+                                                    .children
+                                                    .iter()
+                                                    .any(|i| {
+                                                        i.match_route
+                                                            .as_ref()
+                                                            .map_or(false, |f| current_route.get().starts_with(f))
+                                                    })
+                                        })
+                            });
                             view! {
                                 <li class="hs-accordion">
                                     <button
                                         type="button"
                                         class="hs-accordion-toggle w-full text-start flex items-center gap-x-3.5 py-2 px-2.5 hs-accordion-active:text-blue-600 hs-accordion-active:hover:bg-transparent text-sm text-slate-700 rounded-lg hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-900 dark:text-slate-400 dark:hover:text-slate-300 dark:hs-accordion-active:text-white dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                                         class:active=move || is_active.get()
-                                        on:click=move |_| is_active.update(|v| *v = !*v)
+                                        on:click=move |_| is_displayed.update(|v| *v = !*v)
                                     >
+
                                         <svg
                                             class="flex-shrink-0 size-4"
                                             xmlns="http://www.w3.org/2000/svg"
@@ -133,111 +142,132 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                                 let:item
                                             >
 
-                                                {
-                                                    let current_route = current_route.clone();
-                                                    let is_active = create_rw_signal(
-                                                        item
-                                                            .children
+                                                {if !item.children.is_empty() {
+                                                    let is_displayed = create_rw_signal(false);
+                                                    let children = item.children.clone();
+                                                    let is_active = create_memo(move |_| {
+                                                        children
                                                             .iter()
                                                             .any(|i| {
-                                                                i.route.as_ref().map_or(false, |f| &current_route == f)
-                                                            }),
-                                                    );
-                                                    if !item.children.is_empty() {
-                                                        view! {
-                                                            <li class="hs-accordion">
-                                                                <button
-                                                                    type="button"
-                                                                    class="hs-accordion-toggle w-full text-start flex items-center gap-x-3.5 py-2 px-2.5 hs-accordion-active:text-blue-600 hs-accordion-active:hover:bg-transparent text-sm text-slate-700 rounded-lg hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-900 dark:text-slate-400 dark:hover:text-slate-300 dark:hs-accordion-active:text-white dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                                                                    on:click=move |_| is_active.update(|v| *v = !*v)
+                                                                is_displayed.get()
+                                                                    || i
+                                                                        .match_route
+                                                                        .as_ref()
+                                                                        .map_or(false, |f| current_route.get().starts_with(f))
+                                                            })
+                                                    });
+                                                    view! {
+                                                        <li class="hs-accordion">
+                                                            <button
+                                                                type="button"
+                                                                class="hs-accordion-toggle w-full text-start flex items-center gap-x-3.5 py-2 px-2.5 hs-accordion-active:text-blue-600 hs-accordion-active:hover:bg-transparent text-sm text-slate-700 rounded-lg hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-900 dark:text-slate-400 dark:hover:text-slate-300 dark:hs-accordion-active:text-white dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                                                                on:click=move |_| is_displayed.update(|v| *v = !*v)
+                                                            >
+
+                                                                {item.name}
+
+                                                                <svg
+                                                                    class="hs-accordion-active:block ms-auto size-4"
+                                                                    class:hidden=move || !is_active.get()
+                                                                    class:block=move || is_active.get()
+                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                    width="24"
+                                                                    height="24"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    stroke-width="2"
+                                                                    stroke-linecap="round"
+                                                                    stroke-linejoin="round"
                                                                 >
-                                                                    {item.name}
+                                                                    <path d="m18 15-6-6-6 6"></path>
+                                                                </svg>
 
-                                                                    <svg
-                                                                        class="hs-accordion-active:block ms-auto size-4"
-                                                                        class:hidden=move || !is_active.get()
-                                                                        class:block=move || is_active.get()
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="24"
-                                                                        height="24"
-                                                                        viewBox="0 0 24 24"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        stroke-width="2"
-                                                                        stroke-linecap="round"
-                                                                        stroke-linejoin="round"
-                                                                    >
-                                                                        <path d="m18 15-6-6-6 6"></path>
-                                                                    </svg>
-
-                                                                    <svg
-                                                                        class="hs-accordion-active:hidden ms-auto size-4"
-                                                                        class:hidden=move || is_active.get()
-                                                                        class:block=move || !is_active.get()
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="24"
-                                                                        height="24"
-                                                                        viewBox="0 0 24 24"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        stroke-width="2"
-                                                                        stroke-linecap="round"
-                                                                        stroke-linejoin="round"
-                                                                    >
-                                                                        <path d="m6 9 6 6 6-6"></path>
-                                                                    </svg>
-                                                                </button>
-
-                                                                <div
-                                                                    class="hs-accordion-content w-full overflow-hidden transition-[height] duration-300"
-                                                                    hidden=move || !is_active.get()
+                                                                <svg
+                                                                    class="hs-accordion-active:hidden ms-auto size-4"
+                                                                    class:hidden=move || is_active.get()
+                                                                    class:block=move || !is_active.get()
+                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                    width="24"
+                                                                    height="24"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    stroke-width="2"
+                                                                    stroke-linecap="round"
+                                                                    stroke-linejoin="round"
                                                                 >
-                                                                    <ul class="pt-2 ps-2">
-                                                                        <For
-                                                                            each=move || item.children.clone()
-                                                                            key=|item| item.id()
-                                                                            let:item
-                                                                        >
+                                                                    <path d="m6 9 6 6 6-6"></path>
+                                                                </svg>
+                                                            </button>
 
-                                                                            {
-                                                                                let route = item.route.clone().unwrap();
-                                                                                let class = format!(
-                                                                                    "flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-slate-700 rounded-lg hover:bg-gray-100 dark:bg-gray-800 dark:text-slate-400 dark:hover:text-slate-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600{}",
-                                                                                    if route == current_route { " bg-gray-100" } else { "" },
-                                                                                );
-                                                                                view! {
-                                                                                    <li>
-                                                                                        <a class=class href=route>
-                                                                                            {item.name}
-                                                                                        </a>
-                                                                                    </li>
-                                                                                }
-                                                                                    .into_view()
+                                                            <div
+                                                                class="hs-accordion-content w-full overflow-hidden transition-[height] duration-300"
+                                                                hidden=move || !is_active.get()
+                                                            >
+                                                                <ul class="pt-2 ps-2">
+                                                                    <For
+                                                                        each=move || item.children.clone()
+                                                                        key=|item| item.id()
+                                                                        let:item
+                                                                    >
+
+                                                                        {
+                                                                            let route = item.match_route.clone().unwrap();
+                                                                            view! {
+                                                                                <li>
+                                                                                    <a
+                                                                                        class=move || {
+                                                                                            format!(
+                                                                                                "flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-slate-700 rounded-lg hover:bg-gray-100 dark:bg-gray-800 dark:text-slate-400 dark:hover:text-slate-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600{}",
+                                                                                                if current_route.get().starts_with(&route) {
+                                                                                                    " bg-gray-100"
+                                                                                                } else {
+                                                                                                    ""
+                                                                                                },
+                                                                                            )
+                                                                                        }
+
+                                                                                        href=move || item.route.clone().unwrap()
+                                                                                    >
+                                                                                        {item.name}
+                                                                                    </a>
+                                                                                </li>
                                                                             }
+                                                                                .into_view()
+                                                                        }
 
-                                                                        </For>
+                                                                    </For>
 
-                                                                    </ul>
-                                                                </div>
-                                                            </li>
-                                                        }
-                                                            .into_view()
-                                                    } else {
-                                                        let route = item.route.clone().unwrap();
-                                                        let class = format!(
-                                                            "flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-slate-700 rounded-lg hover:bg-gray-100 dark:bg-gray-800 dark:text-slate-400 dark:hover:text-slate-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600{}",
-                                                            if route == current_route { " bg-gray-100" } else { "" },
-                                                        );
-                                                        view! {
-                                                            <li>
-                                                                <a class=class href=route>
-                                                                    {item.name}
-                                                                </a>
-                                                            </li>
-                                                        }
-                                                            .into_view()
+                                                                </ul>
+                                                            </div>
+                                                        </li>
                                                     }
-                                                }
+                                                        .into_view()
+                                                } else {
+                                                    let route = item.match_route.unwrap();
+                                                    view! {
+                                                        <li>
+                                                            <a
+                                                                class=move || {
+                                                                    format!(
+                                                                        "flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-slate-700 rounded-lg hover:bg-gray-100 dark:bg-gray-800 dark:text-slate-400 dark:hover:text-slate-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600{}",
+                                                                        if current_route.get().starts_with(&route) {
+                                                                            " bg-gray-100"
+                                                                        } else {
+                                                                            ""
+                                                                        },
+                                                                    )
+                                                                }
+
+                                                                href=move || item.route.clone().unwrap()
+                                                            >
+                                                                {item.name}
+                                                            </a>
+                                                        </li>
+                                                    }
+                                                        .into_view()
+                                                }}
 
                                             </For>
 

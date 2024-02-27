@@ -14,9 +14,13 @@ use crate::{
     },
     core::oauth::{oauth_refresh_token, AuthToken},
     pages::{
-        directory::accounts::{edit::AccountEdit, list::AccountList},
+        directory::{
+            domains::{edit::DomainCreate, list::DomainList},
+            principals::{edit::PrincipalEdit, list::PrincipalList},
+        },
         login::Login,
         notfound::NotFound,
+        queue::messages::{list::QueueList, manage::QueueManage},
     },
 };
 
@@ -102,20 +106,63 @@ pub fn App() -> impl IntoView {
                     condition=is_logged_in
                 >
                     <ProtectedRoute
-                        path="/accounts"
-                        view=AccountList
+                        path="/directory/accounts"
+                        view=PrincipalList
                         redirect_path="/login"
                         condition=is_logged_in
                     />
                     <ProtectedRoute
-                        path="/account/:id"
-                        view=AccountEdit
+                        path="/directory/account/:id?"
+                        view=PrincipalEdit
                         redirect_path="/login"
                         condition=is_logged_in
                     />
                     <ProtectedRoute
-                        path="/account"
-                        view=AccountEdit
+                        path="/directory/groups"
+                        view=PrincipalList
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/directory/group/:id?"
+                        view=PrincipalEdit
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+
+                    <ProtectedRoute
+                        path="/directory/lists"
+                        view=PrincipalList
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/directory/list/:id?"
+                        view=PrincipalEdit
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/directory/domains"
+                        view=DomainList
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/directory/domain"
+                        view=DomainCreate
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/queue/messages"
+                        view=QueueList
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/queue/message/:id"
+                        view=QueueManage
                         redirect_path="/login"
                         condition=is_logged_in
                     />
@@ -136,18 +183,24 @@ pub(crate) fn menu_items() -> Vec<MenuItem> {
             "Directory",
             "users",
             vec![
-                MenuItem::child("Accounts", "/manage/accounts"),
-                MenuItem::child("Groups", "/manage/groups"),
-                MenuItem::child("Lists", "/manage/lists"),
-                MenuItem::child("Domains", "/manage/domains"),
+                MenuItem::child("Accounts", "/manage/directory/accounts")
+                    .with_match_route("/manage/directory/account"),
+                MenuItem::child("Groups", "/manage/directory/groups")
+                    .with_match_route("/manage/directory/group"),
+                MenuItem::child("Lists", "/manage/directory/lists")
+                    .with_match_route("/manage/directory/list"),
+                MenuItem::child("Domains", "/manage/directory/domains")
+                    .with_match_route("/manage/directory/domain"),
             ],
         ),
         MenuItem::parent_with_icon(
             "Queues",
             "queue",
             vec![
-                MenuItem::child("Messages", "/manage/messages"),
-                MenuItem::child("Reports", "/manage/reports"),
+                MenuItem::child("Messages", "/manage/queue/messages")
+                    .with_match_route("/manage/queue/message"),
+                MenuItem::child("Reports", "/manage/queue/reports")
+                    .with_match_route("/manage/queue/report"),
             ],
         ),
         MenuItem::parent_with_icon(

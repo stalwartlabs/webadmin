@@ -213,10 +213,6 @@ impl<T: Default + Clone + PartialEq + Hash + 'static> FormValidator<T> {
     pub fn update(&self, value: T) {
         self.signal.set(FormValue::Ok(value));
     }
-
-    pub fn get(&self) -> FormValue<T> {
-        self.signal.get()
-    }
 }
 
 impl<T: Default + Clone + PartialEq + Hash + 'static> FormListValidator<T> {

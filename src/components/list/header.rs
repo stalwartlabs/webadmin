@@ -26,10 +26,13 @@ pub fn ColumnList(
                                 on:change=move |ev| {
                                     selected
                                         .update(|t| {
+                                            let items = select_all.unwrap().call(());
                                             if event_target_checked(&ev) {
-                                                t.extend((select_all.unwrap()).call(()));
+                                                t.extend(items);
                                             } else {
-                                                t.clear();
+                                                for item in items {
+                                                    t.remove(&item);
+                                                }
                                             }
                                         });
                                 }

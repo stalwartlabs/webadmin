@@ -1,4 +1,6 @@
+pub mod card;
 pub mod form;
+pub mod icon;
 pub mod layout;
 pub mod list;
 pub mod messages;

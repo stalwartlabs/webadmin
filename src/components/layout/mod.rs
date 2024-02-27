@@ -17,6 +17,7 @@ use crate::components::{
 pub struct MenuItem {
     pub name: String,
     pub route: Option<String>,
+    pub match_route: Option<String>,
     pub icon: Option<String>,
     pub children: Vec<MenuItem>,
 }
@@ -49,6 +50,7 @@ impl MenuItem {
             route: None,
             icon: Some(icon.into()),
             children,
+            match_route: None,
         }
     }
 
@@ -58,15 +60,18 @@ impl MenuItem {
             route: None,
             icon: None,
             children,
+            match_route: None,
         }
     }
 
     pub fn child(name: impl Into<String>, route: impl Into<String>) -> Self {
+        let route = route.into();
         Self {
             name: name.into(),
-            route: Some(route.into()),
+            route: Some(route.clone()),
             icon: None,
             children: vec![],
+            match_route: Some(route),
         }
     }
 
@@ -75,11 +80,13 @@ impl MenuItem {
         icon: impl Into<String>,
         route: impl Into<String>,
     ) -> Self {
+        let route = route.into();
         Self {
             name: name.into(),
-            route: Some(route.into()),
+            route: Some(route.clone()),
             icon: Some(icon.into()),
             children: vec![],
+            match_route: Some(route),
         }
     }
 
@@ -90,5 +97,10 @@ impl MenuItem {
         self.icon.hash(&mut hasher);
         self.children.len().hash(&mut hasher);
         hasher.finish().to_string()
+    }
+
+    pub fn with_match_route(mut self, match_route: impl Into<String>) -> Self {
+        self.match_route = Some(match_route.into());
+        self
     }
 }

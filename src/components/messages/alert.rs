@@ -32,7 +32,7 @@ pub fn use_alerts() -> RwSignal<Alert> {
 
 #[component]
 pub fn Alerts() -> impl IntoView {
-    let alert = use_context::<RwSignal<Alert>>().unwrap();
+    let alert = expect_context::<RwSignal<Alert>>();
 
     create_effect(move |_| {
         let alert_data = alert.get();

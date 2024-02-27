@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::components::form::select::SelectOption;
 
-pub mod accounts;
+pub mod domains;
+pub mod principals;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct List<T> {
@@ -212,26 +213,67 @@ impl Principal {
 
 impl SelectOption for Type {
     fn label(&self) -> String {
-        match self {
-            Type::Individual => "Individual".to_string(),
-            Type::Group => "Group".to_string(),
-            Type::Resource => "Resource".to_string(),
-            Type::Location => "Location".to_string(),
-            Type::Superuser => "Superuser".to_string(),
-            Type::List => "List".to_string(),
-            Type::Other => "Other".to_string(),
-        }
+        self.name().to_string()
     }
 
     fn value(&self) -> String {
+        self.id().to_string()
+    }
+}
+
+impl Type {
+    pub fn id(&self) -> &'static str {
         match self {
-            Type::Individual => "individual".to_string(),
-            Type::Group => "group".to_string(),
-            Type::Resource => "resource".to_string(),
-            Type::Location => "location".to_string(),
-            Type::Superuser => "superuser".to_string(),
-            Type::List => "list".to_string(),
-            Type::Other => "other".to_string(),
+            Type::Individual => "individual",
+            Type::Group => "group",
+            Type::Resource => "resource",
+            Type::Location => "location",
+            Type::Superuser => "superuser",
+            Type::List => "list",
+            Type::Other => "other",
+        }
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Type::Individual => "Individual",
+            Type::Group => "Group",
+            Type::Resource => "Resource",
+            Type::Location => "Location",
+            Type::Superuser => "Superuser",
+            Type::List => "Mailing List",
+            Type::Other => "Other",
+        }
+    }
+
+    pub fn item_name(&self, plural: bool) -> &'static str {
+        match (self, plural) {
+            (Type::Individual, false) => "account",
+            (Type::Individual, true) => "accounts",
+            (Type::Group, false) => "group",
+            (Type::Group, true) => "groups",
+            (Type::Resource, false) => "resource",
+            (Type::Resource, true) => "resources",
+            (Type::Location, false) => "location",
+            (Type::Location, true) => "locations",
+            (Type::Superuser, false) => "superuser",
+            (Type::Superuser, true) => "superusers",
+            (Type::List, false) => "mailing list",
+            (Type::List, true) => "mailing lists",
+            (Type::Other, false) => "other",
+            (Type::Other, true) => "other",
+        }
+    }
+
+    pub fn resource_name(&self, list: bool) -> &'static str {
+        match (self, list) {
+            (Type::Individual, false) => "account",
+            (Type::Individual, true) => "accounts",
+            (Type::Group, false) => "group",
+            (Type::Group, true) => "groups",
+            (Type::List, false) => "list",
+            (Type::List, true) => "lists",
+            _ => unimplemented!("resource_name for {:?}", self),
         }
     }
 }

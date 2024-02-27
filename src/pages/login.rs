@@ -60,7 +60,7 @@ pub fn Login() -> impl IntoView {
                             Duration::from_secs(grant.expires_in),
                         );
                     }
-                    use_navigate()("/manage/accounts", Default::default());
+                    use_navigate()("/manage/directory/accounts", Default::default());
                 }
                 Err(err) => {
                     alert.set(err);
