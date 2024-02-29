@@ -20,7 +20,10 @@ use crate::{
         },
         login::Login,
         notfound::NotFound,
-        queue::messages::{list::QueueList, manage::QueueManage},
+        queue::{
+            messages::{list::QueueList, manage::QueueManage},
+            reports::{display::ReportDisplay, list::ReportList},
+        },
     },
 };
 
@@ -163,6 +166,18 @@ pub fn App() -> impl IntoView {
                     <ProtectedRoute
                         path="/queue/message/:id"
                         view=QueueManage
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/queue/reports"
+                        view=ReportList
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/queue/report/:id"
+                        view=ReportDisplay
                         redirect_path="/login"
                         condition=is_logged_in
                     />

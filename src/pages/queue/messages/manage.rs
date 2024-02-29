@@ -9,10 +9,13 @@ use leptos_router::{use_navigate, use_params_map};
 use crate::{
     components::{
         card::{Card, CardItem},
-        icon::{IconAlertTriangle, IconBell, IconCancel, IconClock, IconEnvelope, IconId, IconLaunch, IconScale},
+        icon::{
+            IconAlertTriangle, IconBell, IconCancel, IconClock, IconEnvelope, IconId, IconLaunch,
+            IconScale,
+        },
         list::{
             header::ColumnList, row::SelectItem, toolbar::ToolbarButton, Footer, ListItem,
-            ListSection, Toolbar,
+            ListTable, ListTextItem, Toolbar,
         },
         messages::{
             alert::{use_alerts, Alert, Alerts},
@@ -27,7 +30,7 @@ use crate::{
     },
     pages::{
         maybe_plural,
-        queue::messages::{list::StatusBadge, Message, Status},
+        queue::messages::{Message, Status},
     },
 };
 
@@ -269,215 +272,207 @@ pub fn QueueManage() -> impl IntoView {
 
                             </Card>
 
-                            <ListSection
-                                title="Recipients"
-                                subtitle="Retry or cancel delivery"
-                                disable_alerts=true
-                            >
-                                <Toolbar slot>
-                                    <ToolbarButton
-                                        text=Signal::derive(move || {
-                                            let ns = selected.get().len();
-                                            if ns > 0 {
-                                                format!("Retry ({ns})")
-                                            } else {
-                                                "Retry".to_string()
-                                            }
-                                        })
+                            <div class="max-w-[85rem] px-4 py-8 sm:px-6 lg:px-8 lg:py-10 mx-auto">
+                                <ListTable title="Recipients" subtitle="Retry or cancel delivery">
+                                    <Toolbar slot>
+                                        <ToolbarButton
+                                            text=Signal::derive(move || {
+                                                let ns = selected.get().len();
+                                                if ns > 0 {
+                                                    format!("Retry ({ns})")
+                                                } else {
+                                                    "Retry".to_string()
+                                                }
+                                            })
 
-                                        color=Color::Gray
-                                        on_click=Callback::new(move |_| {
-                                            let to_delete = selected.get().len();
-                                            if to_delete > 0 {
-                                                let mut domains = Vec::<String>::new();
-                                                for rcpt in selected
-                                                    .try_update(std::mem::take)
-                                                    .unwrap_or_default()
-                                                {
-                                                    if let Some((_, domain)) = rcpt.split_once('@') {
-                                                        let domain = domain.to_string();
-                                                        if !domains.contains(&domain) {
-                                                            domains.push(domain);
+                                            color=Color::Gray
+                                            on_click=Callback::new(move |_| {
+                                                let to_delete = selected.get().len();
+                                                if to_delete > 0 {
+                                                    let mut domains = Vec::<String>::new();
+                                                    for rcpt in selected
+                                                        .try_update(std::mem::take)
+                                                        .unwrap_or_default()
+                                                    {
+                                                        if let Some((_, domain)) = rcpt.split_once('@') {
+                                                            let domain = domain.to_string();
+                                                            if !domains.contains(&domain) {
+                                                                domains.push(domain);
+                                                            }
                                                         }
                                                     }
+                                                    retry_action
+                                                        .dispatch(
+                                                            if domains.len() != num_domains {
+                                                                domains
+                                                            } else {
+                                                                vec!["".to_string()]
+                                                            },
+                                                        );
                                                 }
-                                                retry_action
-                                                    .dispatch(
-                                                        if domains.len() != num_domains {
-                                                            domains
-                                                        } else {
-                                                            vec!["".to_string()]
-                                                        },
-                                                    );
-                                            }
-                                        })
-                                    >
-
-                                        <IconLaunch/>
-                                    </ToolbarButton>
-                                    <ToolbarButton
-                                        text=Signal::derive(move || {
-                                            let ns = selected.get().len();
-                                            if ns > 0 {
-                                                format!("Cancel ({ns})")
-                                            } else {
-                                                "Cancel".to_string()
-                                            }
-                                        })
-
-                                        color=Color::Red
-                                        on_click=Callback::new(move |_| {
-                                            let to_delete = selected.get().len();
-                                            if to_delete > 0 {
-                                                let text = maybe_plural(
-                                                    to_delete,
-                                                    "recipient",
-                                                    "recipients",
-                                                );
-                                                modal
-                                                    .set(
-                                                        Modal::with_title("Confirm cancel")
-                                                            .with_message(
-                                                                format!(
-                                                                    "Are you sure you want to cancel delivery for {text}? This action cannot be undone.",
-                                                                ),
-                                                            )
-                                                            .with_button(format!("Cancel for {text}"))
-                                                            .with_dangerous_callback(move || {
-                                                                let selected = selected
-                                                                    .try_update(std::mem::take)
-                                                                    .unwrap_or_default();
-                                                                let selected = if selected.len() == num_recipients {
-                                                                    vec!["".to_string()]
-                                                                } else {
-                                                                    selected.into_iter().collect()
-                                                                };
-                                                                cancel_action.dispatch(selected);
-                                                            }),
-                                                    )
-                                            }
-                                        })
-                                    >
-
-                                        <IconCancel/>
-                                    </ToolbarButton>
-
-                                </Toolbar>
-                                <ColumnList
-                                    headers=vec![
-                                        "Recipient".to_string(),
-                                        "Status".to_string(),
-                                        "Server Response".to_string(),
-                                        "Next/Last Retry".to_string(),
-                                    ]
-
-                                    select_all=Callback::new(move |_| {
-                                        message
-                                            .domains
-                                            .iter()
-                                            .flat_map(|d| {
-                                                d.recipients.iter().map(|r| r.address.clone())
                                             })
-                                            .collect::<Vec<_>>()
-                                    })
-                                >
+                                        >
 
-                                    <For
-                                        each=move || { recipients.clone() }
+                                            <IconLaunch/>
+                                        </ToolbarButton>
+                                        <ToolbarButton
+                                            text=Signal::derive(move || {
+                                                let ns = selected.get().len();
+                                                if ns > 0 {
+                                                    format!("Cancel ({ns})")
+                                                } else {
+                                                    "Cancel".to_string()
+                                                }
+                                            })
 
-                                        key=|(recipient, _)| recipient.address.clone()
-                                        children=move |(recipient, next_retry)| {
-                                            let item_id = recipient.address.clone();
-                                            let mut status_details = recipient
-                                                .status
-                                                .clone()
-                                                .unwrap_message();
-                                            let mut status_response = String::new();
-                                            if let Some((code, message)) = status_details
-                                                .split_once(", Message: ")
-                                            {
-                                                status_response = code.to_string();
-                                                status_details = message.to_string();
-                                            }
-                                            let next_retry = next_retry
-                                                .map(|dt| {
-                                                    if !matches!(recipient.status, Status::Completed(_))
-                                                        || dt < Utc::now()
-                                                    {
-                                                        format!(
-                                                            "{} ({})",
-                                                            HumanTime::from(dt),
-                                                            dt.with_timezone(&Local).format("%a, %d %b %Y %H:%M:%S"),
+                                            color=Color::Red
+                                            on_click=Callback::new(move |_| {
+                                                let to_delete = selected.get().len();
+                                                if to_delete > 0 {
+                                                    let text = maybe_plural(
+                                                        to_delete,
+                                                        "recipient",
+                                                        "recipients",
+                                                    );
+                                                    modal
+                                                        .set(
+                                                            Modal::with_title("Confirm cancel")
+                                                                .with_message(
+                                                                    format!(
+                                                                        "Are you sure you want to cancel delivery for {text}? This action cannot be undone.",
+                                                                    ),
+                                                                )
+                                                                .with_button(format!("Cancel for {text}"))
+                                                                .with_dangerous_callback(move || {
+                                                                    let selected = selected
+                                                                        .try_update(std::mem::take)
+                                                                        .unwrap_or_default();
+                                                                    let selected = if selected.len() == num_recipients {
+                                                                        vec!["".to_string()]
+                                                                    } else {
+                                                                        selected.into_iter().collect()
+                                                                    };
+                                                                    cancel_action.dispatch(selected);
+                                                                }),
                                                         )
-                                                    } else {
-                                                        "".to_string()
-                                                    }
+                                                }
+                                            })
+                                        >
+
+                                            <IconCancel/>
+                                        </ToolbarButton>
+
+                                    </Toolbar>
+                                    <ColumnList
+                                        headers=vec![
+                                            "Recipient".to_string(),
+                                            "Status".to_string(),
+                                            "Server Response".to_string(),
+                                            "Next/Last Retry".to_string(),
+                                        ]
+
+                                        select_all=Callback::new(move |_| {
+                                            message
+                                                .domains
+                                                .iter()
+                                                .flat_map(|d| {
+                                                    d.recipients.iter().map(|r| r.address.clone())
                                                 })
-                                                .unwrap_or_default();
-                                            let display_status = match &recipient.status {
-                                                Status::Completed(_) => {
-                                                    Status::Completed("Delivered".into())
-                                                }
-                                                Status::TemporaryFailure(_) => {
-                                                    Status::TemporaryFailure("Pending".into())
-                                                }
-                                                Status::PermanentFailure(_) => {
-                                                    Status::PermanentFailure("Failed".into())
-                                                }
-                                                Status::Scheduled => {
-                                                    Status::TemporaryFailure("Scheduled".into())
-                                                }
-                                            };
-                                            view! {
-                                                <tr>
-                                                    <ListItem>
-                                                        <label class="flex">
-                                                            <SelectItem item_id=item_id/>
+                                                .collect::<Vec<_>>()
+                                        })
+                                    >
 
-                                                            <span class="sr-only">Checkbox</span>
-                                                        </label>
-                                                    </ListItem>
-                                                    <ListItem subclass="ps-6 lg:ps-3 xl:ps-0 pe-6 py-3">
-                                                        <div class="flex items-center gap-x-3">
-                                                            <div class="grow">
-                                                                <span class="block text-sm font-normal text-gray-800 dark:text-gray-200">
-                                                                    {recipient.address}
-                                                                </span>
+                                        <For
+                                            each=move || { recipients.clone() }
+
+                                            key=|(recipient, _)| recipient.address.clone()
+                                            children=move |(recipient, next_retry)| {
+                                                let item_id = recipient.address.clone();
+                                                let mut status_details = recipient
+                                                    .status
+                                                    .clone()
+                                                    .unwrap_message();
+                                                let mut status_response = String::new();
+                                                if let Some((code, message)) = status_details
+                                                    .split_once(", Message: ")
+                                                {
+                                                    status_response = code.to_string();
+                                                    status_details = message.to_string();
+                                                }
+                                                let next_retry = next_retry
+                                                    .map(|dt| {
+                                                        if !matches!(recipient.status, Status::Completed(_))
+                                                            || dt < Utc::now()
+                                                        {
+                                                            format!(
+                                                                "{} ({})",
+                                                                HumanTime::from(dt),
+                                                                dt.with_timezone(&Local).format("%a, %d %b %Y %H:%M:%S"),
+                                                            )
+                                                        } else {
+                                                            "".to_string()
+                                                        }
+                                                    })
+                                                    .unwrap_or_default();
+                                                let display_status = match &recipient.status {
+                                                    Status::Completed(_) => {
+                                                        Status::Completed("Delivered".into())
+                                                    }
+                                                    Status::TemporaryFailure(_) => {
+                                                        Status::TemporaryFailure("Pending".into())
+                                                    }
+                                                    Status::PermanentFailure(_) => {
+                                                        Status::PermanentFailure("Failed".into())
+                                                    }
+                                                    Status::Scheduled => {
+                                                        Status::TemporaryFailure("Scheduled".into())
+                                                    }
+                                                };
+                                                view! {
+                                                    <tr>
+                                                        <ListItem>
+                                                            <label class="flex">
+                                                                <SelectItem item_id=item_id/>
+
+                                                                <span class="sr-only">Checkbox</span>
+                                                            </label>
+                                                        </ListItem>
+                                                        <ListItem subclass="ps-6 lg:ps-3 xl:ps-0 pe-6 py-3">
+                                                            <div class="flex items-center gap-x-3">
+                                                                <div class="grow">
+                                                                    <span class="block text-sm font-normal text-gray-800 dark:text-gray-200">
+                                                                        {recipient.address}
+                                                                    </span>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </ListItem>
+                                                        </ListItem>
 
-                                                    <ListItem>
-                                                        <StatusBadge status=display_status/>
-                                                    </ListItem>
+                                                        <ListItem>{display_status}</ListItem>
 
-                                                    <ListItem class="h-px w-72 whitespace-nowrap">
-                                                        <span class="block text-sm font-semibold text-gray-800 dark:text-gray-200">
-                                                            {status_response}
-                                                        </span>
-                                                        <span class="block text-sm text-gray-500">
-                                                            {status_details}
-                                                        </span>
+                                                        <ListItem class="h-px w-72 whitespace-nowrap">
+                                                            <span class="block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                                                {status_response}
+                                                            </span>
+                                                            <span class="block text-sm text-gray-500">
+                                                                {status_details}
+                                                            </span>
 
-                                                    </ListItem>
+                                                        </ListItem>
 
-                                                    <ListItem>
-                                                        <span class="block text-sm text-gray-500">
-                                                            {next_retry}
-                                                        </span>
-                                                    </ListItem>
+                                                        <ListTextItem>{next_retry}</ListTextItem>
 
-                                                </tr>
+                                                    </tr>
+                                                }
                                             }
-                                        }
-                                    />
+                                        />
 
-                                </ColumnList>
-                                <Footer slot>
-                                    <div></div>
-                                </Footer>
+                                    </ColumnList>
+                                    <Footer slot>
+                                        <div></div>
+                                    </Footer>
 
-                            </ListSection>
+                                </ListTable>
+                            </div>
                         }
                             .into_view(),
                     )

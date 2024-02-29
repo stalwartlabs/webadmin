@@ -1,11 +1,14 @@
 use leptos::*;
 use web_sys::wasm_bindgen::JsCast;
 
+use crate::components::{badge::Badge, icon::IconXMark, Color};
+
 use super::ValidateCb;
 
 #[component]
 pub fn StackedBadge(
     #[prop(into)] add_button_text: String,
+    color: Color,
     values: RwSignal<Vec<String>>,
     #[prop(into, optional)] validate_item: Option<Callback<(String, ValidateCb), ()>>,
 ) -> impl IntoView {
@@ -49,7 +52,8 @@ pub fn StackedBadge(
                     let label = item.clone();
                     view! {
                         <div class="inline-flex flex-wrap gap-2 p-1">
-                            <span class="inline-flex items-center gap-x-1.5 py-1.5 ps-3 pe-2 rounded-full text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-800/30 dark:text-teal-500">
+
+                            <Badge color=color large=true>
                                 {label}
                                 <button
                                     type="button"
@@ -63,23 +67,9 @@ pub fn StackedBadge(
                                 >
 
                                     <span class="sr-only">Remove</span>
-                                    <svg
-                                        class="flex-shrink-0 size-3"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="24"
-                                        height="24"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    >
-                                        <path d="M18 6 6 18"></path>
-                                        <path d="m6 6 12 12"></path>
-                                    </svg>
+                                    <IconXMark attr:class="flex-shrink-0 size-3"/>
                                 </button>
-                            </span>
+                            </Badge>
 
                         </div>
                     }

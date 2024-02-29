@@ -108,12 +108,13 @@ pub fn PrincipalEdit() -> impl IntoView {
     let principal_is_valid = create_action(
         move |(name, cb, expected_types): &(String, ValidateCb, Vec<Type>)| {
             let name = name.clone();
+            let login_name = login.signal().get().unwrap();
             let auth = auth.get();
             let expected_types = expected_types.clone();
             let cb = *cb;
 
             async move {
-                if name == login.signal().get().unwrap() {
+                if name == login_name {
                     cb.call(Err(
                         "Principal name cannot be the same as the current principal".to_string(),
                     ));
@@ -196,15 +197,36 @@ pub fn PrincipalEdit() -> impl IntoView {
         }
     });
 
-    let (title, subtitle) = match selected_type {
-        Type::Individual => (
-            "Edit Account",
-            "Manage account details, password and email addresses.",
-        ),
-        Type::Group => ("Edit Group", "Manage group members and member groups."),
-        Type::List => ("Edit List", "Manage list details and members."),
+    let subtitle = match selected_type {
+        Type::Individual => "Manage account details, password and email addresses.",
+        Type::Group => "Manage group members and member groups.",
+        Type::List => "Manage list details and members.",
         _ => unreachable!(),
     };
+    let title = create_memo(move |_| {
+        if let Some(name) = params().get("id") {
+            match selected_type {
+                Type::Individual => {
+                    format!("Update '{name}' Account")
+                }
+                Type::Group => {
+                    format!("Update '{name}' Group")
+                }
+                Type::List => {
+                    format!("Update '{name}' List")
+                }
+                _ => unreachable!(),
+            }
+        } else {
+            match selected_type {
+                Type::Individual => "Create Account",
+                Type::Group => "Create Group",
+                Type::List => "Create List",
+                _ => unreachable!(),
+            }
+            .to_string()
+        }
+    });
 
     view! {
         <Form title=title subtitle=subtitle>
@@ -327,6 +349,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                 }>
                                     <FormItem label="Members">
                                         <StackedBadge
+                                            color=Color::Green
                                             values=members
 
                                             add_button_text="Add member".to_string()
@@ -352,6 +375,8 @@ pub fn PrincipalEdit() -> impl IntoView {
                                 }>
                                     <FormItem label="Member of">
                                         <StackedBadge
+                                            color=Color::Blue
+
                                             values=member_of
 
                                             add_button_text="Add to group".to_string()

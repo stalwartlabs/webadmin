@@ -48,7 +48,7 @@ pub fn ColumnList(
 
                     key=|(idx, header)| format!("{header}-{idx}")
                     children=move |(idx, header)| {
-                        let class = if idx == 0 {
+                        let class = if idx == 0 && has_select_all {
                             "ps-6 lg:ps-3 xl:ps-0 pe-6 py-3 text-start"
                         } else if idx == total_columns.get() - 1 {
                             "px-6 py-3 text-end"

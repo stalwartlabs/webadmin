@@ -50,9 +50,9 @@ pub fn Form(
             <div class="bg-white rounded-xl shadow p-4 sm:p-7 dark:bg-slate-900">
                 <div class="mb-8">
                     <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">
-                        {title.get()}
+                        {move || title.get()}
                     </h2>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">{subtitle.get()}</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{move || subtitle.get()}</p>
                 </div>
 
                 <Alerts/>

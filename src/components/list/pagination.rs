@@ -1,5 +1,7 @@
 use leptos::*;
 
+use crate::components::icon::{IconArrowLeft, IconArrowRight};
+
 #[component]
 pub fn Pagination(
     #[prop(into)] current_page: MaybeSignal<u32>,
@@ -58,20 +60,8 @@ pub fn Pagination(
                         }
                     >
 
-                        <svg
-                            class="flex-shrink-0 size-4"
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
-                            <path d="m15 18-6-6 6-6"></path>
-                        </svg>
+                        <IconArrowLeft attr:class="flex-shrink-0 size-4"/>
+
                         Prev
                     </button>
 
@@ -87,20 +77,7 @@ pub fn Pagination(
                         >
 
                             Next
-                            <svg
-                                class="flex-shrink-0 size-4"
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            >
-                                <path d="m9 18 6-6-6-6"></path>
-                            </svg>
+                            <IconArrowRight attr:class="flex-shrink-0 size-4"/>
                         </button>
 
                     </Suspense>
@@ -108,5 +85,58 @@ pub fn Pagination(
                 </div>
             </div>
         </div>
+    }
+}
+
+#[component]
+pub fn ItemPagination(
+    #[prop(into)] current_item: MaybeSignal<u32>,
+    #[prop(into)] total_items: MaybeSignal<u32>,
+    #[prop(into)] on_item_change: Callback<u32, ()>,
+) -> impl IntoView {
+    view! {
+        <Show when=move || { total_items.get() > 1 }>
+            <nav class="flex items-center gap-x-1">
+                <button
+                    type="button"
+                    class="min-h-[32px] min-w-8 py-2 px-2 inline-flex justify-center items-center gap-x-2 text-sm rounded-full text-gray-800 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 dark:focus:bg-white/10"
+                    disabled=move || { current_item.get() <= 1 }
+                    on:click=move |_| {
+                        on_item_change.call(current_item.get() - 1);
+                    }
+                >
+
+                    <IconArrowLeft attr:class="flex-shrink-0 size-3.5"/>
+                    <span aria-hidden="true" class="sr-only">
+                        Previous
+                    </span>
+                </button>
+                <div class="flex items-center gap-x-1">
+                    <span class="min-h-[32px] min-w-8 flex justify-center items-center border border-gray-200 text-gray-800 py-1 px-3 text-sm rounded-full focus:outline-none focus:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:border-gray-700 dark:text-white dark:bg-white/10">
+                        {current_item}
+                    </span>
+                    <span class="min-h-[32px] flex justify-center items-center text-gray-500 py-1.5 px-1.5 text-sm dark:text-gray-500">
+                        of
+                    </span>
+                    <span class="min-h-[32px] flex justify-center items-center text-gray-500 py-1.5 px-1.5 text-sm dark:text-gray-500">
+                        {total_items}
+                    </span>
+                </div>
+                <button
+                    type="button"
+                    class="min-h-[32px] min-w-8 py-2 px-2 inline-flex justify-center items-center gap-x-2 text-sm rounded-full text-gray-800 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 dark:focus:bg-white/10"
+                    disabled=move || { current_item.get() >= total_items.get() }
+                    on:click=move |_| {
+                        on_item_change.call(current_item.get() + 1);
+                    }
+                >
+
+                    <span aria-hidden="true" class="sr-only">
+                        Next
+                    </span>
+                    <IconArrowRight attr:class="flex-shrink-0 size-3.5"/>
+                </button>
+            </nav>
+        </Show>
     }
 }

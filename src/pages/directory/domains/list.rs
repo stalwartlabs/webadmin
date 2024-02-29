@@ -12,7 +12,7 @@ use crate::{
             pagination::Pagination,
             row::SelectItem,
             toolbar::{SearchBox, ToolbarButton},
-            Footer, ListSection, Toolbar, ZeroResults,
+            Footer, ListSection, ListTable, Toolbar, ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -127,153 +127,155 @@ pub fn DomainList() -> impl IntoView {
     let total_results = create_rw_signal(None::<u32>);
 
     view! {
-        <ListSection title="Domain" subtitle="Manage local domain names">
-            <Toolbar slot>
-                <SearchBox
-                    value=filter
-                    on_search=move |value| {
-                        use_navigate()(
-                            &UrlBuilder::new("/manage/directory/domains")
-                                .with_parameter("filter", value)
-                                .finish(),
-                            Default::default(),
-                        );
-                    }
-                />
-
-                <ToolbarButton
-                    text=Signal::derive(move || {
-                        let ns = selected.get().len();
-                        if ns > 0 { format!("Delete ({ns})") } else { "Delete".to_string() }
-                    })
-
-                    color=Color::Red
-                    on_click=Callback::new(move |_| {
-                        let to_delete = selected.get().len();
-                        if to_delete > 0 {
-                            let text = maybe_plural(to_delete, "domain", "domains");
-                            modal
-                                .set(
-                                    Modal::with_title("Confirm deletion")
-                                        .with_message(
-                                            format!(
-                                                "Are you sure you want to delete {text}? This action cannot be undone.",
-                                            ),
-                                        )
-                                        .with_button(format!("Delete {text}"))
-                                        .with_dangerous_callback(move || {
-                                            delete_action
-                                                .dispatch(
-                                                    Arc::new(
-                                                        selected.try_update(std::mem::take).unwrap_or_default(),
-                                                    ),
-                                                );
-                                        }),
-                                )
+        <ListSection>
+            <ListTable title="Domain" subtitle="Manage local domain names">
+                <Toolbar slot>
+                    <SearchBox
+                        value=filter
+                        on_search=move |value| {
+                            use_navigate()(
+                                &UrlBuilder::new("/manage/directory/domains")
+                                    .with_parameter("filter", value)
+                                    .finish(),
+                                Default::default(),
+                            );
                         }
-                    })
-                >
+                    />
 
-                    <IconTrash/>
-                </ToolbarButton>
+                    <ToolbarButton
+                        text=Signal::derive(move || {
+                            let ns = selected.get().len();
+                            if ns > 0 { format!("Delete ({ns})") } else { "Delete".to_string() }
+                        })
 
-                <ToolbarButton
-                    text=format!("Add {}", "domain")
-                    color=Color::Blue
-                    on_click=move |_| {
-                        use_navigate()("/manage/directory/domain", Default::default());
-                    }
-                >
+                        color=Color::Red
+                        on_click=Callback::new(move |_| {
+                            let to_delete = selected.get().len();
+                            if to_delete > 0 {
+                                let text = maybe_plural(to_delete, "domain", "domains");
+                                modal
+                                    .set(
+                                        Modal::with_title("Confirm deletion")
+                                            .with_message(
+                                                format!(
+                                                    "Are you sure you want to delete {text}? This action cannot be undone.",
+                                                ),
+                                            )
+                                            .with_button(format!("Delete {text}"))
+                                            .with_dangerous_callback(move || {
+                                                delete_action
+                                                    .dispatch(
+                                                        Arc::new(
+                                                            selected.try_update(std::mem::take).unwrap_or_default(),
+                                                        ),
+                                                    );
+                                            }),
+                                    )
+                            }
+                        })
+                    >
 
-                    <IconAdd size=16 attr:class="flex-shrink-0 size-3"/>
-                </ToolbarButton>
+                        <IconTrash/>
+                    </ToolbarButton>
 
-            </Toolbar>
+                    <ToolbarButton
+                        text=format!("Add {}", "domain")
+                        color=Color::Blue
+                        on_click=move |_| {
+                            use_navigate()("/manage/directory/domain", Default::default());
+                        }
+                    >
 
-            <Transition fallback=Skeleton>
-                {move || match domains.get() {
-                    None => None,
-                    Some(Err(http::Error::Unauthorized)) => {
-                        use_navigate()("/login", Default::default());
-                        Some(view! { <div></div> }.into_view())
-                    }
-                    Some(Err(err)) => {
-                        total_results.set(Some(0));
-                        alert.set(Alert::from(err));
-                        Some(view! { <Skeleton/> }.into_view())
-                    }
-                    Some(Ok(domains)) if !domains.items.is_empty() => {
-                        total_results.set(Some(domains.total as u32));
-                        let domains_ = domains.clone();
-                        Some(
-                            view! {
-                                <ColumnList
-                                    headers=vec!["Name".to_string(), "Accounts".to_string()]
+                        <IconAdd size=16 attr:class="flex-shrink-0 size-3"/>
+                    </ToolbarButton>
 
-                                    select_all=Callback::new(move |_| {
-                                        domains_
-                                            .items
-                                            .iter()
-                                            .map(|p| p.name.to_string())
-                                            .collect::<Vec<_>>()
-                                    })
-                                >
+                </Toolbar>
 
-                                    <For
-                                        each=move || domains.items.clone()
-                                        key=|domain| domain.name.clone()
-                                        let:domain
+                <Transition fallback=Skeleton>
+                    {move || match domains.get() {
+                        None => None,
+                        Some(Err(http::Error::Unauthorized)) => {
+                            use_navigate()("/login", Default::default());
+                            Some(view! { <div></div> }.into_view())
+                        }
+                        Some(Err(err)) => {
+                            total_results.set(Some(0));
+                            alert.set(Alert::from(err));
+                            Some(view! { <Skeleton/> }.into_view())
+                        }
+                        Some(Ok(domains)) if !domains.items.is_empty() => {
+                            total_results.set(Some(domains.total as u32));
+                            let domains_ = domains.clone();
+                            Some(
+                                view! {
+                                    <ColumnList
+                                        headers=vec!["Name".to_string(), "Accounts".to_string()]
+
+                                        select_all=Callback::new(move |_| {
+                                            domains_
+                                                .items
+                                                .iter()
+                                                .map(|p| p.name.to_string())
+                                                .collect::<Vec<_>>()
+                                        })
                                     >
-                                        <DomainItem domain/>
-                                    </For>
 
-                                </ColumnList>
-                            }
-                                .into_view(),
-                        )
-                    }
-                    Some(Ok(_)) => {
-                        total_results.set(Some(0));
-                        Some(
-                            view! {
-                                <ZeroResults
-                                    title="No results"
-                                    subtitle="Your search did not yield any results."
-                                    button_text=format!("Create a new {}", "domain")
+                                        <For
+                                            each=move || domains.items.clone()
+                                            key=|domain| domain.name.clone()
+                                            let:domain
+                                        >
+                                            <DomainItem domain/>
+                                        </For>
 
-                                    button_action=Callback::new(move |_| {
-                                        use_navigate()(
-                                            "/manage/directory/domain",
-                                            Default::default(),
-                                        );
-                                    })
-                                />
-                            }
-                                .into_view(),
-                        )
-                    }
-                }}
+                                    </ColumnList>
+                                }
+                                    .into_view(),
+                            )
+                        }
+                        Some(Ok(_)) => {
+                            total_results.set(Some(0));
+                            Some(
+                                view! {
+                                    <ZeroResults
+                                        title="No results"
+                                        subtitle="Your search did not yield any results."
+                                        button_text=format!("Create a new {}", "domain")
 
-            </Transition>
+                                        button_action=Callback::new(move |_| {
+                                            use_navigate()(
+                                                "/manage/directory/domain",
+                                                Default::default(),
+                                            );
+                                        })
+                                    />
+                                }
+                                    .into_view(),
+                            )
+                        }
+                    }}
 
-            <Footer slot>
+                </Transition>
 
-                <Pagination
-                    current_page=page
-                    total_results=total_results.read_only()
-                    page_size=PAGE_SIZE
-                    on_page_change=move |page: u32| {
-                        use_navigate()(
-                            &UrlBuilder::new("/manage/directory/domains")
-                                .with_parameter("page", page.to_string())
-                                .with_optional_parameter("filter", filter())
-                                .finish(),
-                            Default::default(),
-                        );
-                    }
-                />
+                <Footer slot>
 
-            </Footer>
+                    <Pagination
+                        current_page=page
+                        total_results=total_results.read_only()
+                        page_size=PAGE_SIZE
+                        on_page_change=move |page: u32| {
+                            use_navigate()(
+                                &UrlBuilder::new("/manage/directory/domains")
+                                    .with_parameter("page", page.to_string())
+                                    .with_optional_parameter("filter", filter())
+                                    .finish(),
+                                Default::default(),
+                            );
+                        }
+                    />
+
+                </Footer>
+            </ListTable>
         </ListSection>
     }
 }

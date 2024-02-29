@@ -1,6 +1,7 @@
 pub mod header;
 pub mod pagination;
 pub mod row;
+pub mod table;
 pub mod toolbar;
 
 use leptos::*;
@@ -18,47 +19,62 @@ pub struct Footer {
 }
 
 #[component]
-pub fn ListSection(
-    #[prop(into)] title: MaybeSignal<String>,
-    #[prop(into)] subtitle: MaybeSignal<String>,
-    #[prop(optional)] disable_alerts: bool,
+pub fn ListTable(
+    #[prop(optional, into)] title: MaybeSignal<String>,
+    #[prop(optional, into)] subtitle: MaybeSignal<String>,
     children: Children,
     toolbar: Toolbar,
     footer: Footer,
 ) -> impl IntoView {
-    view! {
-        <div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
-            <Show when=move || { !disable_alerts }>
-                <Alerts/>
-            </Show>
-            <div class="flex flex-col">
-                <div class="-m-1.5 overflow-x-auto">
-                    <div class="p-1.5 min-w-full inline-block align-middle">
-                        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-gray-700">
-                            <div class="px-6 py-4 grid gap-3 md:flex md:justify-between md:items-center border-b border-gray-200 dark:border-gray-700">
-                                <div>
-                                    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                                        {move || title.get()}
-                                    </h2>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                                        {move || subtitle.get()}
-                                    </p>
-                                </div>
-                                <div>
-                                    <div class="inline-flex gap-x-2">{(toolbar.children)()}</div>
-                                </div>
+    let has_title = !title.get().is_empty();
 
+    view! {
+        <div class="flex flex-col">
+            <div class="-m-1.5 overflow-x-auto">
+                <div class="p-1.5 min-w-full inline-block align-middle">
+                    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-gray-700">
+                        <div class="px-6 py-4 grid gap-3 md:flex md:justify-between md:items-center border-b border-gray-200 dark:border-gray-700">
+
+                            {if has_title {
+                                Some(
+                                    view! {
+                                        <div>
+                                            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                                                {move || title.get()}
+                                            </h2>
+                                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                                {move || subtitle.get()}
+                                            </p>
+                                        </div>
+                                    },
+                                )
+                            } else {
+                                None
+                            }}
+                            <div>
+                                <div class="inline-flex gap-x-2">{(toolbar.children)()}</div>
                             </div>
 
-                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                {children()}
-                            </table>
-
-                            {(footer.children)()}
                         </div>
+
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            {children()}
+                        </table>
+
+                        {(footer.children)()}
                     </div>
                 </div>
             </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn ListSection(children: Children) -> impl IntoView {
+    view! {
+        <div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
+            <Alerts/>
+            {children()}
         </div>
     }
 }
@@ -72,6 +88,17 @@ pub fn ListItem(
     view! {
         <td class=class.unwrap_or_else(|| "size-px whitespace-nowrap".to_string())>
             <div class=subclass.unwrap_or_else(|| "ps-6 py-3".to_string())>{children()}</div>
+        </td>
+    }
+}
+
+#[component]
+pub fn ListTextItem(children: Children) -> impl IntoView {
+    view! {
+        <td class="size-px whitespace-nowrap">
+            <div class="ps-6 py-3">
+                <span class="text-sm text-gray-500">{children()}</span>
+            </div>
         </td>
     }
 }

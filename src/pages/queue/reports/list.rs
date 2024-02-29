@@ -5,9 +5,7 @@ use std::collections::HashSet;
 use crate::{
     components::{
         badge::Badge,
-        icon::{
-            IconAlertTriangle, IconCancel, IconCheckCircle, IconClock, IconLaunch, IconRefresh,
-        },
+        icon::{IconCancel, IconEnvelope, IconRefresh, IconShieldCheck},
         list::{
             header::ColumnList,
             pagination::Pagination,
@@ -30,16 +28,16 @@ use crate::{
     pages::{
         directory::List,
         maybe_plural,
-        queue::messages::{Message, Status},
+        queue::reports::{AggregateReportId, AggregateReportType},
     },
 };
-
-use chrono_humanize::HumanTime;
+use chrono::Local;
+use chrono_humanize::{Accuracy, HumanTime, Tense};
 
 const PAGE_SIZE: u32 = 10;
 
 #[component]
-pub fn QueueList() -> impl IntoView {
+pub fn ReportList() -> impl IntoView {
     let query = use_query_map();
     let page = create_memo(move |_| {
         query
@@ -66,20 +64,33 @@ pub fn QueueList() -> impl IntoView {
     let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
     provide_context(selected);
 
-    let messages = create_resource(
+    let reports = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
             let auth = auth.get();
 
             async move {
-                HttpRequest::get("https://127.0.0.1:9980/api/queue/list")
+                HttpRequest::get("https://127.0.0.1:9980/api/report/list")
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
-                    .with_parameter("values", "")
-                    .with_optional_parameter("text", filter)
-                    .send::<List<Message>>()
+                    .with_optional_parameter("domain", filter)
+                    .send::<List<String>>()
                     .await
+                    .map(|list| {
+                        let mut response = List {
+                            items: Vec::with_capacity(list.items.len()),
+                            total: list.total,
+                        };
+                        for item in list.items {
+                            if let Some(item) = AggregateReportId::parse(item.clone()) {
+                                response.items.push(item);
+                            } else {
+                                log::warn!("Invalid report id: {item}");
+                            }
+                        }
+                        response
+                    })
             }
         },
     );
@@ -96,56 +107,17 @@ pub fn QueueList() -> impl IntoView {
         let auth = auth.get();
 
         async move {
-            match HttpRequest::get("https://127.0.0.1:9980/api/queue/cancel")
+            match HttpRequest::get("https://127.0.0.1:9980/api/report/cancel")
                 .with_authorization(&auth)
                 .with_parameter("ids", query)
                 .send::<Vec<bool>>()
                 .await
             {
                 Ok(results) => {
-                    messages.refetch();
+                    reports.refetch();
                     alert.set(Alert::success(format!(
                         "Removed {} from queue.",
-                        maybe_plural(
-                            results.iter().filter(|&&b| b).count(),
-                            "message",
-                            "messages"
-                        )
-                    )));
-                }
-                Err(err) => {
-                    alert.set(Alert::from(err));
-                }
-            }
-        }
-    });
-    let retry_action = create_action(move |items: &HashSet<String>| {
-        let mut query = String::new();
-        for (pos, item) in items.iter().enumerate() {
-            if pos > 0 {
-                query.push(',');
-            }
-            query.push_str(item);
-        }
-
-        let auth = auth.get();
-
-        async move {
-            match HttpRequest::get("https://127.0.0.1:9980/api/queue/retry")
-                .with_authorization(&auth)
-                .with_parameter("ids", query)
-                .send::<Vec<bool>>()
-                .await
-            {
-                Ok(results) => {
-                    messages.refetch();
-                    alert.set(Alert::success(format!(
-                        "Successfully requested immediate delivery of {}.",
-                        maybe_plural(
-                            results.iter().filter(|&&b| b).count(),
-                            "message",
-                            "messages"
-                        )
+                        maybe_plural(results.iter().filter(|&&b| b).count(), "report", "reports")
                     )));
                 }
                 Err(err) => {
@@ -159,13 +131,16 @@ pub fn QueueList() -> impl IntoView {
 
     view! {
         <ListSection>
-            <ListTable title="Message Queue" subtitle="View, cancel or reschedule queued messages">
+            <ListTable
+                title="Outgoing Reports"
+                subtitle="View or cancel scheduled DMARC and TLS aggregate reports"
+            >
                 <Toolbar slot>
                     <SearchBox
                         value=filter
                         on_search=move |value| {
                             use_navigate()(
-                                &UrlBuilder::new("/manage/queue/messages")
+                                &UrlBuilder::new("/manage/queue/reports")
                                     .with_parameter("filter", value)
                                     .finish(),
                                 Default::default(),
@@ -178,32 +153,11 @@ pub fn QueueList() -> impl IntoView {
 
                         color=Color::Gray
                         on_click=Callback::new(move |_| {
-                            messages.refetch();
+                            reports.refetch();
                         })
                     >
 
                         <IconRefresh/>
-                    </ToolbarButton>
-
-                    <ToolbarButton
-                        text=Signal::derive(move || {
-                            let ns = selected.get().len();
-                            if ns > 0 { format!("Retry ({ns})") } else { "Retry".to_string() }
-                        })
-
-                        color=Color::Gray
-                        on_click=Callback::new(move |_| {
-                            let to_delete = selected.get().len();
-                            if to_delete > 0 {
-                                retry_action
-                                    .dispatch(
-                                        selected.try_update(std::mem::take).unwrap_or_default(),
-                                    );
-                            }
-                        })
-                    >
-
-                        <IconLaunch/>
                     </ToolbarButton>
 
                     <ToolbarButton
@@ -216,7 +170,7 @@ pub fn QueueList() -> impl IntoView {
                         on_click=Callback::new(move |_| {
                             let to_delete = selected.get().len();
                             if to_delete > 0 {
-                                let text = maybe_plural(to_delete, "message", "messages");
+                                let text = maybe_plural(to_delete, "report", "reports");
                                 modal
                                     .set(
                                         Modal::with_title("Confirm deletion")
@@ -243,7 +197,7 @@ pub fn QueueList() -> impl IntoView {
                 </Toolbar>
 
                 <Transition fallback=Skeleton>
-                    {move || match messages.get() {
+                    {move || match reports.get() {
                         None => None,
                         Some(Err(http::Error::Unauthorized)) => {
                             use_navigate()("/login", Default::default());
@@ -254,22 +208,22 @@ pub fn QueueList() -> impl IntoView {
                             alert.set(Alert::from(err));
                             Some(view! { <Skeleton/> }.into_view())
                         }
-                        Some(Ok(messages)) if !messages.items.is_empty() => {
-                            total_results.set(Some(messages.total as u32));
-                            let messages_ = messages.clone();
+                        Some(Ok(reports)) if !reports.items.is_empty() => {
+                            total_results.set(Some(reports.total as u32));
+                            let reports_ = reports.clone();
                             Some(
                                 view! {
                                     <ColumnList
                                         headers=vec![
-                                            "Envelope".to_string(),
-                                            "Status".to_string(),
-                                            "Next Retry".to_string(),
-                                            "Next DSN".to_string(),
+                                            "Domain".to_string(),
+                                            "Type".to_string(),
+                                            "Scheduled Delivery".to_string(),
+                                            "Period".to_string(),
                                             "".to_string(),
                                         ]
 
                                         select_all=Callback::new(move |_| {
-                                            messages_
+                                            reports_
                                                 .items
                                                 .iter()
                                                 .map(|p| p.id.to_string())
@@ -278,11 +232,11 @@ pub fn QueueList() -> impl IntoView {
                                     >
 
                                         <For
-                                            each=move || messages.items.clone()
-                                            key=|message| message.id
-                                            let:message
+                                            each=move || reports.items.clone()
+                                            key=|report| report.id.clone()
+                                            let:report
                                         >
-                                            <QueueItem message/>
+                                            <ReportItem report/>
                                         </For>
 
                                     </ColumnList>
@@ -296,7 +250,7 @@ pub fn QueueList() -> impl IntoView {
                                 view! {
                                     <ZeroResults
                                         title="No results"
-                                        subtitle="No queued messages were found with the selected criteria."
+                                        subtitle="No reports were found with the selected criteria."
                                     />
                                 }
                                     .into_view(),
@@ -314,7 +268,7 @@ pub fn QueueList() -> impl IntoView {
                         page_size=PAGE_SIZE
                         on_page_change=move |page: u32| {
                             use_navigate()(
-                                &UrlBuilder::new("/manage/queue/messages")
+                                &UrlBuilder::new("/manage/queue/reports")
                                     .with_parameter("page", page.to_string())
                                     .with_optional_parameter("filter", filter())
                                     .finish(),
@@ -330,45 +284,14 @@ pub fn QueueList() -> impl IntoView {
 }
 
 #[component]
-fn QueueItem(message: Message) -> impl IntoView {
-    let mut total_success = 1;
-    let mut total_pending = 1;
-    let mut total_failed = 1;
-    let mut total_recipients = 0;
-
-    for domain in &message.domains {
-        for rcpt in &domain.recipients {
-            match &rcpt.status {
-                Status::Completed(_) => total_success += 1,
-                Status::TemporaryFailure(_) => total_pending += 1,
-                Status::PermanentFailure(_) => total_failed += 1,
-                Status::Scheduled => match domain.status {
-                    Status::Scheduled | Status::TemporaryFailure(_) => total_pending += 1,
-                    Status::PermanentFailure(_) => total_failed += 1,
-                    _ => {}
-                },
-            }
-
-            total_recipients += 1;
-        }
-    }
-
-    let next_retry = message
-        .next_retry()
-        .map(|dt| HumanTime::from(dt).to_string());
-    let next_dsn = message.next_dsn().map(|dt| HumanTime::from(dt).to_string());
-    let return_path = message.return_path().to_string();
-    let recipients = format!(
-        "{} in {}",
-        maybe_plural(total_recipients, "recipient", "recipients"),
-        maybe_plural(message.domains.len(), "domain", "domains")
-    );
+fn ReportItem(report: AggregateReportId) -> impl IntoView {
+    let show_url = format!("/manage/queue/report/{}", report.id);
 
     view! {
         <tr>
             <ListItem>
                 <label class="flex">
-                    <SelectItem item_id=message.id.to_string()/>
+                    <SelectItem item_id=report.id.to_string()/>
 
                     <span class="sr-only">Checkbox</span>
                 </label>
@@ -377,10 +300,7 @@ fn QueueItem(message: Message) -> impl IntoView {
                 <div class="ps-6 lg:ps-3 xl:ps-0 pe-6 py-3">
                     <div class="flex items-center gap-x-3">
                         <div class="grow">
-                            <span class="block text-sm font-semibold text-gray-800 dark:text-gray-200">
-                                {return_path}
-                            </span>
-                            <span class="block text-sm text-gray-500">{recipients}</span>
+                            <span class="block text-sm text-gray-500">{report.domain}</span>
                         </div>
                     </div>
                 </div>
@@ -388,65 +308,59 @@ fn QueueItem(message: Message) -> impl IntoView {
             <td class="size-px whitespace-nowrap">
                 <div class="px-6 py-3">
                     <div class="inline-flex gap-2 p-1">
-                        <Show when=move || {
-                            total_success > 0
-                        }>{Status::Completed(format!("{total_success} Done"))}</Show>
-                        <Show when=move || {
-                            total_pending > 0
-                        }>{Status::TemporaryFailure(format!("{total_pending} Pending"))}</Show>
-                        <Show when=move || {
-                            total_failed > 0
-                        }>{Status::PermanentFailure(format!("{total_failed} Failed"))}</Show>
+
+                        {match report.typ {
+                            AggregateReportType::Dmarc => {
+                                view! {
+                                    <Badge color=Color::Blue>
+                                        <IconEnvelope attr:class="flex-shrink-0 size-3"/>
+                                        DMARC
+                                    </Badge>
+                                }
+                                    .into_view()
+                            }
+                            AggregateReportType::Tls => {
+                                view! {
+                                    <Badge color=Color::Green>
+                                        <IconShieldCheck attr:class="flex-shrink-0 size-3"/>
+                                        TLS
+                                    </Badge>
+                                }
+                                    .into_view()
+                            }
+                        }}
+
                     </div>
 
                 </div>
             </td>
 
             <ListItem>
-                <span class="text-sm text-gray-500">{next_retry}</span>
+                <span class="text-sm text-gray-500">
+                    {format!(
+                        "{} ({})",
+                        HumanTime::from(report.due),
+                        report.due.with_timezone(&Local).format("%a, %d %b %Y %H:%M:%S"),
+                    )}
+
+                </span>
             </ListItem>
 
             <ListItem>
-                <span class="text-sm text-gray-500">{next_dsn}</span>
+                <span class="text-sm text-gray-500">
+                    {HumanTime::from(report.due - report.created)
+                        .to_text_en(Accuracy::Precise, Tense::Present)}
+                </span>
             </ListItem>
 
             <ListItem subclass="px-6 py-1.5">
                 <a
                     class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                    href=format!("/manage/queue/message/{}", message.id)
+                    href=show_url
                 >
-                    Manage
+                    Show
                 </a>
             </ListItem>
         </tr>
-    }
-}
-
-impl IntoView for Status {
-    fn into_view(self) -> View {
-        match self {
-            Status::Completed(text) => view! {
-                <Badge color=Color::Green>
-                    <IconCheckCircle attr:class="flex-shrink-0 size-3"/>
-                    {text}
-                </Badge>
-            }
-            .into_view(),
-            Status::TemporaryFailure(text) => view! {
-                <Badge color=Color::Blue>
-                    <IconClock attr:class="flex-shrink-0 size-3"/>
-                    {text}
-                </Badge>
-            }
-            .into_view(),
-            Status::PermanentFailure(text) => view! {
-                <Badge color=Color::Red>
-                    <IconAlertTriangle attr:class="flex-shrink-0 size-3"/>
-                    {text}
-                </Badge>
-            }
-            .into_view(),
-            _ => unreachable!(),
-        }
     }
 }

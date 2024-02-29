@@ -6,13 +6,14 @@ use leptos_router::*;
 
 use crate::{
     components::{
+        badge::Badge,
         icon::{IconAdd, IconTrash},
         list::{
             header::ColumnList,
             pagination::Pagination,
             row::SelectItem,
             toolbar::{SearchBox, ToolbarButton},
-            Footer, ListItem, ListSection, Toolbar, ZeroResults,
+            Footer, ListItem, ListSection, ListTable, ListTextItem, Toolbar, ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -145,208 +146,213 @@ pub fn PrincipalList() -> impl IntoView {
     };
 
     view! {
-        <ListSection title=title subtitle=format!("Manage {}", subtitle)>
-            <Toolbar slot>
-                <SearchBox
-                    value=filter
-                    on_search=move |value| {
-                        use_navigate()(
-                            &UrlBuilder::new(
-                                    format!(
-                                        "/manage/directory/{}",
-                                        selected_type.resource_name(true),
-                                    ),
-                                )
-                                .with_parameter("filter", value)
-                                .finish(),
-                            Default::default(),
-                        );
-                    }
-                />
-
-                <ToolbarButton
-                    text=Signal::derive(move || {
-                        let ns = selected.get().len();
-                        if ns > 0 { format!("Delete ({ns})") } else { "Delete".to_string() }
-                    })
-
-                    color=Color::Red
-                    on_click=Callback::new(move |_| {
-                        let to_delete = selected.get().len();
-                        if to_delete > 0 {
-                            let text = maybe_plural(
-                                to_delete,
-                                selected_type.item_name(false),
-                                selected_type.item_name(true),
-                            );
-                            modal
-                                .set(
-                                    Modal::with_title("Confirm deletion")
-                                        .with_message(
-                                            format!(
-                                                "Are you sure you want to delete {text}? This action cannot be undone.",
-                                            ),
-                                        )
-                                        .with_button(format!("Delete {text}"))
-                                        .with_dangerous_callback(move || {
-                                            delete_action
-                                                .dispatch(
-                                                    Arc::new(
-                                                        selected.try_update(std::mem::take).unwrap_or_default(),
-                                                    ),
-                                                );
-                                        }),
-                                )
-                        }
-                    })
-                >
-
-                    <IconTrash/>
-                </ToolbarButton>
-
-                <ToolbarButton
-                    text=format!("Add {}", selected_type.item_name(false))
-                    color=Color::Blue
-                    on_click=move |_| {
-                        use_navigate()(
-                            &format!("/manage/directory/{}", selected_type.resource_name(false)),
-                            Default::default(),
-                        );
-                    }
-                >
-
-                    <IconAdd size=16 attr:class="flex-shrink-0 size-3"/>
-                </ToolbarButton>
-
-            </Toolbar>
-
-            <Transition fallback=Skeleton>
-                {move || match principals.get() {
-                    None => None,
-                    Some(Err(http::Error::Unauthorized)) => {
-                        use_navigate()("/login", Default::default());
-                        Some(view! { <div></div> }.into_view())
-                    }
-                    Some(Err(err)) => {
-                        total_results.set(Some(0));
-                        alert.set(Alert::from(err));
-                        Some(view! { <Skeleton/> }.into_view())
-                    }
-                    Some(Ok(principals)) if !principals.items.is_empty() => {
-                        total_results.set(Some(principals.total as u32));
-                        let principals_ = principals.clone();
-                        let headers = match selected_type {
-                            Type::Individual => {
-                                vec![
-                                    "Name".to_string(),
-                                    "E-mail".to_string(),
-                                    "Type".to_string(),
-                                    "Quota".to_string(),
-                                    "Member of".to_string(),
-                                    "".to_string(),
-                                ]
-                            }
-                            Type::Group => {
-                                vec![
-                                    "Name".to_string(),
-                                    "E-mail".to_string(),
-                                    "Type".to_string(),
-                                    "Members".to_string(),
-                                    "Member of".to_string(),
-                                    "".to_string(),
-                                ]
-                            }
-                            Type::List => {
-                                vec![
-                                    "Name".to_string(),
-                                    "E-mail".to_string(),
-                                    "Type".to_string(),
-                                    "Members".to_string(),
-                                    "".to_string(),
-                                ]
-                            }
-                            _ => unreachable!("Invalid type."),
-                        };
-                        Some(
-                            view! {
-                                <ColumnList
-                                    headers=headers
-
-                                    select_all=Callback::new(move |_| {
-                                        principals_
-                                            .items
-                                            .iter()
-                                            .map(|p| p.name.as_deref().unwrap_or_default().to_string())
-                                            .collect::<Vec<_>>()
-                                    })
-                                >
-
-                                    <For
-                                        each=move || principals.items.clone()
-                                        key=|principal| principal.name.clone().unwrap_or_default()
-                                        let:principal
-                                    >
-                                        <PrincipalItem principal selected_type/>
-                                    </For>
-
-                                </ColumnList>
-                            }
-                                .into_view(),
-                        )
-                    }
-                    Some(Ok(_)) => {
-                        total_results.set(Some(0));
-                        Some(
-                            view! {
-                                <ZeroResults
-                                    title="No results"
-                                    subtitle="Your search did not yield any results."
-                                    button_text=format!(
-                                        "Create a new {}",
-                                        selected_type.item_name(false),
+        <ListSection>
+            <ListTable title=title subtitle=format!("Manage {}", subtitle)>
+                <Toolbar slot>
+                    <SearchBox
+                        value=filter
+                        on_search=move |value| {
+                            use_navigate()(
+                                &UrlBuilder::new(
+                                        format!(
+                                            "/manage/directory/{}",
+                                            selected_type.resource_name(true),
+                                        ),
                                     )
+                                    .with_parameter("filter", value)
+                                    .finish(),
+                                Default::default(),
+                            );
+                        }
+                    />
 
-                                    button_action=Callback::new(move |_| {
-                                        use_navigate()(
-                                            &format!(
-                                                "/manage/directory/{}",
-                                                selected_type.resource_name(false),
-                                            ),
-                                            Default::default(),
-                                        );
-                                    })
-                                />
+                    <ToolbarButton
+                        text=Signal::derive(move || {
+                            let ns = selected.get().len();
+                            if ns > 0 { format!("Delete ({ns})") } else { "Delete".to_string() }
+                        })
+
+                        color=Color::Red
+                        on_click=Callback::new(move |_| {
+                            let to_delete = selected.get().len();
+                            if to_delete > 0 {
+                                let text = maybe_plural(
+                                    to_delete,
+                                    selected_type.item_name(false),
+                                    selected_type.item_name(true),
+                                );
+                                modal
+                                    .set(
+                                        Modal::with_title("Confirm deletion")
+                                            .with_message(
+                                                format!(
+                                                    "Are you sure you want to delete {text}? This action cannot be undone.",
+                                                ),
+                                            )
+                                            .with_button(format!("Delete {text}"))
+                                            .with_dangerous_callback(move || {
+                                                delete_action
+                                                    .dispatch(
+                                                        Arc::new(
+                                                            selected.try_update(std::mem::take).unwrap_or_default(),
+                                                        ),
+                                                    );
+                                            }),
+                                    )
                             }
-                                .into_view(),
-                        )
-                    }
-                }}
+                        })
+                    >
 
-            </Transition>
+                        <IconTrash/>
+                    </ToolbarButton>
 
-            <Footer slot>
+                    <ToolbarButton
+                        text=format!("Add {}", selected_type.item_name(false))
+                        color=Color::Blue
+                        on_click=move |_| {
+                            use_navigate()(
+                                &format!(
+                                    "/manage/directory/{}",
+                                    selected_type.resource_name(false),
+                                ),
+                                Default::default(),
+                            );
+                        }
+                    >
 
-                <Pagination
-                    current_page=page
-                    total_results=total_results.read_only()
-                    page_size=PAGE_SIZE
-                    on_page_change=move |page: u32| {
-                        use_navigate()(
-                            &UrlBuilder::new(
-                                    format!(
-                                        "/manage/directory/{}",
-                                        selected_type.resource_name(true),
-                                    ),
-                                )
-                                .with_parameter("page", page.to_string())
-                                .with_optional_parameter("filter", filter())
-                                .finish(),
-                            Default::default(),
-                        );
-                    }
-                />
+                        <IconAdd size=16 attr:class="flex-shrink-0 size-3"/>
+                    </ToolbarButton>
 
-            </Footer>
+                </Toolbar>
+
+                <Transition fallback=Skeleton>
+                    {move || match principals.get() {
+                        None => None,
+                        Some(Err(http::Error::Unauthorized)) => {
+                            use_navigate()("/login", Default::default());
+                            Some(view! { <div></div> }.into_view())
+                        }
+                        Some(Err(err)) => {
+                            total_results.set(Some(0));
+                            alert.set(Alert::from(err));
+                            Some(view! { <Skeleton/> }.into_view())
+                        }
+                        Some(Ok(principals)) if !principals.items.is_empty() => {
+                            total_results.set(Some(principals.total as u32));
+                            let principals_ = principals.clone();
+                            let headers = match selected_type {
+                                Type::Individual => {
+                                    vec![
+                                        "Name".to_string(),
+                                        "E-mail".to_string(),
+                                        "Type".to_string(),
+                                        "Quota".to_string(),
+                                        "Member of".to_string(),
+                                        "".to_string(),
+                                    ]
+                                }
+                                Type::Group => {
+                                    vec![
+                                        "Name".to_string(),
+                                        "E-mail".to_string(),
+                                        "Type".to_string(),
+                                        "Members".to_string(),
+                                        "Member of".to_string(),
+                                        "".to_string(),
+                                    ]
+                                }
+                                Type::List => {
+                                    vec![
+                                        "Name".to_string(),
+                                        "E-mail".to_string(),
+                                        "Type".to_string(),
+                                        "Members".to_string(),
+                                        "".to_string(),
+                                    ]
+                                }
+                                _ => unreachable!("Invalid type."),
+                            };
+                            Some(
+                                view! {
+                                    <ColumnList
+                                        headers=headers
+
+                                        select_all=Callback::new(move |_| {
+                                            principals_
+                                                .items
+                                                .iter()
+                                                .map(|p| p.name.as_deref().unwrap_or_default().to_string())
+                                                .collect::<Vec<_>>()
+                                        })
+                                    >
+
+                                        <For
+                                            each=move || principals.items.clone()
+                                            key=|principal| principal.name.clone().unwrap_or_default()
+                                            let:principal
+                                        >
+                                            <PrincipalItem principal selected_type/>
+                                        </For>
+
+                                    </ColumnList>
+                                }
+                                    .into_view(),
+                            )
+                        }
+                        Some(Ok(_)) => {
+                            total_results.set(Some(0));
+                            Some(
+                                view! {
+                                    <ZeroResults
+                                        title="No results"
+                                        subtitle="Your search did not yield any results."
+                                        button_text=format!(
+                                            "Create a new {}",
+                                            selected_type.item_name(false),
+                                        )
+
+                                        button_action=Callback::new(move |_| {
+                                            use_navigate()(
+                                                &format!(
+                                                    "/manage/directory/{}",
+                                                    selected_type.resource_name(false),
+                                                ),
+                                                Default::default(),
+                                            );
+                                        })
+                                    />
+                                }
+                                    .into_view(),
+                            )
+                        }
+                    }}
+
+                </Transition>
+
+                <Footer slot>
+
+                    <Pagination
+                        current_page=page
+                        total_results=total_results.read_only()
+                        page_size=PAGE_SIZE
+                        on_page_change=move |page: u32| {
+                            use_navigate()(
+                                &UrlBuilder::new(
+                                        format!(
+                                            "/manage/directory/{}",
+                                            selected_type.resource_name(true),
+                                        ),
+                                    )
+                                    .with_parameter("page", page.to_string())
+                                    .with_optional_parameter("filter", filter())
+                                    .finish(),
+                                Default::default(),
+                            );
+                        }
+                    />
+
+                </Footer>
+            </ListTable>
         </ListSection>
     }
 }
@@ -409,48 +415,38 @@ fn PrincipalItem(principal: Principal, selected_type: Type) -> impl IntoView {
             </ListItem>
 
             <ListItem>
-                <span class=move || {
-                    if matches!(principal.typ, Some(Type::Superuser)) {
-                        "py-1 px-1.5 inline-flex items-center gap-x-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full dark:bg-yellow-500/10 dark:text-yellow-500"
-                    } else {
-                        "py-1 px-1.5 inline-flex items-center gap-x-1 text-xs font-medium bg-teal-100 text-teal-800 rounded-full dark:bg-teal-500/10 dark:text-teal-500"
-                    }
-                }>{principal.typ.unwrap_or(selected_type).name()}</span>
+                <Badge color=match principal.typ.unwrap_or(selected_type) {
+                    Type::Superuser => Color::Yellow,
+                    Type::Individual => Color::Green,
+                    Type::Group => Color::Red,
+                    Type::List => Color::Blue,
+                    _ => Color::Red,
+                }>
+
+                    {principal.typ.unwrap_or(selected_type).name()}
+                </Badge>
 
             </ListItem>
             <Show when=move || { selected_type == Type::Individual }>
-                <ListItem>
-                    <span class="text-sm text-gray-500">
-                        {match (principal.quota, principal.used_quota) {
-                            (Some(quota), Some(used_quota)) if quota > 0 => {
-                                format!(
-                                    "{} ({}%)",
-                                    format_size(used_quota, DECIMAL),
-                                    (used_quota as f64 / quota as f64 * 100.0).round() as u8,
-                                )
-                            }
-                            _ => "N/A".to_string(),
-                        }}
+                <ListTextItem>
+                    {match (principal.quota, principal.used_quota) {
+                        (Some(quota), Some(used_quota)) if quota > 0 => {
+                            format!(
+                                "{} ({}%)",
+                                format_size(used_quota, DECIMAL),
+                                (used_quota as f64 / quota as f64 * 100.0).round() as u8,
+                            )
+                        }
+                        _ => "N/A".to_string(),
+                    }}
 
-                    </span>
-
-                </ListItem>
+                </ListTextItem>
             </Show>
             <Show when=move || { matches!(selected_type, Type::List | Type::Group) }>
-                <ListItem>
-                    <span class="text-sm text-gray-500">
-                        {maybe_plural(num_members, "member", "members")}
-                    </span>
-
-                </ListItem>
+                <ListTextItem>{maybe_plural(num_members, "member", "members")}</ListTextItem>
             </Show>
             <Show when=move || { matches!(selected_type, Type::Individual | Type::Group) }>
-                <ListItem>
-                    <span class="text-sm text-gray-500">
-                        {maybe_plural(num_member_of, "group", "groups")}
-                    </span>
-
-                </ListItem>
+                <ListTextItem>{maybe_plural(num_member_of, "group", "groups")}</ListTextItem>
             </Show>
             <ListItem subclass="px-6 py-1.5">
                 <a
