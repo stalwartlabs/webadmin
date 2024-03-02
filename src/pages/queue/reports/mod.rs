@@ -1,3 +1,4 @@
+pub mod arf;
 pub mod display;
 pub mod dmarc;
 pub mod list;
@@ -36,12 +37,12 @@ pub enum AggregateReport {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct AggregateReportId {
-    id: String,
-    domain: String,
-    policy: u64,
-    created: DateTime<Utc>,
-    due: DateTime<Utc>,
-    typ: AggregateReportType,
+    pub id: String,
+    pub domain: String,
+    pub policy: u64,
+    pub created: DateTime<Utc>,
+    pub due: DateTime<Utc>,
+    pub typ: AggregateReportType,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Copy)]
@@ -83,18 +84,18 @@ impl AggregateReportId {
 // TODO: use definitions from mail-auth crate (which needs to be able to compile for WASM first)
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct DmarcDateRange {
-    begin: u64,
-    end: u64,
+    pub begin: u64,
+    pub end: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ReportMetadata {
-    org_name: String,
-    email: String,
-    extra_contact_info: Option<String>,
-    report_id: String,
-    date_range: DmarcDateRange,
-    error: Vec<String>,
+    pub org_name: String,
+    pub email: String,
+    pub extra_contact_info: Option<String>,
+    pub report_id: String,
+    pub date_range: DmarcDateRange,
+    pub error: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -165,17 +166,17 @@ pub struct PolicyOverrideReason {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PolicyEvaluated {
-    disposition: ActionDisposition,
-    dkim: DmarcResult,
-    spf: DmarcResult,
-    reason: Vec<PolicyOverrideReason>,
+    pub disposition: ActionDisposition,
+    pub dkim: DmarcResult,
+    pub spf: DmarcResult,
+    pub reason: Vec<PolicyOverrideReason>,
 }
 
 #[derive(Debug, Clone, Hash, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Row {
-    source_ip: Option<IpAddr>,
-    count: u32,
-    policy_evaluated: PolicyEvaluated,
+    pub source_ip: Option<IpAddr>,
+    pub count: u32,
+    pub policy_evaluated: PolicyEvaluated,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -247,19 +248,19 @@ pub struct AuthResult {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Record {
-    row: Row,
-    identifiers: Identifier,
-    auth_results: AuthResult,
-    extensions: Vec<Extension>,
+    pub row: Row,
+    pub identifiers: Identifier,
+    pub auth_results: AuthResult,
+    pub extensions: Vec<Extension>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Report {
-    version: f32,
-    report_metadata: ReportMetadata,
-    policy_published: PolicyPublished,
-    record: Vec<Record>,
-    extensions: Vec<Extension>,
+    pub version: f32,
+    pub report_metadata: ReportMetadata,
+    pub policy_published: PolicyPublished,
+    pub record: Vec<Record>,
+    pub extensions: Vec<Extension>,
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -413,6 +414,84 @@ pub enum ResultType {
     Other,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct Feedback {
+    pub feedback_type: FeedbackType,
+    pub arrival_date: Option<i64>,
+    pub authentication_results: Vec<String>,
+    pub incidents: u32,
+    pub original_envelope_id: Option<String>,
+    pub original_mail_from: Option<String>,
+    pub original_rcpt_to: Option<String>,
+    pub reported_domain: Vec<String>,
+    pub reported_uri: Vec<String>,
+    pub reporting_mta: Option<String>,
+    pub source_ip: Option<IpAddr>,
+    pub user_agent: Option<String>,
+    pub version: u32,
+    pub source_port: u32,
+
+    // Auth-Failure keys
+    pub auth_failure: AuthFailureType,
+    pub delivery_result: DeliveryResult,
+    pub dkim_adsp_dns: Option<String>,
+    pub dkim_canonicalized_body: Option<String>,
+    pub dkim_canonicalized_header: Option<String>,
+    pub dkim_domain: Option<String>,
+    pub dkim_identity: Option<String>,
+    pub dkim_selector: Option<String>,
+    pub dkim_selector_dns: Option<String>,
+    pub spf_dns: Option<String>,
+    pub identity_alignment: IdentityAlignment,
+
+    pub message: Option<String>,
+    pub headers: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize, Default)]
+pub enum AuthFailureType {
+    Adsp,
+    BodyHash,
+    Revoked,
+    Signature,
+    Spf,
+    Dmarc,
+    #[default]
+    Unspecified,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize, Default)]
+pub enum IdentityAlignment {
+    None,
+    Spf,
+    Dkim,
+    DkimSpf,
+    #[default]
+    Unspecified,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize, Default)]
+pub enum DeliveryResult {
+    Delivered,
+    Spam,
+    Policy,
+    Reject,
+    Other,
+    #[default]
+    Unspecified,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize, Default)]
+pub enum FeedbackType {
+    Abuse,
+    AuthFailure,
+    Fraud,
+    NotSpam,
+    #[default]
+    Other,
+    Virus,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ReportUri {
     Mail(String),
@@ -559,6 +638,58 @@ impl Display for ResultType {
             ResultType::StsPolicyInvalid => f.write_str("STS policy invalid"),
             ResultType::StsWebpkiInvalid => f.write_str("STS webpki invalid"),
             ResultType::Other => f.write_str("Other"),
+        }
+    }
+}
+
+impl Display for FeedbackType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FeedbackType::Abuse => f.write_str("Abuse"),
+            FeedbackType::AuthFailure => f.write_str("Authentication Failure"),
+            FeedbackType::Fraud => f.write_str("Fraud"),
+            FeedbackType::NotSpam => f.write_str("Not Spam"),
+            FeedbackType::Other => f.write_str("Other"),
+            FeedbackType::Virus => f.write_str("Virus"),
+        }
+    }
+}
+
+impl Display for AuthFailureType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AuthFailureType::Adsp => f.write_str("ADSP"),
+            AuthFailureType::BodyHash => f.write_str("Body Hash"),
+            AuthFailureType::Revoked => f.write_str("Revoked"),
+            AuthFailureType::Signature => f.write_str("Signature"),
+            AuthFailureType::Spf => f.write_str("SPF"),
+            AuthFailureType::Dmarc => f.write_str("DMARC"),
+            AuthFailureType::Unspecified => f.write_str("Unspecified"),
+        }
+    }
+}
+
+impl Display for IdentityAlignment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IdentityAlignment::None => f.write_str("None"),
+            IdentityAlignment::Spf => f.write_str("SPF"),
+            IdentityAlignment::Dkim => f.write_str("DKIM"),
+            IdentityAlignment::DkimSpf => f.write_str("DKIM+SPF"),
+            IdentityAlignment::Unspecified => f.write_str("Unspecified"),
+        }
+    }
+}
+
+impl Display for DeliveryResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DeliveryResult::Delivered => f.write_str("Delivered"),
+            DeliveryResult::Spam => f.write_str("Spam"),
+            DeliveryResult::Policy => f.write_str("Policy"),
+            DeliveryResult::Reject => f.write_str("Reject"),
+            DeliveryResult::Other => f.write_str("Other"),
+            DeliveryResult::Unspecified => f.write_str("Unspecified"),
         }
     }
 }

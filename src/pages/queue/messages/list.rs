@@ -72,11 +72,11 @@ pub fn QueueList() -> impl IntoView {
             let auth = auth.get();
 
             async move {
-                HttpRequest::get("https://127.0.0.1:9980/api/queue/list")
+                HttpRequest::get("https://127.0.0.1:9980/api/queue/messages")
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
-                    .with_parameter("values", "")
+                    .with_parameter("values", "1")
                     .with_optional_parameter("text", filter)
                     .send::<List<Message>>()
                     .await
@@ -85,72 +85,66 @@ pub fn QueueList() -> impl IntoView {
     );
 
     let cancel_action = create_action(move |items: &HashSet<String>| {
-        let mut query = String::new();
-        for (pos, item) in items.iter().enumerate() {
-            if pos > 0 {
-                query.push(',');
-            }
-            query.push_str(item);
-        }
-
+        let items = items.clone();
         let auth = auth.get();
 
         async move {
-            match HttpRequest::get("https://127.0.0.1:9980/api/queue/cancel")
-                .with_authorization(&auth)
-                .with_parameter("ids", query)
-                .send::<Vec<bool>>()
-                .await
-            {
-                Ok(results) => {
-                    messages.refetch();
-                    alert.set(Alert::success(format!(
-                        "Removed {} from queue.",
-                        maybe_plural(
-                            results.iter().filter(|&&b| b).count(),
-                            "message",
-                            "messages"
-                        )
-                    )));
+            let mut total_deleted = 0;
+            for id in items {
+                match HttpRequest::delete(format!("https://127.0.0.1:9980/api/queue/messages/{id}"))
+                    .with_authorization(&auth)
+                    .send::<bool>()
+                    .await
+                {
+                    Ok(true) => {
+                        total_deleted += 1;
+                    }
+                    Ok(false) | Err(http::Error::NotFound) => {}
+                    Err(err) => {
+                        alert.set(Alert::from(err));
+                        return;
+                    }
                 }
-                Err(err) => {
-                    alert.set(Alert::from(err));
-                }
+            }
+
+            if total_deleted > 0 {
+                messages.refetch();
+                alert.set(Alert::success(format!(
+                    "Removed {} from queue.",
+                    maybe_plural(total_deleted, "message", "messages")
+                )));
             }
         }
     });
     let retry_action = create_action(move |items: &HashSet<String>| {
-        let mut query = String::new();
-        for (pos, item) in items.iter().enumerate() {
-            if pos > 0 {
-                query.push(',');
-            }
-            query.push_str(item);
-        }
-
+        let items = items.clone();
         let auth = auth.get();
 
         async move {
-            match HttpRequest::get("https://127.0.0.1:9980/api/queue/retry")
-                .with_authorization(&auth)
-                .with_parameter("ids", query)
-                .send::<Vec<bool>>()
-                .await
-            {
-                Ok(results) => {
-                    messages.refetch();
-                    alert.set(Alert::success(format!(
-                        "Successfully requested immediate delivery of {}.",
-                        maybe_plural(
-                            results.iter().filter(|&&b| b).count(),
-                            "message",
-                            "messages"
-                        )
-                    )));
+            let mut total_rescheduled = 0;
+            for id in items {
+                match HttpRequest::patch(format!("https://127.0.0.1:9980/api/queue/messages/{id}"))
+                    .with_authorization(&auth)
+                    .send::<bool>()
+                    .await
+                {
+                    Ok(true) => {
+                        total_rescheduled += 1;
+                    }
+                    Ok(false) | Err(http::Error::NotFound) => {}
+                    Err(err) => {
+                        alert.set(Alert::from(err));
+                        return;
+                    }
                 }
-                Err(err) => {
-                    alert.set(Alert::from(err));
-                }
+            }
+
+            if total_rescheduled > 0 {
+                messages.refetch();
+                alert.set(Alert::success(format!(
+                    "Successfully requested immediate delivery of {}.",
+                    maybe_plural(total_rescheduled, "message", "messages")
+                )));
             }
         }
     });
@@ -331,9 +325,9 @@ pub fn QueueList() -> impl IntoView {
 
 #[component]
 fn QueueItem(message: Message) -> impl IntoView {
-    let mut total_success = 1;
-    let mut total_pending = 1;
-    let mut total_failed = 1;
+    let mut total_success = 0;
+    let mut total_pending = 0;
+    let mut total_failed = 0;
     let mut total_recipients = 0;
 
     for domain in &message.domains {

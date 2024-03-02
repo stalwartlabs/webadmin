@@ -17,6 +17,7 @@ use crate::{
         directory::{
             domains::{edit::DomainCreate, list::DomainList},
             principals::{edit::PrincipalEdit, list::PrincipalList},
+            Type,
         },
         login::Login,
         notfound::NotFound,
@@ -24,6 +25,7 @@ use crate::{
             messages::{list::QueueList, manage::QueueManage},
             reports::{display::ReportDisplay, list::ReportList},
         },
+        reports::{display::IncomingReportDisplay, list::IncomingReportList, ReportType},
     },
 };
 
@@ -116,7 +118,7 @@ pub fn App() -> impl IntoView {
                     />
                     <ProtectedRoute
                         path="/directory/account/:id?"
-                        view=PrincipalEdit
+                        view=move || view! { <PrincipalEdit selected_type=Type::Individual/> }
                         redirect_path="/login"
                         condition=is_logged_in
                     />
@@ -128,7 +130,7 @@ pub fn App() -> impl IntoView {
                     />
                     <ProtectedRoute
                         path="/directory/group/:id?"
-                        view=PrincipalEdit
+                        view=move || view! { <PrincipalEdit selected_type=Type::Group/> }
                         redirect_path="/login"
                         condition=is_logged_in
                     />
@@ -141,7 +143,7 @@ pub fn App() -> impl IntoView {
                     />
                     <ProtectedRoute
                         path="/directory/list/:id?"
-                        view=PrincipalEdit
+                        view=move || view! { <PrincipalEdit selected_type=Type::List/> }
                         redirect_path="/login"
                         condition=is_logged_in
                     />
@@ -178,6 +180,44 @@ pub fn App() -> impl IntoView {
                     <ProtectedRoute
                         path="/queue/report/:id"
                         view=ReportDisplay
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/reports/dmarc"
+                        view=move || view! { <IncomingReportList report_type=ReportType::Dmarc/> }
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/reports/tls"
+                        view=move || view! { <IncomingReportList report_type=ReportType::Tls/> }
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/reports/arf"
+                        view=move || view! { <IncomingReportList report_type=ReportType::Arf/> }
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/reports/dmarc/:id"
+                        view=move || {
+                            view! { <IncomingReportDisplay report_type=ReportType::Dmarc/> }
+                        }
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/reports/tls/:id"
+                        view=move || view! { <IncomingReportDisplay report_type=ReportType::Tls/> }
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/reports/arf/:id"
+                        view=move || view! { <IncomingReportDisplay report_type=ReportType::Arf/> }
                         redirect_path="/login"
                         condition=is_logged_in
                     />
@@ -219,32 +259,13 @@ pub(crate) fn menu_items() -> Vec<MenuItem> {
             ],
         ),
         MenuItem::parent_with_icon(
-            "Nested Test",
-            "test",
+            "Reports",
+            "report",
             vec![
-                MenuItem::parent(
-                    "Test 1",
-                    vec![
-                        MenuItem::child("Test 1.1", "/manage/test1"),
-                        MenuItem::child("Test 1.2", "/manage/test2"),
-                    ],
-                ),
-                MenuItem::parent(
-                    "Test 2",
-                    vec![
-                        MenuItem::child("Test 2.1", "/manage/test3"),
-                        MenuItem::child("Test 2.2", "/manage/test4"),
-                    ],
-                ),
-                MenuItem::parent(
-                    "Test 3",
-                    vec![
-                        MenuItem::child("Test 3.1", "/manage/test5"),
-                        MenuItem::child("Test 3.2", "/manage/test6"),
-                    ],
-                ),
+                MenuItem::child("DMARC Aggregate", "/manage/reports/dmarc"),
+                MenuItem::child("TLS Aggregate", "/manage/reports/tls"),
+                MenuItem::child("Failures", "/manage/reports/arf"),
             ],
         ),
-        MenuItem::child_with_icon("Documentation", "test", "/test"),
     ]
 }

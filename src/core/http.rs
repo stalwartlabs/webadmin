@@ -117,6 +117,17 @@ impl<'x> HttpRequest {
         }
     }
 
+    pub async fn try_send<T>(self) -> Result<Option<T>>
+    where
+        T: DeserializeOwned,
+    {
+        match self.send::<T>().await {
+            Ok(data) => Ok(Some(data)),
+            Err(Error::NotFound) => Ok(None),
+            Err(err) => Err(err),
+        }
+    }
+
     pub async fn send_raw(self) -> Result<String> {
         let abort_controller = web_sys::AbortController::new().ok();
         let abort_signal = abort_controller.as_ref().map(|a| a.signal());

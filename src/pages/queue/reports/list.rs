@@ -11,7 +11,7 @@ use crate::{
             pagination::Pagination,
             row::SelectItem,
             toolbar::{SearchBox, ToolbarButton},
-            Footer, ListItem, ListSection, ListTable, Toolbar, ZeroResults,
+            Footer, ListItem, ListSection, ListTable, ListTextItem, Toolbar, ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -29,9 +29,10 @@ use crate::{
         directory::List,
         maybe_plural,
         queue::reports::{AggregateReportId, AggregateReportType},
+        FormatDateTime,
     },
 };
-use chrono::Local;
+
 use chrono_humanize::{Accuracy, HumanTime, Tense};
 
 const PAGE_SIZE: u32 = 10;
@@ -70,7 +71,7 @@ pub fn ReportList() -> impl IntoView {
             let auth = auth.get();
 
             async move {
-                HttpRequest::get("https://127.0.0.1:9980/api/report/list")
+                HttpRequest::get("https://127.0.0.1:9980/api/queue/reports")
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
@@ -96,33 +97,34 @@ pub fn ReportList() -> impl IntoView {
     );
 
     let cancel_action = create_action(move |items: &HashSet<String>| {
-        let mut query = String::new();
-        for (pos, item) in items.iter().enumerate() {
-            if pos > 0 {
-                query.push(',');
-            }
-            query.push_str(item);
-        }
-
+        let items = items.clone();
         let auth = auth.get();
 
         async move {
-            match HttpRequest::get("https://127.0.0.1:9980/api/report/cancel")
-                .with_authorization(&auth)
-                .with_parameter("ids", query)
-                .send::<Vec<bool>>()
-                .await
-            {
-                Ok(results) => {
-                    reports.refetch();
-                    alert.set(Alert::success(format!(
-                        "Removed {} from queue.",
-                        maybe_plural(results.iter().filter(|&&b| b).count(), "report", "reports")
-                    )));
+            let mut total_deleted = 0;
+            for id in items {
+                match HttpRequest::delete(format!("https://127.0.0.1:9980/api/queue/reports/{id}"))
+                    .with_authorization(&auth)
+                    .send::<bool>()
+                    .await
+                {
+                    Ok(true) => {
+                        total_deleted += 1;
+                    }
+                    Ok(false) | Err(http::Error::NotFound) => {}
+                    Err(err) => {
+                        alert.set(Alert::from(err));
+                        return;
+                    }
                 }
-                Err(err) => {
-                    alert.set(Alert::from(err));
-                }
+            }
+
+            if total_deleted > 0 {
+                reports.refetch();
+                alert.set(Alert::success(format!(
+                    "Removed {} from queue.",
+                    maybe_plural(total_deleted, "report", "reports")
+                )));
             }
         }
     });
@@ -335,23 +337,15 @@ fn ReportItem(report: AggregateReportId) -> impl IntoView {
                 </div>
             </td>
 
-            <ListItem>
-                <span class="text-sm text-gray-500">
-                    {format!(
-                        "{} ({})",
-                        HumanTime::from(report.due),
-                        report.due.with_timezone(&Local).format("%a, %d %b %Y %H:%M:%S"),
-                    )}
+            <ListTextItem>
+                {format!("{} ({})", HumanTime::from(report.due), report.due.format_date_time())}
 
-                </span>
-            </ListItem>
+            </ListTextItem>
 
-            <ListItem>
-                <span class="text-sm text-gray-500">
-                    {HumanTime::from(report.due - report.created)
-                        .to_text_en(Accuracy::Precise, Tense::Present)}
-                </span>
-            </ListItem>
+            <ListTextItem>
+                {HumanTime::from(report.due - report.created)
+                    .to_text_en(Accuracy::Precise, Tense::Present)}
+            </ListTextItem>
 
             <ListItem subclass="px-6 py-1.5">
                 <a

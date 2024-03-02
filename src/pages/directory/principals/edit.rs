@@ -2,7 +2,7 @@ use std::vec;
 
 use humansize::{format_size, DECIMAL};
 use leptos::*;
-use leptos_router::{use_navigate, use_params_map, use_route};
+use leptos_router::{use_navigate, use_params_map};
 use pwhash::sha512_crypt;
 
 use crate::{
@@ -29,7 +29,7 @@ use crate::{
 };
 
 #[component]
-pub fn PrincipalEdit() -> impl IntoView {
+pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let params = use_params_map();
@@ -51,18 +51,6 @@ pub fn PrincipalEdit() -> impl IntoView {
         },
     );
     let (pending, set_pending) = create_signal(false);
-    let selected_type = use_route()
-        .original_path()
-        .split('/')
-        .rev()
-        .find(|v| !v.starts_with(':'))
-        .map(|t| match t {
-            "account" => Type::Individual,
-            "group" => Type::Group,
-            "list" => Type::List,
-            _ => Type::Individual,
-        })
-        .unwrap_or(Type::Individual);
 
     let current_principal = create_rw_signal(Principal::default());
     let login = FormValidator::new(String::new());

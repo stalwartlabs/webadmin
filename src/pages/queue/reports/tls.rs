@@ -3,8 +3,8 @@ use std::{
     vec,
 };
 
-use chrono::Local;
 use leptos::*;
+use leptos_router::use_navigate;
 
 use crate::{
     components::{
@@ -19,10 +19,13 @@ use crate::{
         report::{ReportItem, ReportSection, ReportTextValue, ReportView},
         Color,
     },
-    pages::queue::reports::{display::PAGE_SIZE, Policy},
+    pages::{
+        queue::reports::{display::PAGE_SIZE, Policy},
+        FormatDateTime,
+    },
 };
 
-use super::{FailureDetails, PolicyType, ReportUri, TlsReport};
+use super::{FailureDetails, PolicyType, TlsReport};
 
 #[derive(Clone, Debug, PartialEq, Copy)]
 enum CurrentView {
@@ -33,31 +36,15 @@ enum CurrentView {
 
 #[component]
 #[allow(unused_parens)]
-pub fn TlsReportDisplay(report: TlsReport, rua: Vec<ReportUri>) -> impl IntoView {
-    let report_start_date = report
-        .date_range
-        .start_datetime
-        .with_timezone(&Local)
-        .format("%a, %d %b %Y")
-        .to_string();
-    let report_start_time = report
-        .date_range
-        .start_datetime
-        .with_timezone(&Local)
-        .format("%H:%M:%S")
-        .to_string();
-    let report_end_date = report
-        .date_range
-        .end_datetime
-        .with_timezone(&Local)
-        .format("%a, %d %b %Y")
-        .to_string();
-    let report_end_time = report
-        .date_range
-        .end_datetime
-        .with_timezone(&Local)
-        .format("%H:%M:%S")
-        .to_string();
+pub fn TlsReportDisplay(
+    report: TlsReport,
+    extra: Vec<(String, String)>,
+    back_url: String,
+) -> impl IntoView {
+    let report_start_date = report.date_range.start_datetime.format_date_time();
+    let report_start_time = report.date_range.start_datetime.format_time();
+    let report_end_date = report.date_range.end_datetime.format_date_time();
+    let report_end_time = report.date_range.end_datetime.format_time();
 
     let mut total_success = 0;
     let mut total_fail = 0;
@@ -67,11 +54,6 @@ pub fn TlsReportDisplay(report: TlsReport, rua: Vec<ReportUri>) -> impl IntoView
         total_fail += policy.summary.total_failure;
     }
 
-    let rua = rua
-        .into_iter()
-        .map(|uri| uri.to_string())
-        .collect::<Vec<String>>()
-        .join(", ");
     let current_view = create_rw_signal(CurrentView::Main);
     let total_policies = report.policies.len() as u32;
     let policy_page = create_rw_signal(1u32);
@@ -109,6 +91,21 @@ pub fn TlsReportDisplay(report: TlsReport, rua: Vec<ReportUri>) -> impl IntoView
         policies
     });
 
+    let extra = extra
+        .into_iter()
+        .filter_map(|(k, v)| {
+            if !v.is_empty() {
+                Some(view! {
+                    <ReportItem label=k>
+                        <ReportTextValue value=v/>
+                    </ReportItem>
+                })
+            } else {
+                None
+            }
+        })
+        .collect_view();
+
     view! {
         <Card>
             <CardItem title="Report Start" contents=report_start_date subcontents=report_start_time>
@@ -145,9 +142,7 @@ pub fn TlsReportDisplay(report: TlsReport, rua: Vec<ReportUri>) -> impl IntoView
                 <ReportItem label="Contact" hide=report.contact_info.is_none()>
                     <ReportTextValue value=report.contact_info.unwrap_or_default()/>
                 </ReportItem>
-                <ReportItem label="Report URIs" hide=rua.is_empty()>
-                    <ReportTextValue value=rua/>
-                </ReportItem>
+                {extra}
             </ReportSection>
             {if total_policies > 0 {
                 Some(
@@ -229,6 +224,17 @@ pub fn TlsReportDisplay(report: TlsReport, rua: Vec<ReportUri>) -> impl IntoView
                 None
             }}
 
+            <div class="flex justify-end">
+
+                <Button
+                    text="Close"
+                    color=Color::Blue
+                    on_click=move |_| {
+                        use_navigate()(&back_url, Default::default());
+                    }
+                />
+
+            </div>
         </ReportView>
 
         {move || {
@@ -524,7 +530,7 @@ impl FailureDetails {
             || self
                 .receiving_mx_hostname
                 .as_ref()
-                .map_or(false, |s| s.to_string().contains(filter))
+                .map_or(false, |s| s.contains(filter))
             || self
                 .receiving_mx_helo
                 .as_ref()
@@ -536,7 +542,7 @@ impl FailureDetails {
             || self
                 .failure_reason_code
                 .as_ref()
-                .map_or(false, |s| s.to_string().contains(filter))
+                .map_or(false, |s| s.contains(filter))
     }
 
     pub fn id(&self) -> u64 {

@@ -32,7 +32,7 @@ pub fn ReportDisplay() -> impl IntoView {
                 #[cfg(feature = "demo")]
                 {
                     if id == "dmarc_demo" {
-                        return Ok(Some(AggregateReport::Dmarc {
+                        return Ok(AggregateReport::Dmarc {
                             rua: vec![crate::pages::queue::reports::URI {
                                 uri: "rcpt@sender.org".to_string(),
                                 max_size: 0,
@@ -42,9 +42,9 @@ pub fn ReportDisplay() -> impl IntoView {
                             range_from: chrono::Utc::now(),
                             range_to: chrono::Utc::now(),
                             report: crate::pages::queue::reports::test_dmarc_report(),
-                        }));
+                        });
                     } else if id == "tls_demo" {
-                        return Ok(Some(AggregateReport::Tls {
+                        return Ok(AggregateReport::Tls {
                             rua: vec![crate::pages::queue::reports::ReportUri::Mail(
                                 "rcpt@sender.org".to_string(),
                             )],
@@ -53,22 +53,19 @@ pub fn ReportDisplay() -> impl IntoView {
                             range_from: chrono::Utc::now(),
                             range_to: chrono::Utc::now(),
                             report: crate::pages::queue::reports::test_tls_report(),
-                        }));
+                        });
                     }
                 }
 
-                HttpRequest::get("https://127.0.0.1:9980/api/report/status")
+                HttpRequest::get(format!("https://127.0.0.1:9980/api/queue/reports/{id}"))
                     .with_authorization(&auth)
-                    .with_parameter("id", id)
-                    .send::<Vec<Option<AggregateReport>>>()
+                    .send::<AggregateReport>()
                     .await
-                    .map(|result| result.into_iter().next().flatten())
             }
         },
     );
 
-    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
-    provide_context(selected);
+    provide_context(create_rw_signal::<HashSet<String>>(HashSet::new()));
 
     view! {
         <Alerts/>
@@ -80,7 +77,7 @@ pub fn ReportDisplay() -> impl IntoView {
                     use_navigate()("/login", Default::default());
                     Some(view! { <div></div> }.into_view())
                 }
-                Some(Err(http::Error::NotFound)) | Some(Ok(None)) => {
+                Some(Err(http::Error::NotFound)) => {
                     use_navigate()("/manage/queue/reports", Default::default());
                     Some(view! { <div></div> }.into_view())
                 }
@@ -88,13 +85,51 @@ pub fn ReportDisplay() -> impl IntoView {
                     alert.set(Alert::from(err));
                     Some(view! { <div></div> }.into_view())
                 }
-                Some(Ok(Some(report))) => {
+                Some(Ok(report)) => {
                     match report {
                         AggregateReport::Tls { report, rua, .. } => {
-                            Some(view! { <TlsReportDisplay report=report rua=rua/> }.into_view())
+                            Some(
+                                view! {
+                                    <TlsReportDisplay
+                                        report=report
+                                        extra=vec![
+                                            (
+                                                "Report URI".to_string(),
+                                                rua
+                                                    .into_iter()
+                                                    .map(|uri| uri.to_string())
+                                                    .collect::<Vec<String>>()
+                                                    .join(", "),
+                                            ),
+                                        ]
+
+                                        back_url="/manage/queue/reports".to_string()
+                                    />
+                                }
+                                    .into_view(),
+                            )
                         }
                         AggregateReport::Dmarc { report, rua, .. } => {
-                            Some(view! { <DmarcReportDisplay report=report rua=rua/> }.into_view())
+                            Some(
+                                view! {
+                                    <DmarcReportDisplay
+                                        report=report
+                                        extra=vec![
+                                            (
+                                                "Report URI".to_string(),
+                                                rua
+                                                    .into_iter()
+                                                    .map(|uri| uri.uri)
+                                                    .collect::<Vec<String>>()
+                                                    .join(", "),
+                                            ),
+                                        ]
+
+                                        back_url="/manage/queue/reports".to_string()
+                                    />
+                                }
+                                    .into_view(),
+                            )
                         }
                     }
                 }

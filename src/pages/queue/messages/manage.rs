@@ -1,6 +1,6 @@
 use std::{collections::HashSet, vec};
 
-use chrono::{Local, Utc};
+use chrono::Utc;
 use chrono_humanize::HumanTime;
 use humansize::{format_size, DECIMAL};
 use leptos::*;
@@ -31,6 +31,7 @@ use crate::{
     pages::{
         maybe_plural,
         queue::messages::{Message, Status},
+        FormatDateTime,
     },
 };
 
@@ -47,12 +48,10 @@ pub fn QueueManage() -> impl IntoView {
             let id = id.clone();
 
             async move {
-                HttpRequest::get("https://127.0.0.1:9980/api/queue/status")
+                HttpRequest::get(format!("https://127.0.0.1:9980/api/queue/messages/{id}"))
                     .with_authorization(&auth)
-                    .with_parameter("id", id)
-                    .send::<Vec<Option<Message>>>()
+                    .send::<Message>()
                     .await
-                    .map(|result| result.into_iter().next().flatten())
             }
         },
     );
@@ -64,14 +63,13 @@ pub fn QueueManage() -> impl IntoView {
 
         async move {
             for item in items {
-                match HttpRequest::get("https://127.0.0.1:9980/api/queue/cancel")
+                match HttpRequest::delete(format!("https://127.0.0.1:9980/api/queue/messages/{id}"))
                     .with_authorization(&auth)
-                    .with_parameter("id", &id)
                     .with_parameter("filter", item)
-                    .send::<Vec<bool>>()
+                    .send::<bool>()
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(_) | Err(http::Error::NotFound) => {}
                     Err(err) => {
                         alert.set(Alert::from(err));
                         return;
@@ -90,14 +88,13 @@ pub fn QueueManage() -> impl IntoView {
 
         async move {
             for item in items {
-                match HttpRequest::get("https://127.0.0.1:9980/api/queue/retry")
+                match HttpRequest::patch(format!("https://127.0.0.1:9980/api/queue/messages/{id}"))
                     .with_authorization(&auth)
-                    .with_parameter("id", &id)
                     .with_parameter("filter", item)
-                    .send::<Vec<bool>>()
+                    .send::<bool>()
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(_) | Err(http::Error::NotFound) => {}
                     Err(err) => {
                         alert.set(Alert::from(err));
                         return;
@@ -122,7 +119,7 @@ pub fn QueueManage() -> impl IntoView {
                     use_navigate()("/login", Default::default());
                     Some(view! { <div></div> }.into_view())
                 }
-                Some(Err(http::Error::NotFound)) | Some(Ok(None)) => {
+                Some(Err(http::Error::NotFound)) => {
                     use_navigate()("/manage/queue/messages", Default::default());
                     Some(view! { <div></div> }.into_view())
                 }
@@ -130,7 +127,7 @@ pub fn QueueManage() -> impl IntoView {
                     alert.set(Alert::from(err));
                     Some(view! { <div></div> }.into_view())
                 }
-                Some(Ok(Some(message))) => {
+                Some(Ok(message)) => {
                     let return_path = message.return_path().to_string();
                     let num_recipients = message
                         .domains
@@ -174,11 +171,7 @@ pub fn QueueManage() -> impl IntoView {
                                 <CardItem
                                     title="Sent"
                                     contents=HumanTime::from(message.created).to_string()
-                                    subcontents=message
-                                        .created
-                                        .with_timezone(&Local)
-                                        .format("%a, %d %b %Y %H:%M:%S")
-                                        .to_string()
+                                    subcontents=message.created.format_date_time()
                                 >
 
                                     <IconClock attr:class="flex-shrink-0 size-5 text-gray-400 dark:text-gray-600"/>
@@ -212,11 +205,7 @@ pub fn QueueManage() -> impl IntoView {
                                         .map(|dt| HumanTime::from(dt).to_string())
                                         .unwrap_or("N/A".to_string())
                                     subcontents=next_retry
-                                        .map(|dt| {
-                                            dt.with_timezone(&Local)
-                                                .format("%a, %d %b %Y %H:%M:%S")
-                                                .to_string()
-                                        })
+                                        .map(|dt| { dt.format_date_time() })
                                         .unwrap_or("N/A".to_string())
                                 >
 
@@ -229,11 +218,7 @@ pub fn QueueManage() -> impl IntoView {
                                         .map(|dt| HumanTime::from(dt).to_string())
                                         .unwrap_or("N/A".to_string())
                                     subcontents=next_dsn
-                                        .map(|dt| {
-                                            dt.with_timezone(&Local)
-                                                .format("%a, %d %b %Y %H:%M:%S")
-                                                .to_string()
-                                        })
+                                        .map(|dt| { dt.format_date_time() })
                                         .unwrap_or("N/A".to_string())
                                 >
 
@@ -246,11 +231,7 @@ pub fn QueueManage() -> impl IntoView {
                                         .map(|dt| HumanTime::from(dt).to_string())
                                         .unwrap_or("N/A".to_string())
                                     subcontents=expires
-                                        .map(|dt| {
-                                            dt.with_timezone(&Local)
-                                                .format("%a, %d %b %Y %H:%M:%S")
-                                                .to_string()
-                                        })
+                                        .map(|dt| { dt.format_date_time() })
                                         .unwrap_or("N/A".to_string())
                                 >
 
@@ -407,7 +388,7 @@ pub fn QueueManage() -> impl IntoView {
                                                             format!(
                                                                 "{} ({})",
                                                                 HumanTime::from(dt),
-                                                                dt.with_timezone(&Local).format("%a, %d %b %Y %H:%M:%S"),
+                                                                dt.format_date_time(),
                                                             )
                                                         } else {
                                                             "".to_string()

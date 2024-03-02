@@ -3,8 +3,9 @@ use std::{
     vec,
 };
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use leptos::*;
+use leptos_router::use_navigate;
 
 use crate::{
     components::{
@@ -25,29 +26,36 @@ use crate::{
         report::{ReportItem, ReportSection, ReportTextValue, ReportView},
         Color,
     },
-    pages::queue::reports::{display::PAGE_SIZE, ActionDisposition, Report},
+    pages::{
+        queue::reports::{display::PAGE_SIZE, ActionDisposition, Report},
+        FormatDateTime,
+    },
 };
 
-use super::{DkimResult, DmarcResult, Record, SpfResult, URI};
+use super::{DkimResult, DmarcResult, Record, SpfResult};
 
 #[component]
 #[allow(unused_parens)]
-pub fn DmarcReportDisplay(report: Report, rua: Vec<URI>) -> impl IntoView {
+pub fn DmarcReportDisplay(
+    report: Report,
+    extra: Vec<(String, String)>,
+    back_url: String,
+) -> impl IntoView {
     let report_start_date =
         DateTime::<Utc>::from_timestamp(report.report_metadata.date_range.begin as i64, 0)
-            .map(|dt| dt.with_timezone(&Local).format("%a, %d %b %Y").to_string())
+            .map(|dt| dt.format_date_time())
             .unwrap_or_else(|| "N/A".to_string());
     let report_start_time =
         DateTime::<Utc>::from_timestamp(report.report_metadata.date_range.begin as i64, 0)
-            .map(|dt| dt.with_timezone(&Local).format("%H:%M:%S").to_string())
+            .map(|dt| dt.format_time())
             .unwrap_or_else(|| "N/A".to_string());
     let report_end_date =
         DateTime::<Utc>::from_timestamp(report.report_metadata.date_range.end as i64, 0)
-            .map(|dt| dt.with_timezone(&Local).format("%a, %d %b %Y").to_string())
+            .map(|dt| dt.format_date_time())
             .unwrap_or_else(|| "N/A".to_string());
     let report_end_time =
         DateTime::<Utc>::from_timestamp(report.report_metadata.date_range.end as i64, 0)
-            .map(|dt| dt.with_timezone(&Local).format("%H:%M:%S").to_string())
+            .map(|dt| dt.format_time())
             .unwrap_or_else(|| "N/A".to_string());
     let domain = report.policy_published.domain.clone();
 
@@ -70,11 +78,6 @@ pub fn DmarcReportDisplay(report: Report, rua: Vec<URI>) -> impl IntoView {
         "N/A".to_string()
     };
     let email = report.report_metadata.email.clone();
-    let rua = rua
-        .into_iter()
-        .map(|uri| uri.uri)
-        .collect::<Vec<String>>()
-        .join(", ");
     let total_results = report.record.len() as u32;
     let page = create_rw_signal(1u32);
     let filter = create_rw_signal(None::<String>);
@@ -117,6 +120,20 @@ pub fn DmarcReportDisplay(report: Report, rua: Vec<URI>) -> impl IntoView {
             None
         }
     });
+    let extra = extra
+        .into_iter()
+        .filter_map(|(k, v)| {
+            if !v.is_empty() {
+                Some(view! {
+                    <ReportItem label=k>
+                        <ReportTextValue value=v/>
+                    </ReportItem>
+                })
+            } else {
+                None
+            }
+        })
+        .collect_view();
 
     view! {
         <Card>
@@ -192,14 +209,13 @@ pub fn DmarcReportDisplay(report: Report, rua: Vec<URI>) -> impl IntoView {
                 <ReportItem label="Errors" hide=report.report_metadata.error.is_empty()>
                     <ReportTextValue value=report.report_metadata.error.join(",")/>
                 </ReportItem>
+                {extra}
             </ReportSection>
             <ReportSection title="Published Policy">
                 <ReportItem label="Domain">
                     <ReportTextValue value=report.policy_published.domain/>
                 </ReportItem>
-                <ReportItem label="Report URIs" hide=rua.is_empty()>
-                    <ReportTextValue value=rua/>
-                </ReportItem>
+
                 <ReportItem label="DKIM Alignment">
                     <ReportTextValue value=report.policy_published.adkim.to_string()/>
                 </ReportItem>
@@ -297,6 +313,17 @@ pub fn DmarcReportDisplay(report: Report, rua: Vec<URI>) -> impl IntoView {
 
             </div>
 
+            <div class="flex justify-end">
+
+                <Button
+                    text="Close"
+                    color=Color::Blue
+                    on_click=move |_| {
+                        use_navigate()(&back_url, Default::default());
+                    }
+                />
+
+            </div>
         </ReportView>
 
         {move || {
@@ -445,13 +472,16 @@ pub fn DmarcReportDisplay(report: Report, rua: Vec<URI>) -> impl IntoView {
                             }}
 
                             <div class="grid justify-center sm:flex sm:justify-between sm:items-center gap-1">
-                                <ItemPagination
-                                    total_items=fetch_records.get_untracked().len() as u32
-                                    current_item=record_id + 1
-                                    on_item_change=move |new_record_id| {
-                                        selected_record.set(new_record_id - 1);
-                                    }
-                                />
+                                <div>
+                                    <ItemPagination
+                                        total_items=fetch_records.get_untracked().len() as u32
+                                        current_item=record_id + 1
+                                        on_item_change=move |new_record_id| {
+                                            selected_record.set(new_record_id - 1);
+                                        }
+                                    />
+
+                                </div>
 
                                 <Button
                                     text="Close"
