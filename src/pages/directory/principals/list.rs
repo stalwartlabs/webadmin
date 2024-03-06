@@ -82,7 +82,7 @@ pub fn PrincipalList() -> impl IntoView {
             let auth = auth.get();
 
             async move {
-                let principal_names = HttpRequest::get("https://127.0.0.1/api/principal")
+                let principal_names = HttpRequest::get("/api/principal")
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
@@ -94,7 +94,7 @@ pub fn PrincipalList() -> impl IntoView {
 
                 for name in principal_names.items {
                     items.push(
-                        HttpRequest::get(format!("https://127.0.0.1/api/principal/{}", name))
+                        HttpRequest::get(format!("/api/principal/{}", name))
                             .with_authorization(&auth)
                             .send::<Principal>()
                             .await?,
@@ -115,11 +115,10 @@ pub fn PrincipalList() -> impl IntoView {
 
         async move {
             for item in items.iter() {
-                if let Err(err) =
-                    HttpRequest::delete(format!("https://127.0.0.1/api/principal/{item}"))
-                        .with_authorization(&auth)
-                        .send::<()>()
-                        .await
+                if let Err(err) = HttpRequest::delete(format!("/api/principal/{item}"))
+                    .with_authorization(&auth)
+                    .send::<()>()
+                    .await
                 {
                     alert.set(Alert::from(err));
                     return;

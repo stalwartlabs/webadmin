@@ -40,7 +40,7 @@ pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
 
             async move {
                 if !name.is_empty() {
-                    HttpRequest::get(format!("https://127.0.0.1/api/principal/{name}"))
+                    HttpRequest::get(format!("/api/principal/{name}"))
                         .with_authorization(&auth)
                         .send::<Principal>()
                         .await
@@ -57,7 +57,7 @@ pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
     let name = FormValidator::new(String::new());
     let typ: RwSignal<Type> = create_rw_signal(selected_type);
     let password = FormValidator::new(String::new());
-    let quota = create_rw_signal(0u32);
+    let quota = create_rw_signal(0u64);
     let member_of = create_rw_signal(Vec::<String>::new());
     let members = create_rw_signal(Vec::<String>::new());
     let email = FormValidator::new(String::new());
@@ -109,31 +109,30 @@ pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
                     return;
                 }
 
-                let result =
-                    match HttpRequest::get(format!("https://127.0.0.1/api/principal/{name}"))
-                        .with_authorization(&auth)
-                        .send::<Principal>()
-                        .await
+                let result = match HttpRequest::get(format!("/api/principal/{name}"))
+                    .with_authorization(&auth)
+                    .send::<Principal>()
+                    .await
+                {
+                    Ok(principal)
+                        if principal
+                            .typ
+                            .as_ref()
+                            .map_or(false, |t| expected_types.contains(t)) =>
                     {
-                        Ok(principal)
-                            if principal
-                                .typ
-                                .as_ref()
-                                .map_or(false, |t| expected_types.contains(t)) =>
-                        {
-                            Ok(name)
-                        }
-                        Ok(_) => Err(format!(
-                            "Principal is not a {}",
-                            expected_types.first().unwrap().item_name(false)
-                        )),
-                        Err(http::Error::NotFound) => Err("Principal does not exist".to_string()),
-                        Err(http::Error::Unauthorized) => {
-                            use_navigate()("/login", Default::default());
-                            Err("Unauthorized".to_string())
-                        }
-                        Err(err) => Err(format!("Request failed: {err:?}")),
-                    };
+                        Ok(name)
+                    }
+                    Ok(_) => Err(format!(
+                        "Principal is not a {}",
+                        expected_types.first().unwrap().item_name(false)
+                    )),
+                    Err(http::Error::NotFound) => Err("Principal does not exist".to_string()),
+                    Err(http::Error::Unauthorized) => {
+                        use_navigate()("/login", Default::default());
+                        Err("Unauthorized".to_string())
+                    }
+                    Err(err) => Err(format!("Request failed: {err:?}")),
+                };
 
                 cb.call(result);
             }
@@ -151,7 +150,7 @@ pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
                 let updates = current.into_updates(changes);
 
                 if !updates.is_empty() {
-                    HttpRequest::patch(format!("https://127.0.0.1/api/principal/{name}"))
+                    HttpRequest::patch(format!("/api/principal/{name}"))
                         .with_authorization(&auth)
                         .with_body(updates)
                         .unwrap()
@@ -161,7 +160,7 @@ pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
                     Ok(())
                 }
             } else {
-                HttpRequest::post("https://127.0.0.1/api/principal")
+                HttpRequest::post("/api/principal")
                     .with_authorization(&auth)
                     .with_body(changes)
                     .unwrap()

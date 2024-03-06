@@ -72,11 +72,16 @@ impl<'x> HttpRequest {
         self
     }
 
-    pub fn with_authorization(self, state: impl AsRef<AuthToken>) -> Self {
-        self.with_header(
+    pub fn with_authorization(self, auth_token: impl AsRef<AuthToken>) -> Self {
+        let auth_token = auth_token.as_ref();
+        let mut result = self.with_header(
             "Authorization",
-            format!("Bearer {}", state.as_ref().access_token),
-        )
+            format!("Bearer {}", auth_token.access_token),
+        );
+        if !auth_token.base_url.is_empty() {
+            result.url = UrlBuilder::new(format!("{}{}", auth_token.base_url, result.url.finish()));
+        }
+        result
     }
 
     pub fn with_header(self, name: impl AsRef<str>, value: impl AsRef<str>) -> Self {

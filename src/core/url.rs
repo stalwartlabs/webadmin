@@ -1,5 +1,5 @@
 pub struct UrlBuilder {
-    url: form_urlencoded::Serializer<'static, String>,
+    pub url: form_urlencoded::Serializer<'static, String>,
 }
 
 impl UrlBuilder {

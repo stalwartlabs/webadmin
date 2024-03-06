@@ -71,7 +71,7 @@ pub fn ReportList() -> impl IntoView {
             let auth = auth.get();
 
             async move {
-                HttpRequest::get("https://127.0.0.1:9980/api/queue/reports")
+                HttpRequest::get("/api/queue/reports")
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
@@ -103,7 +103,7 @@ pub fn ReportList() -> impl IntoView {
         async move {
             let mut total_deleted = 0;
             for id in items {
-                match HttpRequest::delete(format!("https://127.0.0.1:9980/api/queue/reports/{id}"))
+                match HttpRequest::delete(format!("/api/queue/reports/{id}"))
                     .with_authorization(&auth)
                     .send::<bool>()
                     .await

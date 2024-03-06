@@ -282,6 +282,7 @@ impl<T: Default + Clone> Default for FormValue<T> {
 }
 
 pub type StringValidateFn = Callback<String, Option<String>>;
+pub type StringSanitizeFn = Callback<String, String>;
 pub type ValidateCb = Callback<Result<String, String>, ()>;
 
 pub fn value_trim(value: String) -> String {
@@ -313,6 +314,14 @@ pub fn value_is_email(value: String) -> Option<String> {
         None
     } else {
         Some("This is not a valid email address".to_string())
+    }
+}
+
+pub fn value_is_url(value: String) -> Option<String> {
+    if value.is_empty() || value.starts_with("https://") || value.starts_with("http://") {
+        None
+    } else {
+        Some("This is not a valid URL".to_string())
     }
 }
 

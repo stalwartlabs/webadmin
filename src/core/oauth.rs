@@ -10,6 +10,7 @@ use super::http::{self, HttpRequest};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AuthToken {
+    pub base_url: Arc<String>,
     pub access_token: Arc<String>,
     pub refresh_token: Arc<String>,
     pub is_valid: bool,
@@ -61,8 +62,12 @@ pub enum ErrorType {
     ExpiredToken,
 }
 
-pub async fn oauth_authenticate(user: &str, password: &str) -> Result<OAuthGrant, Alert> {
-    match HttpRequest::post("https://127.0.0.1/api/oauth/code")
+pub async fn oauth_authenticate(
+    base_url: &str,
+    user: &str,
+    password: &str,
+) -> Result<OAuthGrant, Alert> {
+    match HttpRequest::post(format!("{base_url}/api/oauth/code"))
         .with_header(
             "Authorization",
             format!(
@@ -79,7 +84,7 @@ pub async fn oauth_authenticate(user: &str, password: &str) -> Result<OAuthGrant
         .await
     {
         Ok(code) => {
-            match HttpRequest::post("https://127.0.0.1/auth/token")
+            match HttpRequest::post(format!("{base_url}/auth/token"))
                 .with_raw_body(
                     form_urlencoded::Serializer::new(String::with_capacity(code.len() + 64))
                         .append_pair("grant_type", "authorization_code")
@@ -107,10 +112,10 @@ pub async fn oauth_authenticate(user: &str, password: &str) -> Result<OAuthGrant
     }
 }
 
-pub async fn oauth_refresh_token(refresh_token: &str) -> Option<OAuthGrant> {
+pub async fn oauth_refresh_token(base_url: &str, refresh_token: &str) -> Option<OAuthGrant> {
     log::debug!("Refreshing OAuth token");
 
-    match HttpRequest::post("https://127.0.0.1/auth/token")
+    match HttpRequest::post(format!("{base_url}/auth/token"))
         .with_raw_body(
             form_urlencoded::Serializer::new(String::with_capacity(refresh_token.len() + 64))
                 .append_pair("grant_type", "refresh_token")

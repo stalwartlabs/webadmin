@@ -20,11 +20,11 @@ pub struct Principal {
     pub typ: Option<Type>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub quota: Option<u32>,
+    pub quota: Option<u64>,
 
     #[serde(rename = "usedQuota")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub used_quota: Option<u32>,
+    pub used_quota: Option<u64>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -108,7 +108,7 @@ pub enum PrincipalAction {
 pub enum PrincipalValue {
     String(String),
     StringList(Vec<String>),
-    Integer(u32),
+    Integer(u64),
 }
 
 impl Principal {

@@ -64,7 +64,12 @@ pub fn App() -> impl IntoView {
 
         async move {
             if !changed_auth_token.is_valid && !changed_auth_token.refresh_token.is_empty() {
-                if let Some(grant) = oauth_refresh_token(&changed_auth_token.refresh_token).await {
+                if let Some(grant) = oauth_refresh_token(
+                    &changed_auth_token.base_url,
+                    &changed_auth_token.refresh_token,
+                )
+                .await
+                {
                     let refresh_token = grant.refresh_token.unwrap_or_default();
                     auth_token.update(|auth_token| {
                         auth_token.access_token = grant.access_token.into();
@@ -206,6 +211,7 @@ pub fn App() -> impl IntoView {
                         view=move || {
                             view! { <IncomingReportDisplay report_type=ReportType::Dmarc/> }
                         }
+
                         redirect_path="/login"
                         condition=is_logged_in
                     />

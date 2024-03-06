@@ -28,7 +28,7 @@ pub fn DomainCreate() -> impl IntoView {
 
         async move {
             set_pending.set(true);
-            let result = HttpRequest::post(format!("https://127.0.0.1/api/domain/{name}"))
+            let result = HttpRequest::post(format!("/api/domain/{name}"))
                 .with_authorization(&auth)
                 .send::<()>()
                 .await

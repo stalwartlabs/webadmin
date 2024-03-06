@@ -167,12 +167,12 @@ pub fn InputPassword(
     }
 }
 
-const UNIT_GB: u32 = 1024 * 1024 * 1024;
-const UNIT_MB: u32 = 1024 * 1024;
+const UNIT_GB: u64 = 1024 * 1024 * 1024;
+const UNIT_MB: u64 = 1024 * 1024;
 
 #[component]
 pub fn InputSize(
-    #[prop(optional, into)] value: RwSignal<u32>,
+    #[prop(optional, into)] value: RwSignal<u64>,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
 ) -> impl IntoView {
@@ -189,7 +189,7 @@ pub fn InputSize(
     let display_value = create_rw_signal(if multiplier != 0 {
         raw_value / multiplier
     } else {
-        0u32
+        0u64
     });
     let multiplier = create_rw_signal(multiplier);
 
@@ -208,7 +208,7 @@ pub fn InputSize(
                 }
 
                 on:change=move |ev| {
-                    let new_value = event_target_value(&ev).parse::<u32>().unwrap_or(0);
+                    let new_value = event_target_value(&ev).parse::<u64>().unwrap_or(0);
                     display_value.set(new_value);
                     value.set(new_value * multiplier.get());
                 }
@@ -223,7 +223,7 @@ pub fn InputSize(
                     name="hs-inline-leading-select-currency"
                     class="block text-xs w-full border-transparent rounded-lg focus:ring-blue-600 focus:border-blue-600 dark:bg-gray-800"
                     on:change=move |ev| {
-                        match event_target_value(&ev).parse::<u32>().unwrap_or(0) {
+                        match event_target_value(&ev).parse::<u64>().unwrap_or(0) {
                             0 => {
                                 display_value.set(0);
                                 multiplier.set(0);

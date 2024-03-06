@@ -71,7 +71,7 @@ pub fn DomainList() -> impl IntoView {
             let auth = auth.get();
 
             async move {
-                let domain_names = HttpRequest::get("https://127.0.0.1/api/domain")
+                let domain_names = HttpRequest::get("/api/domain")
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
@@ -81,7 +81,7 @@ pub fn DomainList() -> impl IntoView {
                 let mut items = Vec::with_capacity(domain_names.items.len());
 
                 for name in domain_names.items {
-                    let records = HttpRequest::get("https://127.0.0.1/api/principal")
+                    let records = HttpRequest::get("/api/principal")
                         .with_authorization(&auth)
                         .with_parameter("filter", &name)
                         .send::<List<String>>()
@@ -106,11 +106,10 @@ pub fn DomainList() -> impl IntoView {
 
         async move {
             for item in items.iter() {
-                if let Err(err) =
-                    HttpRequest::delete(format!("https://127.0.0.1/api/domain/{item}"))
-                        .with_authorization(&auth)
-                        .send::<()>()
-                        .await
+                if let Err(err) = HttpRequest::delete(format!("/api/domain/{item}"))
+                    .with_authorization(&auth)
+                    .send::<()>()
+                    .await
                 {
                     alert.set(Alert::from(err));
                     return;

@@ -72,7 +72,7 @@ pub fn QueueList() -> impl IntoView {
             let auth = auth.get();
 
             async move {
-                HttpRequest::get("https://127.0.0.1:9980/api/queue/messages")
+                HttpRequest::get("/api/queue/messages")
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
@@ -91,7 +91,7 @@ pub fn QueueList() -> impl IntoView {
         async move {
             let mut total_deleted = 0;
             for id in items {
-                match HttpRequest::delete(format!("https://127.0.0.1:9980/api/queue/messages/{id}"))
+                match HttpRequest::delete(format!("/api/queue/messages/{id}"))
                     .with_authorization(&auth)
                     .send::<bool>()
                     .await
@@ -123,7 +123,7 @@ pub fn QueueList() -> impl IntoView {
         async move {
             let mut total_rescheduled = 0;
             for id in items {
-                match HttpRequest::patch(format!("https://127.0.0.1:9980/api/queue/messages/{id}"))
+                match HttpRequest::patch(format!("/api/queue/messages/{id}"))
                     .with_authorization(&auth)
                     .send::<bool>()
                     .await

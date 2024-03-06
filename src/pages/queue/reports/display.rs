@@ -57,7 +57,7 @@ pub fn ReportDisplay() -> impl IntoView {
                     }
                 }
 
-                HttpRequest::get(format!("https://127.0.0.1:9980/api/queue/reports/{id}"))
+                HttpRequest::get(format!("/api/queue/reports/{id}"))
                     .with_authorization(&auth)
                     .send::<AggregateReport>()
                     .await

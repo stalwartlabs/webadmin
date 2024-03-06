@@ -72,14 +72,13 @@ pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
             let auth = auth.get();
 
             async move {
-                let ids =
-                    HttpRequest::get(format!("https://127.0.0.1:9980/api/reports/{report_class}"))
-                        .with_authorization(&auth)
-                        .with_parameter("page", page.to_string())
-                        .with_parameter("limit", PAGE_SIZE.to_string())
-                        .with_optional_parameter("filter", filter)
-                        .send::<List<String>>()
-                        .await?;
+                let ids = HttpRequest::get(format!("/api/reports/{report_class}"))
+                    .with_authorization(&auth)
+                    .with_parameter("page", page.to_string())
+                    .with_parameter("limit", PAGE_SIZE.to_string())
+                    .with_optional_parameter("filter", filter)
+                    .send::<List<String>>()
+                    .await?;
                 let mut result = List {
                     items: Vec::with_capacity(ids.items.len()),
                     total: ids.total,
@@ -87,27 +86,21 @@ pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
 
                 for id in ids.items {
                     let report = match report_type {
-                        ReportType::Dmarc => HttpRequest::get(format!(
-                            "https://127.0.0.1:9980/api/reports/dmarc/{id}"
-                        ))
-                        .with_authorization(&auth)
-                        .try_send::<IncomingReport<Report>>()
-                        .await?
-                        .map(|report| IncomingReportSummary::dmarc(id, report)),
-                        ReportType::Tls => {
-                            HttpRequest::get(format!("https://127.0.0.1:9980/api/reports/tls/{id}"))
-                                .with_authorization(&auth)
-                                .try_send::<IncomingReport<TlsReport>>()
-                                .await?
-                                .map(|report| IncomingReportSummary::tls(id, report))
-                        }
-                        ReportType::Arf => {
-                            HttpRequest::get(format!("https://127.0.0.1:9980/api/reports/arf/{id}"))
-                                .with_authorization(&auth)
-                                .try_send::<IncomingReport<Feedback>>()
-                                .await?
-                                .map(|report| IncomingReportSummary::arf(id, report))
-                        }
+                        ReportType::Dmarc => HttpRequest::get(format!("/api/reports/dmarc/{id}"))
+                            .with_authorization(&auth)
+                            .try_send::<IncomingReport<Report>>()
+                            .await?
+                            .map(|report| IncomingReportSummary::dmarc(id, report)),
+                        ReportType::Tls => HttpRequest::get(format!("/api/reports/tls/{id}"))
+                            .with_authorization(&auth)
+                            .try_send::<IncomingReport<TlsReport>>()
+                            .await?
+                            .map(|report| IncomingReportSummary::tls(id, report)),
+                        ReportType::Arf => HttpRequest::get(format!("/api/reports/arf/{id}"))
+                            .with_authorization(&auth)
+                            .try_send::<IncomingReport<Feedback>>()
+                            .await?
+                            .map(|report| IncomingReportSummary::arf(id, report)),
                     };
                     if let Some(report) = report {
                         result.items.push(report);
@@ -126,12 +119,10 @@ pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
         async move {
             let mut total_deleted = 0;
             for id in items {
-                match HttpRequest::delete(format!(
-                    "https://127.0.0.1:9980/api/reports/{report_class}/{id}"
-                ))
-                .with_authorization(&auth)
-                .send::<bool>()
-                .await
+                match HttpRequest::delete(format!("/api/reports/{report_class}/{id}"))
+                    .with_authorization(&auth)
+                    .send::<bool>()
+                    .await
                 {
                     Ok(true) => {
                         total_deleted += 1;

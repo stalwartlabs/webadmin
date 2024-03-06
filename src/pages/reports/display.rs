@@ -45,27 +45,21 @@ pub fn IncomingReportDisplay(report_type: ReportType) -> impl IntoView {
 
             async move {
                 match report_type {
-                    ReportType::Dmarc => {
-                        HttpRequest::get(format!("https://127.0.0.1:9980/api/reports/dmarc/{id}"))
-                            .with_authorization(&auth)
-                            .send::<IncomingReport<Report>>()
-                            .await
-                            .map(ReportWrapper::Dmarc)
-                    }
-                    ReportType::Tls => {
-                        HttpRequest::get(format!("https://127.0.0.1:9980/api/reports/tls/{id}"))
-                            .with_authorization(&auth)
-                            .send::<IncomingReport<TlsReport>>()
-                            .await
-                            .map(ReportWrapper::Tls)
-                    }
-                    ReportType::Arf => {
-                        HttpRequest::get(format!("https://127.0.0.1:9980/api/reports/arf/{id}"))
-                            .with_authorization(&auth)
-                            .send::<IncomingReport<Feedback>>()
-                            .await
-                            .map(ReportWrapper::Arf)
-                    }
+                    ReportType::Dmarc => HttpRequest::get(format!("/api/reports/dmarc/{id}"))
+                        .with_authorization(&auth)
+                        .send::<IncomingReport<Report>>()
+                        .await
+                        .map(ReportWrapper::Dmarc),
+                    ReportType::Tls => HttpRequest::get(format!("/api/reports/tls/{id}"))
+                        .with_authorization(&auth)
+                        .send::<IncomingReport<TlsReport>>()
+                        .await
+                        .map(ReportWrapper::Tls),
+                    ReportType::Arf => HttpRequest::get(format!("/api/reports/arf/{id}"))
+                        .with_authorization(&auth)
+                        .send::<IncomingReport<Feedback>>()
+                        .await
+                        .map(ReportWrapper::Arf),
                 }
             }
         },
