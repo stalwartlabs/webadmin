@@ -11,4 +11,5 @@
         "--stdin",
         "--rustfmt"
     ],
+    "rust-analyzer.showUnlinkedFileNotification": false,
 }
