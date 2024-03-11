@@ -26,11 +26,10 @@ use crate::{
         url::UrlBuilder,
     },
     pages::{
-        directory::List,
         maybe_plural,
         queue::reports::{Feedback, Report, TlsReport},
         reports::{IncomingReport, IncomingReportSummary},
-        FormatDateTime,
+        FormatDateTime, List,
     },
 };
 use chrono_humanize::{Accuracy, HumanTime, Tense};

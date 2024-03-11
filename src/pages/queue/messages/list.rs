@@ -28,9 +28,9 @@ use crate::{
         url::UrlBuilder,
     },
     pages::{
-        directory::List,
         maybe_plural,
         queue::messages::{Message, Status},
+        List,
     },
 };
 

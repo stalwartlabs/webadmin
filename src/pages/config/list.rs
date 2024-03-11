@@ -2,7 +2,6 @@ use std::{collections::HashSet, sync::Arc};
 
 use leptos::*;
 use leptos_router::*;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     components::{
@@ -12,7 +11,7 @@ use crate::{
             pagination::Pagination,
             row::SelectItem,
             toolbar::{SearchBox, ToolbarButton},
-            Footer, ListSection, ListTable, Toolbar, ZeroResults,
+            Footer, ListItem, ListSection, ListTable, ListTextItem, Toolbar, ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -26,19 +25,14 @@ use crate::{
         oauth::use_authorization,
         url::UrlBuilder,
     },
-    pages::{maybe_plural, List},
+    pages::{config::Schemas, maybe_plural, List},
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct Domain {
-    name: String,
-    addresses: u32,
-}
-
-const PAGE_SIZE: u32 = 10;
+use super::{Schema, Settings, UpdateSettings};
 
 #[component]
-pub fn DomainList() -> impl IntoView {
+pub fn SettingsList(id: &'static str) -> impl IntoView {
+    let schema = expect_context::<Arc<Schemas>>().get(id);
     let query = use_query_map();
     let page = create_memo(move |_| {
         query
@@ -58,6 +52,12 @@ pub fn DomainList() -> impl IntoView {
             })
         })
     });
+    let schema_ = schema.clone();
+    let current_schema = create_memo(move |_| schema_.clone());
+    let schema_id = schema.id;
+    let name_singular = schema.name_singular;
+    let name_plural = schema.name_plural;
+    let page_size = schema.list.page_size;
 
     let auth = use_authorization();
     let alert = use_alerts();
@@ -65,37 +65,22 @@ pub fn DomainList() -> impl IntoView {
     let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
     provide_context(selected);
 
-    let domains = create_resource(
+    let settings = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
             let auth = auth.get();
+            let schema = current_schema.get();
 
             async move {
-                let domain_names = HttpRequest::get("/api/domain")
+                HttpRequest::get("/api/settings")
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
-                    .with_parameter("limit", PAGE_SIZE.to_string())
+                    .with_parameter("limit", schema.list.page_size.to_string())
+                    .with_parameter("prefix", schema.prefix.unwrap())
+                    .with_parameter("groupby", format!(".{}", schema.suffix.unwrap_or_default()))
                     .with_optional_parameter("filter", filter)
-                    .send::<List<String>>()
-                    .await?;
-                let mut items = Vec::with_capacity(domain_names.items.len());
-
-                for name in domain_names.items {
-                    let records = HttpRequest::get("/api/principal")
-                        .with_authorization(&auth)
-                        .with_parameter("filter", &name)
-                        .send::<List<String>>()
-                        .await?;
-                    items.push(Domain {
-                        name,
-                        addresses: records.total as u32,
-                    });
-                }
-
-                Ok(Arc::new(List {
-                    items,
-                    total: domain_names.total,
-                }))
+                    .send::<List<Settings>>()
+                    .await
             }
         },
     );
@@ -103,37 +88,55 @@ pub fn DomainList() -> impl IntoView {
     let delete_action = create_action(move |items: &Arc<HashSet<String>>| {
         let items = items.clone();
         let auth = auth.get();
+        let schema = current_schema.get();
 
         async move {
+            let mut updates = Vec::with_capacity(items.len());
             for item in items.iter() {
-                if let Err(err) = HttpRequest::delete(format!("/api/domain/{item}"))
-                    .with_authorization(&auth)
-                    .send::<()>()
-                    .await
-                {
-                    alert.set(Alert::from(err));
-                    return;
+                if !item.is_empty() {
+                    if schema.suffix.is_some() {
+                        updates.push(UpdateSettings::Clear {
+                            prefix: format!("{}.{}.", schema.prefix.unwrap(), item),
+                        });
+                    } else {
+                        updates.push(UpdateSettings::Delete {
+                            keys: vec![format!("{}.{}", schema.prefix.unwrap(), item)],
+                        });
+                    }
                 }
             }
-            domains.refetch();
-            alert.set(Alert::success(format!(
-                "Deleted {}.",
-                maybe_plural(items.len(), "domain", "domains")
-            )));
+
+            match HttpRequest::post("/api/settings")
+                .with_authorization(&auth)
+                .with_body(updates)
+                .unwrap()
+                .send::<()>()
+                .await
+            {
+                Ok(_) => {
+                    settings.refetch();
+                    alert.set(Alert::success(format!(
+                        "Deleted {}.",
+                        maybe_plural(items.len(), name_singular, name_plural,)
+                    )));
+                }
+                Err(err) => {
+                    alert.set(Alert::from(err));
+                }
+            }
         }
     });
 
     let total_results = create_rw_signal(None::<u32>);
-
     view! {
         <ListSection>
-            <ListTable title="Domain" subtitle="Manage local domain names">
+            <ListTable title=schema.list.title subtitle=schema.list.subtitle>
                 <Toolbar slot>
                     <SearchBox
                         value=filter
                         on_search=move |value| {
                             use_navigate()(
-                                &UrlBuilder::new("/manage/directory/domains")
+                                &UrlBuilder::new(format!("/settings/{}", schema_id))
                                     .with_parameter("filter", value)
                                     .finish(),
                                 Default::default(),
@@ -151,7 +154,7 @@ pub fn DomainList() -> impl IntoView {
                         on_click=Callback::new(move |_| {
                             let to_delete = selected.get().len();
                             if to_delete > 0 {
-                                let text = maybe_plural(to_delete, "domain", "domains");
+                                let text = maybe_plural(to_delete, name_singular, name_plural);
                                 modal
                                     .set(
                                         Modal::with_title("Confirm deletion")
@@ -178,10 +181,10 @@ pub fn DomainList() -> impl IntoView {
                     </ToolbarButton>
 
                     <ToolbarButton
-                        text=format!("Add {}", "domain")
+                        text=format!("Add {}", name_singular)
                         color=Color::Blue
                         on_click=move |_| {
-                            use_navigate()("/manage/directory/domain", Default::default());
+                            use_navigate()(&format!("/settings/{}", schema_id), Default::default());
                         }
                     >
 
@@ -191,7 +194,7 @@ pub fn DomainList() -> impl IntoView {
                 </Toolbar>
 
                 <Transition fallback=Skeleton>
-                    {move || match domains.get() {
+                    {move || match settings.get() {
                         None => None,
                         Some(Err(http::Error::Unauthorized)) => {
                             use_navigate()("/login", Default::default());
@@ -202,29 +205,45 @@ pub fn DomainList() -> impl IntoView {
                             alert.set(Alert::from(err));
                             Some(view! { <Skeleton/> }.into_view())
                         }
-                        Some(Ok(domains)) if !domains.items.is_empty() => {
-                            total_results.set(Some(domains.total as u32));
-                            let domains_ = domains.clone();
+                        Some(Ok(settings)) if !settings.items.is_empty() => {
+                            total_results.set(Some(settings.total as u32));
+                            let schema = current_schema.get();
+                            let settings_ = settings.clone();
+                            let mut headers = schema
+                                .list
+                                .fields
+                                .iter()
+                                .map(|f| f.label_column.to_string())
+                                .collect::<Vec<_>>();
+                            if schema.can_edit() {
+                                headers.push("".to_string());
+                            }
                             Some(
                                 view! {
                                     <ColumnList
-                                        headers=vec!["Name".to_string(), "Accounts".to_string()]
+                                        headers=headers
 
                                         select_all=Callback::new(move |_| {
-                                            domains_
+                                            settings_
                                                 .items
                                                 .iter()
-                                                .map(|p| p.name.to_string())
+                                                .filter_map(|p| p.get("_id").map(|id| id.to_string()))
                                                 .collect::<Vec<_>>()
                                         })
                                     >
 
                                         <For
-                                            each=move || domains.items.clone()
-                                            key=|domain| domain.name.clone()
-                                            let:domain
+                                            each=move || settings.items.clone()
+                                            key=|setting| {
+                                                setting
+                                                    .get("_id")
+                                                    .map(|s| s.to_string())
+                                                    .unwrap_or_default()
+                                            }
+
+                                            let:settings
                                         >
-                                            <DomainItem domain/>
+                                            <SettingsItem settings schema=schema.clone()/>
                                         </For>
 
                                     </ColumnList>
@@ -239,11 +258,11 @@ pub fn DomainList() -> impl IntoView {
                                     <ZeroResults
                                         title="No results"
                                         subtitle="Your search did not yield any results."
-                                        button_text=format!("Create a new {}", "domain")
+                                        button_text=format!("Create a new {}", name_singular)
 
                                         button_action=Callback::new(move |_| {
                                             use_navigate()(
-                                                "/manage/directory/domain",
+                                                &format!("/settings/{}", schema_id),
                                                 Default::default(),
                                             );
                                         })
@@ -261,10 +280,10 @@ pub fn DomainList() -> impl IntoView {
                     <Pagination
                         current_page=page
                         total_results=total_results.read_only()
-                        page_size=PAGE_SIZE
+                        page_size=page_size
                         on_page_change=move |page: u32| {
                             use_navigate()(
-                                &UrlBuilder::new("/manage/directory/domains")
+                                &UrlBuilder::new(format!("/settings/{}", schema_id))
                                     .with_parameter("page", page.to_string())
                                     .with_optional_parameter("filter", filter())
                                     .finish(),
@@ -280,42 +299,48 @@ pub fn DomainList() -> impl IntoView {
 }
 
 #[component]
-fn DomainItem(domain: Domain) -> impl IntoView {
-    let action_url = format!("/manage/directory/accounts?filter={}", domain.name);
-    let domain_id = domain.name.clone();
+fn SettingsItem(settings: Settings, schema: Arc<Schema>) -> impl IntoView {
+    let columns = schema
+        .list
+        .fields
+        .iter()
+        .map(|field| {
+            let value = field.display(&settings);
+            view! { <ListTextItem>{value}</ListTextItem> }
+        })
+        .collect_view();
+    let setting_id = settings
+        .get("_id")
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+    let edit_link = if schema.can_edit() {
+        let edit_url = format!("/settings/{}/{}", schema.id, setting_id);
+        Some(view! {
+            <ListItem subclass="px-6 py-1.5">
+                <a
+                    class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                    href=edit_url
+                >
+                    Edit
+                </a>
+            </ListItem>
+        })
+    } else {
+        None
+    };
 
     view! {
         <tr>
-            <td class="size-px whitespace-nowrap">
-                <div class="ps-6 py-3">
-                    <label class="flex">
-                        <SelectItem item_id=domain_id/>
+            <ListItem>
+                <label class="flex">
+                    <SelectItem item_id=setting_id/>
 
-                        <span class="sr-only">Checkbox</span>
-                    </label>
-                </div>
-            </td>
-            <td class="size-px whitespace-nowrap">
-                <div class="ps-6 lg:ps-3 xl:ps-0 pe-6 py-3">
-                    <div class="flex items-center gap-x-3">
-                        <span class="block text-sm font-semibold text-gray-800 dark:text-gray-200">
-                            {domain.name}
-                        </span>
-                    </div>
-                </div>
-            </td>
+                    <span class="sr-only">Checkbox</span>
+                </label>
+            </ListItem>
+            {columns}
+            {edit_link}
 
-            <td class="size-px whitespace-nowrap">
-                <div class="px-6 py-1.5">
-                    <a
-                        class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                        href=action_url
-                    >
-                        {domain.addresses}
-                        accounts
-                    </a>
-                </div>
-            </td>
         </tr>
     }
 }

@@ -3,41 +3,60 @@ use web_sys::wasm_bindgen::JsCast;
 
 use crate::components::{badge::Badge, icon::IconXMark, Color};
 
-use super::ValidateCb;
+use super::{FormElement, ValidateCb};
 
 #[component]
 pub fn StackedBadge(
     #[prop(into)] add_button_text: String,
     color: Color,
-    values: RwSignal<Vec<String>>,
+    element: FormElement,
     #[prop(into, optional)] validate_item: Option<Callback<(String, ValidateCb), ()>>,
 ) -> impl IntoView {
     let show_tooltip = create_rw_signal(false);
     let add_value = create_rw_signal(String::new());
     let validation_error = create_rw_signal(None::<String>);
 
+    let value = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .array_value(element.id)
+            .enumerate()
+            .map(|(idx, s)| (idx, s.to_string()))
+            .collect::<Vec<_>>()
+    });
+
     let validate_value = move || {
-        let value = add_value.get().trim().to_string();
-        if let Some(cb) = validate_item.as_ref() {
-            cb.call((
-                value,
-                (move |result| match result {
-                    Ok(value) => {
-                        values.update(|v| {
-                            v.push(value);
-                        });
-                        show_tooltip.set(false);
-                    }
-                    Err(error) => {
-                        validation_error.set(Some(error));
-                    }
-                })
-                .into(),
-            ));
+        let add_value = add_value.get().trim().to_string();
+        if !element
+            .data
+            .get()
+            .array_value(element.id)
+            .any(|v| v == add_value)
+        {
+            if let Some(cb) = validate_item.as_ref() {
+                cb.call((
+                    add_value,
+                    (move |result| match result {
+                        Ok(add_value) => {
+                            element.data.update(|data| {
+                                data.array_push(element.id, add_value);
+                            });
+                            show_tooltip.set(false);
+                        }
+                        Err(error) => {
+                            validation_error.set(Some(error));
+                        }
+                    })
+                    .into(),
+                ));
+            } else {
+                element.data.update(|data| {
+                    data.array_push(element.id, add_value);
+                });
+                show_tooltip.set(false);
+            }
         } else {
-            values.update(|v| {
-                v.push(value);
-            });
             show_tooltip.set(false);
         }
     };
@@ -46,9 +65,9 @@ pub fn StackedBadge(
         <div class="relative">
 
             <For
-                each=move || { values.get() }
-                key=move |item| item.clone()
-                children=move |item| {
+                each=move || { value.get() }
+                key=move |(idx, item)| format!("{idx}_{item}")
+                children=move |(idx, item)| {
                     let label = item.clone();
                     view! {
                         <div class="inline-flex flex-wrap gap-2 p-1">
@@ -59,9 +78,10 @@ pub fn StackedBadge(
                                     type="button"
                                     class="flex-shrink-0 size-4 inline-flex items-center justify-center rounded-full hover:bg-teal-200 focus:outline-none focus:bg-teal-200 focus:text-teal-500 dark:hover:bg-teal-900"
                                     on:click=move |_| {
-                                        values
-                                            .update(|v| {
-                                                v.remove(v.iter().position(|i| i == &item).unwrap());
+                                        element
+                                            .data
+                                            .update(|data| {
+                                                data.array_delete(element.id, idx);
                                             });
                                     }
                                 >

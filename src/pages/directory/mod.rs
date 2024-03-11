@@ -1,15 +1,9 @@
-use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
-use crate::components::form::select::SelectOption;
+use serde::{Deserialize, Serialize};
 
 pub mod domains;
 pub mod principals;
-
-#[derive(Clone, Serialize, Deserialize, Default)]
-pub struct List<T> {
-    pub items: Vec<T>,
-    pub total: u64,
-}
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Principal {
@@ -17,7 +11,7 @@ pub struct Principal {
     pub id: Option<u32>,
 
     #[serde(rename = "type")]
-    pub typ: Option<Type>,
+    pub typ: Option<PrincipalType>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quota: Option<u64>,
@@ -48,7 +42,7 @@ pub struct Principal {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Type {
+pub enum PrincipalType {
     #[serde(rename = "individual")]
     #[default]
     Individual = 0,
@@ -141,7 +135,7 @@ impl Principal {
                 updates.push(PrincipalUpdate {
                     action: PrincipalAction::Set,
                     field: PrincipalField::Type,
-                    value: PrincipalValue::String(change.value()),
+                    value: PrincipalValue::String(change.id().to_string()),
                 });
             }
             _ => {}
@@ -211,69 +205,76 @@ impl Principal {
     }
 }
 
-impl SelectOption for Type {
-    fn label(&self) -> String {
-        self.name().to_string()
-    }
-
-    fn value(&self) -> String {
-        self.id().to_string()
-    }
-}
-
-impl Type {
-    pub fn id(&self) -> &'static str {
+impl PrincipalType {
+    pub const fn id(&self) -> &'static str {
         match self {
-            Type::Individual => "individual",
-            Type::Group => "group",
-            Type::Resource => "resource",
-            Type::Location => "location",
-            Type::Superuser => "superuser",
-            Type::List => "list",
-            Type::Other => "other",
+            PrincipalType::Individual => "individual",
+            PrincipalType::Group => "group",
+            PrincipalType::Resource => "resource",
+            PrincipalType::Location => "location",
+            PrincipalType::Superuser => "superuser",
+            PrincipalType::List => "list",
+            PrincipalType::Other => "other",
         }
     }
 
-    pub fn name(&self) -> &'static str {
+    pub const fn name(&self) -> &'static str {
         match self {
-            Type::Individual => "Individual",
-            Type::Group => "Group",
-            Type::Resource => "Resource",
-            Type::Location => "Location",
-            Type::Superuser => "Superuser",
-            Type::List => "Mailing List",
-            Type::Other => "Other",
+            PrincipalType::Individual => "Individual",
+            PrincipalType::Group => "Group",
+            PrincipalType::Resource => "Resource",
+            PrincipalType::Location => "Location",
+            PrincipalType::Superuser => "Superuser",
+            PrincipalType::List => "Mailing List",
+            PrincipalType::Other => "Other",
         }
     }
 
-    pub fn item_name(&self, plural: bool) -> &'static str {
+    pub const fn item_name(&self, plural: bool) -> &'static str {
         match (self, plural) {
-            (Type::Individual, false) => "account",
-            (Type::Individual, true) => "accounts",
-            (Type::Group, false) => "group",
-            (Type::Group, true) => "groups",
-            (Type::Resource, false) => "resource",
-            (Type::Resource, true) => "resources",
-            (Type::Location, false) => "location",
-            (Type::Location, true) => "locations",
-            (Type::Superuser, false) => "superuser",
-            (Type::Superuser, true) => "superusers",
-            (Type::List, false) => "mailing list",
-            (Type::List, true) => "mailing lists",
-            (Type::Other, false) => "other",
-            (Type::Other, true) => "other",
+            (PrincipalType::Individual, false) => "account",
+            (PrincipalType::Individual, true) => "accounts",
+            (PrincipalType::Group, false) => "group",
+            (PrincipalType::Group, true) => "groups",
+            (PrincipalType::Resource, false) => "resource",
+            (PrincipalType::Resource, true) => "resources",
+            (PrincipalType::Location, false) => "location",
+            (PrincipalType::Location, true) => "locations",
+            (PrincipalType::Superuser, false) => "superuser",
+            (PrincipalType::Superuser, true) => "superusers",
+            (PrincipalType::List, false) => "mailing list",
+            (PrincipalType::List, true) => "mailing lists",
+            (PrincipalType::Other, false) => "other",
+            (PrincipalType::Other, true) => "other",
         }
     }
 
     pub fn resource_name(&self, list: bool) -> &'static str {
         match (self, list) {
-            (Type::Individual, false) => "account",
-            (Type::Individual, true) => "accounts",
-            (Type::Group, false) => "group",
-            (Type::Group, true) => "groups",
-            (Type::List, false) => "list",
-            (Type::List, true) => "lists",
+            (PrincipalType::Individual, false) => "account",
+            (PrincipalType::Individual, true) => "accounts",
+            (PrincipalType::Group, false) => "group",
+            (PrincipalType::Group, true) => "groups",
+            (PrincipalType::List, false) => "list",
+            (PrincipalType::List, true) => "lists",
             _ => unimplemented!("resource_name for {:?}", self),
+        }
+    }
+}
+
+impl FromStr for PrincipalType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "individual" => Ok(PrincipalType::Individual),
+            "group" => Ok(PrincipalType::Group),
+            "resource" => Ok(PrincipalType::Resource),
+            "location" => Ok(PrincipalType::Location),
+            "superuser" => Ok(PrincipalType::Superuser),
+            "list" => Ok(PrincipalType::List),
+            "other" => Ok(PrincipalType::Other),
+            _ => Err(format!("Invalid PrincipalType: {}", s)),
         }
     }
 }

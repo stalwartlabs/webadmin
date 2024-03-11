@@ -1,5 +1,6 @@
 #![allow(unstable_name_collisions)]
-use std::time::Duration;
+use core::schema::Schemas;
+use std::{sync::Arc, time::Duration};
 
 use components::layout::MenuItem;
 use gloo_storage::{SessionStorage, Storage};
@@ -14,10 +15,11 @@ use crate::{
     },
     core::oauth::{oauth_refresh_token, AuthToken},
     pages::{
+        config::list::SettingsList,
         directory::{
             domains::{edit::DomainCreate, list::DomainList},
             principals::{edit::PrincipalEdit, list::PrincipalList},
-            Type,
+            PrincipalType,
         },
         login::Login,
         notfound::NotFound,
@@ -55,6 +57,7 @@ pub fn App() -> impl IntoView {
     );
     provide_meta_context();
     provide_context(auth_token);
+    provide_context(build_schemas());
     init_alerts();
     init_modals();
 
@@ -121,9 +124,13 @@ pub fn App() -> impl IntoView {
                         redirect_path="/login"
                         condition=is_logged_in
                     />
+
                     <ProtectedRoute
                         path="/directory/account/:id?"
-                        view=move || view! { <PrincipalEdit selected_type=Type::Individual/> }
+                        view=move || {
+                            view! { <PrincipalEdit selected_type=PrincipalType::Individual/> }
+                        }
+
                         redirect_path="/login"
                         condition=is_logged_in
                     />
@@ -135,7 +142,7 @@ pub fn App() -> impl IntoView {
                     />
                     <ProtectedRoute
                         path="/directory/group/:id?"
-                        view=move || view! { <PrincipalEdit selected_type=Type::Group/> }
+                        view=move || view! { <PrincipalEdit selected_type=PrincipalType::Group/> }
                         redirect_path="/login"
                         condition=is_logged_in
                     />
@@ -148,7 +155,7 @@ pub fn App() -> impl IntoView {
                     />
                     <ProtectedRoute
                         path="/directory/list/:id?"
-                        view=move || view! { <PrincipalEdit selected_type=Type::List/> }
+                        view=move || view! { <PrincipalEdit selected_type=PrincipalType::List/> }
                         redirect_path="/login"
                         condition=is_logged_in
                     />
@@ -227,7 +234,42 @@ pub fn App() -> impl IntoView {
                         redirect_path="/login"
                         condition=is_logged_in
                     />
+                </ProtectedRoute>
 
+                <ProtectedRoute
+                    path="/settings"
+                    view=|| {
+                        view! { <Layout menu_items=menu_items()/> }
+                    }
+
+                    redirect_path="/login"
+                    condition=is_logged_in
+                >
+                    <ProtectedRoute
+                        path="/store"
+                        view=move || view! { <SettingsList id="store"/> }
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+
+                    <ProtectedRoute
+                        path="/directory"
+                        view=move || view! { <SettingsList id="directory"/> }
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/spam-scores"
+                        view=move || view! { <SettingsList id="spam-scores"/> }
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
+                    <ProtectedRoute
+                        path="/spam-free"
+                        view=move || view! { <SettingsList id="spam-free"/> }
+                        redirect_path="/login"
+                        condition=is_logged_in
+                    />
                 </ProtectedRoute>
                 <Route path="/" view=Login/>
                 <Route path="/login" view=Login/>
@@ -274,4 +316,16 @@ pub(crate) fn menu_items() -> Vec<MenuItem> {
             ],
         ),
     ]
+}
+
+pub fn build_schemas() -> Arc<Schemas> {
+    Schemas::builder()
+        .build_login()
+        .build_principals()
+        .build_domains()
+        .build_store()
+        .build_directory()
+        .build_spam_lists()
+        .build()
+        .into()
 }

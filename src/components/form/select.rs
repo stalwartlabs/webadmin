@@ -1,36 +1,56 @@
 use leptos::*;
 
-pub trait SelectOption: Clone + PartialEq + Eq + Default + 'static {
-    fn label(&self) -> String;
-    fn value(&self) -> String;
-}
+use crate::core::schema::{Source, Type};
+
+use super::FormElement;
 
 #[component]
-pub fn Select<T: SelectOption>(
-    #[prop(optional, into)] value: RwSignal<T>,
-    #[prop(optional, into)] options: MaybeSignal<Vec<T>>,
-) -> impl IntoView {
-    let ev_options = options.clone();
+pub fn Select(element: FormElement) -> impl IntoView {
+    let options = match &element
+        .data
+        .get_untracked()
+        .schema
+        .fields
+        .get(element.id)
+        .unwrap()
+        .typ_
+    {
+        Type::Select(Source::Static(options)) => options
+            .into_iter()
+            .map(|(value, label)| (value.to_string(), label.to_string()))
+            .collect::<Vec<_>>(),
+        Type::Select(Source::Dynamic { schema, field }) => {
+            todo!()
+        }
+        _ => panic!("Invalid schema type for select"),
+    };
+    let value = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .value::<String>(element.id)
+            .unwrap_or_default()
+    });
 
     view! {
         <select
             class="py-2 px-3 pe-9 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
             on:change=move |ev| {
-                let selection = event_target_value(&ev);
-                value
-                    .set(ev_options.get().iter().find(|o| o.value() == selection).unwrap().clone());
+                element
+                    .data
+                    .update(|data| {
+                        data.set(element.id, event_target_value(&ev));
+                    });
             }
         >
 
             <For
-                each=move || options.get()
-                key=move |item| item.value()
-                children=move |item| {
-                    let option_value = item.value();
-                    let label = item.label();
-                    let is_selected = value.get() == item;
+                each=move || options.clone()
+                key=move |(id, _)| id.clone()
+                children=move |(id, label)| {
+                    let id_ = id.clone();
                     view! {
-                        <option selected=is_selected value=option_value>
+                        <option selected=move || value.get() == id value=id_>
                             {label}
                         </option>
                     }
@@ -38,25 +58,5 @@ pub fn Select<T: SelectOption>(
             />
 
         </select>
-    }
-}
-
-impl SelectOption for String {
-    fn label(&self) -> String {
-        self.clone()
-    }
-
-    fn value(&self) -> String {
-        self.clone()
-    }
-}
-
-impl SelectOption for &'static str {
-    fn label(&self) -> String {
-        self.to_string()
-    }
-
-    fn value(&self) -> String {
-        self.to_string()
     }
 }

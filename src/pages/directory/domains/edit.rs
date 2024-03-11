@@ -1,16 +1,22 @@
+use std::sync::Arc;
+
 use leptos::*;
 use leptos_router::use_navigate;
 
 use crate::{
     components::{
         form::{
-            button::Button, input::InputText, value_lowercase, value_trim, ButtonBar, Form,
-            FormItem, FormValidator,
+            button::Button, input::InputText, Form, FormButtonBar, FormElement, FormItem,
+            FormSection,
         },
         messages::alert::{use_alerts, Alert},
         Color,
     },
-    core::{http::HttpRequest, oauth::use_authorization},
+    core::{
+        http::HttpRequest,
+        oauth::use_authorization,
+        schema::{Builder, Schemas, Transformer, Type, Validator},
+    },
 };
 
 #[component]
@@ -20,7 +26,9 @@ pub fn DomainCreate() -> impl IntoView {
 
     let (pending, set_pending) = create_signal(false);
 
-    let name = FormValidator::new(String::new());
+    let data = expect_context::<Arc<Schemas>>()
+        .build_form("domains")
+        .into_signal();
 
     let save_changes = create_action(move |name: &String| {
         let auth = auth.get();
@@ -49,15 +57,18 @@ pub fn DomainCreate() -> impl IntoView {
     view! {
         <Form title="Create domain" subtitle="Create a new local domain name">
 
-            <FormItem label="Domain name">
-                <InputText
-                    placeholder="example.org"
+            <FormSection>
+                <FormItem label="Domain name">
+                    <InputText
+                        placeholder="example.org"
 
-                    value=name
-                />
-            </FormItem>
+                        element=FormElement::new("domain", data)
+                    />
+                </FormItem>
 
-            <ButtonBar slot>
+            </FormSection>
+
+            <FormButtonBar>
                 <Button
                     text="Cancel"
                     color=Color::Gray
@@ -70,25 +81,31 @@ pub fn DomainCreate() -> impl IntoView {
                     text="Create"
                     color=Color::Blue
                     on_click=Callback::new(move |_| {
-                        if let Some(domain_name) = name
-                            .validate([value_trim, value_lowercase], [value_is_domain])
-                        {
-                            save_changes.dispatch(domain_name);
-                        }
+                        data.update(|data| {
+                            if data.validate_form() {
+                                save_changes.dispatch(data.value("domain").unwrap());
+                            }
+                        });
                     })
 
                     disabled=pending
                 />
-            </ButtonBar>
+            </FormButtonBar>
 
         </Form>
     }
 }
 
-pub fn value_is_domain(value: String) -> Option<String> {
-    if value.is_empty() || !value.contains('.') || value.starts_with('.') || value.ends_with('.') {
-        Some("Invalid domain name".to_string())
-    } else {
-        None
+impl Builder<Schemas, ()> {
+    pub fn build_domains(self) -> Self {
+        self.new_schema("domains")
+            .new_field("domain")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::RemoveSpaces, Transformer::Lowercase],
+                [Validator::Required, Validator::IsDomain],
+            )
+            .build()
+            .build()
     }
 }

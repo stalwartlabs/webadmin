@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use gloo_storage::{LocalStorage, SessionStorage, Storage};
 use leptos::*;
@@ -10,12 +10,14 @@ use crate::{
     components::{
         form::{
             input::{InputPassword, InputText},
-            value_is_not_empty, value_is_url, value_lowercase, value_remove_spaces, FormValidator,
-            StringSanitizeFn,
+            FormElement,
         },
         messages::alert::{use_alerts, Alerts},
     },
-    core::oauth::{oauth_authenticate, AuthToken},
+    core::{
+        oauth::{oauth_authenticate, AuthToken},
+        schema::{Builder, Schemas, Transformer, Type, Validator},
+    },
     STATE_LOGIN_NAME_KEY, STATE_STORAGE_KEY,
 };
 
@@ -86,9 +88,14 @@ pub fn Login() -> impl IntoView {
         || (String::new(), String::new()),
         |session| (session.login, session.base_url),
     );
-    let base_url = FormValidator::new(base_url);
-    let login = FormValidator::new(login);
-    let password = FormValidator::new(String::new());
+    let data = expect_context::<Arc<Schemas>>()
+        .build_form("login")
+        .with_value("base-url", base_url)
+        .with_value("login", login)
+        .into_signal();
+    let has_remote = create_memo(move |_| {
+        query.get().get("remote").is_some() || data.get().has_value("base-url")
+    });
 
     view! {
         <Body class="dark:bg-slate-900 bg-gray-100 flex h-full items-center py-16"/>
@@ -108,23 +115,23 @@ pub fn Login() -> impl IntoView {
                         <Alerts/>
                         <form on:submit=|ev| ev.prevent_default()>
                             <div class="grid gap-y-4">
-                                <Show when=move || {
-                                    query.get().get("remote").is_some()
-                                        || !base_url.signal().get().unwrap().is_empty()
-                                }>
+                                <Show when=has_remote>
                                     <div>
                                         <label class="block text-sm mb-2 dark:text-white">
                                             Host
                                         </label>
                                         <InputText
                                             placeholder="https://mail.example.org"
-                                            value=base_url
+                                            element=FormElement::new("base-url", data)
                                         />
                                     </div>
                                 </Show>
                                 <div>
                                     <label class="block text-sm mb-2 dark:text-white">Login</label>
-                                    <InputText placeholder="user@example.org" value=login/>
+                                    <InputText
+                                        placeholder="user@example.org"
+                                        element=FormElement::new("login", data)
+                                    />
                                 </div>
                                 <div>
                                     <div class="flex justify-between items-center">
@@ -133,7 +140,7 @@ pub fn Login() -> impl IntoView {
                                         </label>
 
                                     </div>
-                                    <InputPassword value=password/>
+                                    <InputPassword element=FormElement::new("password", data)/>
                                 </div>
                                 <div class="flex items-center">
                                     <div class="flex">
@@ -163,44 +170,35 @@ pub fn Login() -> impl IntoView {
                                     type="submit"
                                     class="w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                                     on:click=move |_| {
-                                        if let (Some(login), Some(password), Some(base_url)) = (
-                                            login
-                                                .validate(
-                                                    [value_remove_spaces, value_lowercase],
-                                                    [value_is_not_empty],
-                                                ),
-                                            password
-                                                .validate::<
-                                                    [_; 0],
-                                                    _,
-                                                    StringSanitizeFn,
-                                                    _,
-                                                >([], [value_is_not_empty]),
-                                            base_url
-                                                .validate::<
-                                                    [_; 0],
-                                                    _,
-                                                    StringSanitizeFn,
-                                                    _,
-                                                >([], [value_is_url]),
-                                        ) {
-                                            if remember_me.get() {
-                                                if let Err(err) = LocalStorage::set(
-                                                    STATE_LOGIN_NAME_KEY,
-                                                    SavedSession {
-                                                        login: login.clone(),
-                                                        base_url: base_url.clone(),
-                                                    },
-                                                ) {
-                                                    log::error!(
-                                                        "Failed to save login name to local storage: {}", err
-                                                    );
+                                        data.update(|data| {
+                                            if data.validate_form() {
+                                                let login = data
+                                                    .value::<String>("login")
+                                                    .unwrap_or_default();
+                                                let password = data
+                                                    .value::<String>("password")
+                                                    .unwrap_or_default();
+                                                let base_url = data
+                                                    .value::<String>("base-url")
+                                                    .unwrap_or_default();
+                                                if remember_me.get() {
+                                                    if let Err(err) = LocalStorage::set(
+                                                        STATE_LOGIN_NAME_KEY,
+                                                        SavedSession {
+                                                            login: login.clone(),
+                                                            base_url: base_url.clone(),
+                                                        },
+                                                    ) {
+                                                        log::error!(
+                                                            "Failed to save login name to local storage: {}", err
+                                                        );
+                                                    }
+                                                } else {
+                                                    LocalStorage::delete(STATE_LOGIN_NAME_KEY);
                                                 }
-                                            } else {
-                                                LocalStorage::delete(STATE_LOGIN_NAME_KEY);
+                                                login_action.dispatch((login, password, base_url));
                                             }
-                                            login_action.dispatch((login, password, base_url));
-                                        }
+                                        });
                                     }
                                 >
 
@@ -212,5 +210,26 @@ pub fn Login() -> impl IntoView {
                 </div>
             </div>
         </main>
+    }
+}
+
+impl Builder<Schemas, ()> {
+    pub fn build_login(self) -> Self {
+        self.new_schema("login")
+            .new_field("login")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::RemoveSpaces, Transformer::Lowercase],
+                [Validator::Required],
+            )
+            .build()
+            .new_field("password")
+            .typ(Type::Secret)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("base-url")
+            .input_check([Transformer::Trim], [Validator::IsUrl])
+            .build()
+            .build()
     }
 }

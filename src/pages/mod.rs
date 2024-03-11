@@ -1,10 +1,18 @@
 use chrono::{DateTime, Local, Utc};
+use serde::{Deserialize, Serialize};
 
+pub mod config;
 pub mod directory;
 pub mod login;
 pub mod notfound;
 pub mod queue;
 pub mod reports;
+
+#[derive(Clone, Serialize, Deserialize, Default)]
+pub struct List<T> {
+    pub items: Vec<T>,
+    pub total: u64,
+}
 
 pub fn maybe_plural(items: usize, singular: &str, plural: &str) -> String {
     if items == 1 {

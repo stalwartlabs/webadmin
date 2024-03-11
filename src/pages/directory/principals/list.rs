@@ -28,8 +28,8 @@ use crate::{
         url::UrlBuilder,
     },
     pages::{
-        directory::{List, Principal, Type},
-        maybe_plural,
+        directory::{Principal, PrincipalType},
+        maybe_plural, List,
     },
 };
 
@@ -69,12 +69,12 @@ pub fn PrincipalList() -> impl IntoView {
         .rev()
         .find(|v| !v.is_empty())
         .map(|t| match t {
-            "accounts" => Type::Individual,
-            "groups" => Type::Group,
-            "lists" => Type::List,
-            _ => Type::Individual,
+            "accounts" => PrincipalType::Individual,
+            "groups" => PrincipalType::Group,
+            "lists" => PrincipalType::List,
+            _ => PrincipalType::Individual,
         })
-        .unwrap_or(Type::Individual);
+        .unwrap_or(PrincipalType::Individual);
 
     let principals = create_resource(
         move || (page(), filter()),
@@ -138,9 +138,9 @@ pub fn PrincipalList() -> impl IntoView {
 
     let total_results = create_rw_signal(None::<u32>);
     let (title, subtitle) = match selected_type {
-        Type::Individual => ("Accounts", "user accounts"),
-        Type::Group => ("Groups", "groups"),
-        Type::List => ("Mailing Lists", "mailing lists"),
+        PrincipalType::Individual => ("Accounts", "user accounts"),
+        PrincipalType::Group => ("Groups", "groups"),
+        PrincipalType::List => ("Mailing Lists", "mailing lists"),
         _ => unreachable!("Invalid type."),
     };
 
@@ -240,7 +240,7 @@ pub fn PrincipalList() -> impl IntoView {
                             total_results.set(Some(principals.total as u32));
                             let principals_ = principals.clone();
                             let headers = match selected_type {
-                                Type::Individual => {
+                                PrincipalType::Individual => {
                                     vec![
                                         "Name".to_string(),
                                         "E-mail".to_string(),
@@ -250,7 +250,7 @@ pub fn PrincipalList() -> impl IntoView {
                                         "".to_string(),
                                     ]
                                 }
-                                Type::Group => {
+                                PrincipalType::Group => {
                                     vec![
                                         "Name".to_string(),
                                         "E-mail".to_string(),
@@ -260,7 +260,7 @@ pub fn PrincipalList() -> impl IntoView {
                                         "".to_string(),
                                     ]
                                 }
-                                Type::List => {
+                                PrincipalType::List => {
                                     vec![
                                         "Name".to_string(),
                                         "E-mail".to_string(),
@@ -357,7 +357,7 @@ pub fn PrincipalList() -> impl IntoView {
 }
 
 #[component]
-fn PrincipalItem(principal: Principal, selected_type: Type) -> impl IntoView {
+fn PrincipalItem(principal: Principal, selected_type: PrincipalType) -> impl IntoView {
     let name = principal.name.as_deref().unwrap_or("unknown").to_string();
     let display_name = principal
         .description
@@ -415,10 +415,10 @@ fn PrincipalItem(principal: Principal, selected_type: Type) -> impl IntoView {
 
             <ListItem>
                 <Badge color=match principal.typ.unwrap_or(selected_type) {
-                    Type::Superuser => Color::Yellow,
-                    Type::Individual => Color::Green,
-                    Type::Group => Color::Red,
-                    Type::List => Color::Blue,
+                    PrincipalType::Superuser => Color::Yellow,
+                    PrincipalType::Individual => Color::Green,
+                    PrincipalType::Group => Color::Red,
+                    PrincipalType::List => Color::Blue,
                     _ => Color::Red,
                 }>
 
@@ -426,7 +426,7 @@ fn PrincipalItem(principal: Principal, selected_type: Type) -> impl IntoView {
                 </Badge>
 
             </ListItem>
-            <Show when=move || { selected_type == Type::Individual }>
+            <Show when=move || { selected_type == PrincipalType::Individual }>
                 <ListTextItem>
                     {match (principal.quota, principal.used_quota) {
                         (Some(quota), Some(used_quota)) if quota > 0 => {
@@ -441,10 +441,14 @@ fn PrincipalItem(principal: Principal, selected_type: Type) -> impl IntoView {
 
                 </ListTextItem>
             </Show>
-            <Show when=move || { matches!(selected_type, Type::List | Type::Group) }>
+            <Show when=move || {
+                matches!(selected_type, PrincipalType::List | PrincipalType::Group)
+            }>
                 <ListTextItem>{maybe_plural(num_members, "member", "members")}</ListTextItem>
             </Show>
-            <Show when=move || { matches!(selected_type, Type::Individual | Type::Group) }>
+            <Show when=move || {
+                matches!(selected_type, PrincipalType::Individual | PrincipalType::Group)
+            }>
                 <ListTextItem>{maybe_plural(num_member_of, "group", "groups")}</ListTextItem>
             </Show>
             <ListItem subclass="px-6 py-1.5">

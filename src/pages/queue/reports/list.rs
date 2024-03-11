@@ -26,10 +26,9 @@ use crate::{
         url::UrlBuilder,
     },
     pages::{
-        directory::List,
         maybe_plural,
         queue::reports::{AggregateReportId, AggregateReportType},
-        FormatDateTime,
+        FormatDateTime, List,
     },
 };
 

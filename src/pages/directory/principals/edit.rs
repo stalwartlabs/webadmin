@@ -1,4 +1,4 @@
-use std::vec;
+use std::{sync::Arc, vec};
 
 use humansize::{format_size, DECIMAL};
 use leptos::*;
@@ -13,23 +13,23 @@ use crate::{
             select::Select,
             stacked_badge::StackedBadge,
             stacked_input::StackedInput,
-            value_is_email, value_is_not_empty, value_lowercase, value_remove_spaces, value_trim,
-            ButtonBar, Form, FormItem, FormListValidator, FormValidator, StringValidateFn,
-            ValidateCb,
+            Form, FormButtonBar, FormElement, FormItem, FormSection, ValidateCb,
         },
         messages::alert::{use_alerts, Alert},
         skeleton::Skeleton,
         Color,
     },
     core::{
+        form::FormData,
         http::{self, HttpRequest},
         oauth::use_authorization,
+        schema::{Builder, Schemas, Source, Transformer, Type, Validator},
     },
-    pages::directory::{Principal, Type},
+    pages::directory::{Principal, PrincipalType},
 };
 
 #[component]
-pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
+pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let params = use_params_map();
@@ -53,50 +53,14 @@ pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
     let (pending, set_pending) = create_signal(false);
 
     let current_principal = create_rw_signal(Principal::default());
-    let login = FormValidator::new(String::new());
-    let name = FormValidator::new(String::new());
-    let typ: RwSignal<Type> = create_rw_signal(selected_type);
-    let password = FormValidator::new(String::new());
-    let quota = create_rw_signal(0u64);
-    let member_of = create_rw_signal(Vec::<String>::new());
-    let members = create_rw_signal(Vec::<String>::new());
-    let email = FormValidator::new(String::new());
-    let aliases = FormListValidator::new(Vec::<String>::new());
+    let data = expect_context::<Arc<Schemas>>()
+        .build_form("principals")
+        .into_signal();
 
-    let validate = move || {
-        let aliases = aliases.validate([value_trim, value_lowercase], [value_is_email])?;
-
-        Some(Principal {
-            typ: typ.get().into(),
-            quota: quota.get().into(),
-            name: login
-                .validate([value_remove_spaces, value_lowercase], [value_is_not_empty])?
-                .into(),
-            secrets: {
-                let password = password.signal().get().ok()?;
-                if !password.is_empty() {
-                    vec![sha512_crypt::hash(password).unwrap()]
-                } else {
-                    vec![]
-                }
-            },
-            emails: [email.validate([value_trim, value_lowercase], [value_is_email])?]
-                .into_iter()
-                .chain(aliases)
-                .filter(|x| !x.is_empty())
-                .collect::<Vec<_>>(),
-            member_of: member_of.get(),
-            members: members.get(),
-            description: name
-                .validate::<_, [_; 0], _, StringValidateFn>([value_trim], [])?
-                .into(),
-            ..Default::default()
-        })
-    };
     let principal_is_valid = create_action(
-        move |(name, cb, expected_types): &(String, ValidateCb, Vec<Type>)| {
+        move |(name, cb, expected_types): &(String, ValidateCb, Vec<PrincipalType>)| {
             let name = name.clone();
-            let login_name = login.signal().get().unwrap();
+            let login_name = data.get().value::<String>("name").unwrap_or_default();
             let auth = auth.get();
             let expected_types = expected_types.clone();
             let cb = *cb;
@@ -185,30 +149,30 @@ pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
     });
 
     let subtitle = match selected_type {
-        Type::Individual => "Manage account details, password and email addresses.",
-        Type::Group => "Manage group members and member groups.",
-        Type::List => "Manage list details and members.",
+        PrincipalType::Individual => "Manage account details, password and email addresses.",
+        PrincipalType::Group => "Manage group members and member groups.",
+        PrincipalType::List => "Manage list details and members.",
         _ => unreachable!(),
     };
     let title = create_memo(move |_| {
         if let Some(name) = params().get("id") {
             match selected_type {
-                Type::Individual => {
+                PrincipalType::Individual => {
                     format!("Update '{name}' Account")
                 }
-                Type::Group => {
+                PrincipalType::Group => {
                     format!("Update '{name}' Group")
                 }
-                Type::List => {
+                PrincipalType::List => {
                     format!("Update '{name}' List")
                 }
                 _ => unreachable!(),
             }
         } else {
             match selected_type {
-                Type::Individual => "Create Account",
-                Type::Group => "Create Group",
-                Type::List => "Create List",
+                PrincipalType::Individual => "Create Account",
+                PrincipalType::Group => "Create Group",
+                PrincipalType::List => "Create List",
                 _ => unreachable!(),
             }
             .to_string()
@@ -239,150 +203,155 @@ pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
                         Some(view! { <div></div> }.into_view())
                     }
                     Some(Ok(principal)) => {
-                        login.update(principal.name.clone().unwrap_or_default());
-                        typ.set(principal.typ.unwrap_or(selected_type));
-                        name.update(principal.description.clone().unwrap_or_default());
-                        password.update(String::new());
-                        quota.set(principal.quota.unwrap_or_default());
-                        member_of.set(principal.member_of.clone());
-                        members.set(principal.members.clone());
-                        email.update(principal.emails.first().cloned().unwrap_or_default());
-                        aliases
-                            .update(principal.emails.iter().skip(1).cloned().collect::<Vec<_>>());
+                        data.update(|data| {
+                            data.from_principal(&principal, selected_type);
+                        });
                         let used_quota = principal.used_quota.unwrap_or_default();
                         let total_quota = principal.quota.unwrap_or_default();
                         current_principal.set(principal);
                         Some(
                             view! {
-                                <FormItem label=match selected_type {
-                                    Type::Individual => "Login name",
-                                    _ => "Name",
-                                }>
-                                    <InputText
-                                        placeholder=match selected_type {
-                                            Type::Individual => "Login name",
-                                            _ => "Short Name",
-                                        }
+                                <FormSection>
+                                    <FormItem label=match selected_type {
+                                        PrincipalType::Individual => "Login name",
+                                        _ => "Name",
+                                    }>
+                                        <InputText
+                                            placeholder=match selected_type {
+                                                PrincipalType::Individual => "Login name",
+                                                _ => "Short Name",
+                                            }
 
-                                        value=login
-                                    />
-                                </FormItem>
-
-                                <FormItem label=match selected_type {
-                                    Type::Individual => "Name",
-                                    _ => "Description",
-                                }>
-                                    <InputText
-                                        placeholder=match selected_type {
-                                            Type::Individual => "Full Name",
-                                            _ => "Description",
-                                        }
-
-                                        value=name
-                                    />
-                                </FormItem>
-
-                                <Show when=move || matches!(selected_type, Type::Individual)>
-                                    <FormItem label="Type">
-                                        <Select
-                                            value=typ
-                                            options=vec![Type::Individual, Type::Superuser]
+                                            element=FormElement::new("name", data)
                                         />
-
                                     </FormItem>
 
-                                    <FormItem label="Password">
-                                        <InputPassword value=password/>
-                                    </FormItem>
-                                </Show>
+                                    <FormItem label=match selected_type {
+                                        PrincipalType::Individual => "Name",
+                                        _ => "Description",
+                                    }>
+                                        <InputText
+                                            placeholder=match selected_type {
+                                                PrincipalType::Individual => "Full Name",
+                                                _ => "Description",
+                                            }
 
-                                <FormItem label="Email">
-                                    <InputText placeholder="user@example.org" value=email/>
-                                </FormItem>
-
-                                <FormItem label="Aliases">
-                                    <StackedInput
-                                        values=aliases
-                                        placeholder="Email"
-                                        add_button_text="Add Email".to_string()
-                                    />
-                                </FormItem>
-
-                                <Show when=move || matches!(selected_type, Type::Individual)>
-                                    <FormItem label="Disk quota">
-                                        <div class="relative">
-                                            <InputSize value=quota/>
-                                            <Show when=move || { total_quota > 0 }>
-                                                <p class="mt-3">
-                                                    <label class="inline-flex items-center gap-x-1 text-xs text-black-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600">
-
-                                                        {format!(
-                                                            "{} used ({:.1}%)",
-                                                            format_size(used_quota, DECIMAL),
-                                                            (used_quota as f64 / total_quota as f64) * 100.0,
-                                                        )}
-
-                                                    </label>
-                                                </p>
-
-                                            </Show>
-
-                                        </div>
-                                    </FormItem>
-                                </Show>
-
-                                <Show when=move || {
-                                    matches!(selected_type, Type::Group | Type::List)
-                                }>
-                                    <FormItem label="Members">
-                                        <StackedBadge
-                                            color=Color::Green
-                                            values=members
-
-                                            add_button_text="Add member".to_string()
-                                            validate_item=Callback::new(move |(value, cb)| {
-                                                principal_is_valid
-                                                    .dispatch((
-                                                        value,
-                                                        cb,
-                                                        if selected_type == Type::Group {
-                                                            vec![Type::Individual, Type::Group]
-                                                        } else {
-                                                            vec![Type::Individual]
-                                                        },
-                                                    ));
-                                            })
+                                            element=FormElement::new("description", data)
                                         />
-
                                     </FormItem>
-                                </Show>
 
-                                <Show when=move || {
-                                    matches!(selected_type, Type::Individual | Type::Group)
-                                }>
-                                    <FormItem label="Member of">
-                                        <StackedBadge
-                                            color=Color::Blue
+                                    <Show when=move || {
+                                        matches!(selected_type, PrincipalType::Individual)
+                                    }>
+                                        <FormItem label="Type">
+                                            <Select element=FormElement::new("type", data)/>
 
-                                            values=member_of
+                                        </FormItem>
 
-                                            add_button_text="Add to group".to_string()
-                                            validate_item=Callback::new(move |(value, cb)| {
-                                                principal_is_valid
-                                                    .dispatch((
-                                                        value,
-                                                        cb,
-                                                        if selected_type == Type::Group {
-                                                            vec![Type::Group]
-                                                        } else {
-                                                            vec![Type::Group, Type::List]
-                                                        },
-                                                    ));
-                                            })
+                                        <FormItem label="Password">
+                                            <InputPassword element=FormElement::new("password", data)/>
+                                        </FormItem>
+                                    </Show>
+
+                                    <FormItem label="Email">
+                                        <InputText
+                                            placeholder="user@example.org"
+                                            element=FormElement::new("email", data)
                                         />
-
                                     </FormItem>
-                                </Show>
+
+                                    <FormItem label="Aliases">
+                                        <StackedInput
+                                            element=FormElement::new("aliases", data)
+                                            placeholder="Email"
+                                            add_button_text="Add Email".to_string()
+                                        />
+                                    </FormItem>
+
+                                    <Show when=move || {
+                                        matches!(selected_type, PrincipalType::Individual)
+                                    }>
+                                        <FormItem label="Disk quota">
+                                            <div class="relative">
+                                                <InputSize element=FormElement::new("quota", data)/>
+                                                <Show when=move || { total_quota > 0 }>
+                                                    <p class="mt-3">
+                                                        <label class="inline-flex items-center gap-x-1 text-xs text-black-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600">
+
+                                                            {format!(
+                                                                "{} used ({:.1}%)",
+                                                                format_size(used_quota, DECIMAL),
+                                                                (used_quota as f64 / total_quota as f64) * 100.0,
+                                                            )}
+
+                                                        </label>
+                                                    </p>
+
+                                                </Show>
+
+                                            </div>
+                                        </FormItem>
+                                    </Show>
+
+                                    <Show when=move || {
+                                        matches!(
+                                            selected_type,
+                                            PrincipalType::Group | PrincipalType::List
+                                        )
+                                    }>
+                                        <FormItem label="Members">
+                                            <StackedBadge
+                                                color=Color::Green
+                                                element=FormElement::new("members", data)
+
+                                                add_button_text="Add member".to_string()
+                                                validate_item=Callback::new(move |(value, cb)| {
+                                                    principal_is_valid
+                                                        .dispatch((
+                                                            value,
+                                                            cb,
+                                                            if selected_type == PrincipalType::Group {
+                                                                vec![PrincipalType::Individual, PrincipalType::Group]
+                                                            } else {
+                                                                vec![PrincipalType::Individual]
+                                                            },
+                                                        ));
+                                                })
+                                            />
+
+                                        </FormItem>
+                                    </Show>
+
+                                    <Show when=move || {
+                                        matches!(
+                                            selected_type,
+                                            PrincipalType::Individual | PrincipalType::Group
+                                        )
+                                    }>
+                                        <FormItem label="Member of">
+                                            <StackedBadge
+                                                color=Color::Blue
+
+                                                element=FormElement::new("member-of", data)
+
+                                                add_button_text="Add to group".to_string()
+                                                validate_item=Callback::new(move |(value, cb)| {
+                                                    principal_is_valid
+                                                        .dispatch((
+                                                            value,
+                                                            cb,
+                                                            if selected_type == PrincipalType::Group {
+                                                                vec![PrincipalType::Group]
+                                                            } else {
+                                                                vec![PrincipalType::Group, PrincipalType::List]
+                                                            },
+                                                        ));
+                                                })
+                                            />
+
+                                        </FormItem>
+                                    </Show>
+                                </FormSection>
                             }
                                 .into_view(),
                         )
@@ -391,7 +360,7 @@ pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
 
             </Transition>
 
-            <ButtonBar slot>
+            <FormButtonBar>
                 <Button
                     text="Cancel"
                     color=Color::Gray
@@ -407,15 +376,117 @@ pub fn PrincipalEdit(selected_type: Type) -> impl IntoView {
                     text="Save changes"
                     color=Color::Blue
                     on_click=Callback::new(move |_| {
-                        if let Some(changes) = validate() {
-                            save_changes.dispatch(changes);
-                        }
+                        data.update(|data| {
+                            if let Some(changes) = data.to_principal() {
+                                save_changes.dispatch(changes);
+                            }
+                        });
                     })
 
                     disabled=pending
                 />
-            </ButtonBar>
+            </FormButtonBar>
 
         </Form>
+    }
+}
+
+#[allow(clippy::wrong_self_convention)]
+impl FormData {
+    fn from_principal(&mut self, principal: &Principal, default_type: PrincipalType) {
+        self.set("name", principal.name.clone().unwrap_or_default());
+        self.set(
+            "description",
+            principal.description.clone().unwrap_or_default(),
+        );
+        self.set("quota", principal.quota.unwrap_or_default().to_string());
+        self.set(
+            "type",
+            principal.typ.unwrap_or(default_type).id().to_string(),
+        );
+        if let Some(email) = principal.emails.first() {
+            self.set("email", email);
+        }
+        self.array_set("member-of", principal.member_of.iter());
+        self.array_set("members", principal.members.iter());
+        self.array_set("aliases", principal.emails.iter().skip(1));
+    }
+
+    fn to_principal(&mut self) -> Option<Principal> {
+        if self.validate_form() {
+            Some(Principal {
+                typ: self.value::<PrincipalType>("type").unwrap().into(),
+                quota: self.value("quota"),
+                name: self.value::<String>("name").unwrap().into(),
+                secrets: {
+                    if let Some(password) = self.value::<String>("password") {
+                        vec![sha512_crypt::hash(password).unwrap()]
+                    } else {
+                        vec![]
+                    }
+                },
+                emails: [self.value::<String>("email").unwrap_or_default()]
+                    .into_iter()
+                    .chain(self.array_value("aliases").map(|m| m.to_string()))
+                    .filter(|x| !x.is_empty())
+                    .collect::<Vec<_>>(),
+                member_of: self
+                    .array_value("member-of")
+                    .map(|m| m.to_string())
+                    .collect(),
+                members: self.array_value("members").map(|m| m.to_string()).collect(),
+                description: self.value("description"),
+                ..Default::default()
+            })
+        } else {
+            None
+        }
+    }
+}
+
+impl Builder<Schemas, ()> {
+    pub fn build_principals(self) -> Self {
+        const IDS: &[(&str, &str)] = &[
+            (
+                PrincipalType::Individual.id(),
+                PrincipalType::Individual.name(),
+            ),
+            (
+                PrincipalType::Superuser.id(),
+                PrincipalType::Superuser.name(),
+            ),
+        ];
+
+        self.new_schema("principals")
+            .new_field("name")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::RemoveSpaces, Transformer::Lowercase],
+                [Validator::Required],
+            )
+            .build()
+            .new_field("email")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim, Transformer::Lowercase],
+                [Validator::IsEmail],
+            )
+            .build()
+            .new_field("aliases")
+            .typ(Type::InputMulti)
+            .input_check(
+                [Transformer::Trim, Transformer::Lowercase],
+                [Validator::IsEmail],
+            )
+            .build()
+            .new_field("description")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("type")
+            .typ(Type::Select(Source::Static(IDS)))
+            .default(PrincipalType::Individual.id())
+            .build()
+            .build()
     }
 }

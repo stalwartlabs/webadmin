@@ -1,15 +1,28 @@
 use leptos::*;
 
-use super::{FormValidator, FormValue};
+use super::FormElement;
 
 #[component]
 pub fn InputText(
-    #[prop(optional, into)] value: FormValidator<String>,
+    element: FormElement,
     #[prop(optional, into)] placeholder: Option<MaybeSignal<String>>,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
 ) -> impl IntoView {
-    let value = value.signal();
+    let value = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .value::<String>(element.id)
+            .unwrap_or_default()
+    });
+    let error = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .error_string(element.id)
+            .map(|s| s.to_string())
+    });
 
     view! {
         <div class="relative">
@@ -17,7 +30,7 @@ pub fn InputText(
                 {..attrs}
                 type="text"
                 class=move || {
-                    if value.get().is_ok() {
+                    if error.get().is_none() {
                         "py-2 px-3 pe-11 block w-full border-gray-200 shadow-sm text-sm rounded-lg focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
                     } else {
                         "py-2 px-3 pe-11 block w-full border-red-500 shadow-sm text-sm rounded-lg focus:border-red-500 focus:ring-red-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
@@ -25,16 +38,20 @@ pub fn InputText(
                 }
 
                 placeholder=placeholder.map(|p| move || p.get())
-                prop:value=move || value.get().unwrap()
+                prop:value=move || value.get()
                 disabled=move || disabled.get()
                 on:change=move |ev| {
-                    value.set(FormValue::Ok(event_target_value(&ev)));
+                    element
+                        .data
+                        .update(|data| {
+                            data.update(element.id, event_target_value(&ev));
+                        });
                 }
             />
 
             <div
                 class="absolute inset-y-0 end-0 flex items-center pointer-events-none pe-3"
-                class:hidden=move || value.get().is_ok()
+                class:hidden=move || error.get().is_none()
             >
                 <svg
                     class="flex-shrink-0 size-4 text-red-500"
@@ -57,21 +74,34 @@ pub fn InputText(
         <p
             class="text-xs text-red-600 mt-2"
             id="hs-validation-name-error-helper"
-            class:hidden=move || value.get().is_ok()
+            class:hidden=move || error.get().is_none()
         >
-            {move || { value.get().unwrap_err() }}
+            {move || { error.get().unwrap_or_default() }}
         </p>
     }
 }
 
 #[component]
 pub fn InputPassword(
-    #[prop(optional, into)] value: FormValidator<String>,
+    element: FormElement,
     #[prop(optional, into)] placeholder: Option<MaybeSignal<String>>,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
 ) -> impl IntoView {
-    let value = value.signal();
+    let value = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .value::<String>(element.id)
+            .unwrap_or_default()
+    });
+    let error = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .error_string(element.id)
+            .map(|s| s.to_string())
+    });
     let show_password = create_rw_signal(false);
 
     view! {
@@ -80,7 +110,7 @@ pub fn InputPassword(
                 {..attrs}
                 type=move || if show_password.get() { "text" } else { "password" }
                 class=move || {
-                    if value.get().is_ok() {
+                    if error.get().is_none() {
                         "py-2 px-3 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
                     } else {
                         "py-2 px-3 block w-full border-red-500 rounded-lg text-sm focus:border-red-500 focus:ring-red-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
@@ -88,10 +118,14 @@ pub fn InputPassword(
                 }
 
                 placeholder=placeholder.map(|p| move || p.get())
-                prop:value=move || value.get().unwrap()
+                prop:value=move || value.get()
                 disabled=move || disabled.get()
                 on:change=move |ev| {
-                    value.set(FormValue::Ok(event_target_value(&ev)));
+                    element
+                        .data
+                        .update(|data| {
+                            data.update(element.id, event_target_value(&ev));
+                        });
                 }
             />
 
@@ -105,7 +139,7 @@ pub fn InputPassword(
 
                 <svg
                     class=move || {
-                        let color = if value.get().is_ok() { "gray-400" } else { "red-500" };
+                        let color = if error.get().is_none() { "gray-400" } else { "red-500" };
                         format!("flex-shrink-0 size-3.5 text-{color} dark:text-neutral-600")
                     }
 
@@ -160,9 +194,9 @@ pub fn InputPassword(
         <p
             class="text-xs text-red-600 mt-2"
             id="hs-validation-name-error-helper"
-            class:hidden=move || value.get().is_ok()
+            class:hidden=move || error.get().is_none()
         >
-            {move || { value.get().unwrap_err() }}
+            {move || { error.get().unwrap_or_default() }}
         </p>
     }
 }
@@ -172,33 +206,43 @@ const UNIT_MB: u64 = 1024 * 1024;
 
 #[component]
 pub fn InputSize(
-    #[prop(optional, into)] value: RwSignal<u64>,
+    element: FormElement,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
 ) -> impl IntoView {
-    let raw_value = value.get_untracked();
-    let multiplier = if raw_value == 0 {
-        0
-    } else if raw_value % UNIT_GB == 0 {
-        UNIT_GB
-    } else if raw_value % UNIT_MB == 0 {
-        UNIT_MB
-    } else {
-        1
-    };
-    let display_value = create_rw_signal(if multiplier != 0 {
-        raw_value / multiplier
-    } else {
-        0u64
+    let value = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .value::<u64>(element.id)
+            .unwrap_or_default()
     });
-    let multiplier = create_rw_signal(multiplier);
+
+    let multiplier = create_memo(move |_| {
+        let raw_value = value.get();
+        if raw_value == 0 {
+            0
+        } else if raw_value % UNIT_GB == 0 {
+            UNIT_GB
+        } else if raw_value % UNIT_MB == 0 {
+            UNIT_MB
+        } else {
+            1
+        }
+    });
+    let display_value = create_memo(move |_| {
+        let multiplier = multiplier.get();
+        if multiplier != 0 {
+            value.get() / multiplier
+        } else {
+            0u64
+        }
+    });
 
     view! {
         <div class="relative">
             <input
                 type="text"
-                id="hs-inline-leading-pricing-select-label"
-                name="inline-add-on"
                 class="py-2 px-3 ps-9 pe-20 block w-full border-gray-200 shadow-sm rounded-lg text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
                 prop:value=move || {
                     match display_value.get() {
@@ -208,9 +252,16 @@ pub fn InputSize(
                 }
 
                 on:change=move |ev| {
-                    let new_value = event_target_value(&ev).parse::<u64>().unwrap_or(0);
-                    display_value.set(new_value);
-                    value.set(new_value * multiplier.get());
+                    element
+                        .data
+                        .update(|data| {
+                            data.update(
+                                element.id,
+                                (event_target_value(&ev).parse::<u64>().unwrap_or(0)
+                                    * multiplier.get())
+                                    .to_string(),
+                            );
+                        });
                 }
 
                 {..attrs}
@@ -219,22 +270,22 @@ pub fn InputSize(
 
             <div class="absolute inset-y-0 end-0 flex items-center text-gray-500 pe-px">
                 <select
-                    id="hs-inline-leading-select-currency"
-                    name="hs-inline-leading-select-currency"
                     class="block text-xs w-full border-transparent rounded-lg focus:ring-blue-600 focus:border-blue-600 dark:bg-gray-800"
                     on:change=move |ev| {
-                        match event_target_value(&ev).parse::<u64>().unwrap_or(0) {
-                            0 => {
-                                display_value.set(0);
-                                multiplier.set(0);
-                                value.set(0);
-                            }
-                            new_multiplier => {
-                                multiplier.set(new_multiplier);
-                                value.set(display_value.get() * new_multiplier);
-                                display_value.set(1);
-                            }
-                        }
+                        element
+                            .data
+                            .update(|data| {
+                                data.update(
+                                    element.id,
+                                    match event_target_value(&ev).parse::<u64>().unwrap_or(0) {
+                                        0 => "0".to_string(),
+                                        new_multiplier => {
+                                            (std::cmp::max(display_value.get(), 1) * new_multiplier)
+                                                .to_string()
+                                        }
+                                    },
+                                );
+                            });
                     }
                 >
 

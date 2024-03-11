@@ -1,26 +1,53 @@
 use leptos::*;
 
-use crate::components::form::FormValue;
+use crate::core::form::FormErrorId;
 
-use super::FormListValidator;
+use super::FormElement;
 
 #[component]
 pub fn StackedInput(
     add_button_text: String,
-    values: FormListValidator<String>,
+    element: FormElement,
     #[prop(optional, into)] placeholder: Option<MaybeSignal<String>>,
 ) -> impl IntoView {
-    let values = values.signal();
+    let values = create_memo(move |_| {
+        let data = element.data.get();
+        let error = data.error(element.id);
+
+        data.array_value(element.id)
+            .enumerate()
+            .map(|(idx, value)| {
+                (
+                    idx,
+                    value.to_string(),
+                    error.as_ref().and_then(|e| {
+                        if e.id == FormErrorId::Index(idx) {
+                            Some(e.error.clone())
+                        } else {
+                            None
+                        }
+                    }),
+                )
+            })
+            .collect::<Vec<_>>()
+    });
 
     view! {
         <div id="hs-wrapper-for-copy" class="space-y-3">
 
             <For
-                each=move || { values.get().into_iter().enumerate().collect::<Vec<_>>() }
-                key=move |(idx, item)| format!("{}_{idx}", item.hash())
-                children=move |(idx, item)| {
-                    let is_err = item.is_err();
-                    let err = if is_err { item.clone().unwrap_err() } else { "".to_string() };
+                each=move || { values.get().into_iter() }
+                key=move |(idx, item, error)| {
+                    format!(
+                        "{idx}_{}_{}",
+                        item.as_bytes().iter().map(|v| *v as usize).sum::<usize>(),
+                        error.is_some(),
+                    )
+                }
+
+                children=move |(idx, item, error)| {
+                    let is_err = error.is_some();
+                    let error = error.unwrap_or_default();
                     view! {
                         <div id="hs-wrapper-for-copy" class="space-y-3">
                             <div class="relative">
@@ -35,12 +62,13 @@ pub fn StackedInput(
                                         }
                                     }
 
-                                    prop:value=item.unwrap()
+                                    prop:value=item
                                     placeholder=placeholder.clone().map(|p| move || p.get())
                                     on:change=move |ev| {
-                                        values
-                                            .update(|v| {
-                                                v[idx] = FormValue::Ok(event_target_value(&ev));
+                                        element
+                                            .data
+                                            .update(|data| {
+                                                data.array_update(element.id, idx, event_target_value(&ev));
                                             });
                                     }
                                 />
@@ -49,9 +77,10 @@ pub fn StackedInput(
                                     type="button"
                                     class="absolute top-0 end-0 p-2.5 rounded-e-md dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                                     on:click=move |_| {
-                                        values
-                                            .update(|v| {
-                                                v.remove(idx);
+                                        element
+                                            .data
+                                            .update(|data| {
+                                                data.array_delete(element.id, idx);
                                             });
                                     }
                                 >
@@ -78,7 +107,7 @@ pub fn StackedInput(
                                 id="hs-validation-name-error-helper"
                                 class:hidden=!is_err
                             >
-                                {err}
+                                {error}
                             </p>
                         </div>
                     }
@@ -92,10 +121,11 @@ pub fn StackedInput(
                 type="button"
                 class="py-1.5 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full border border-dashed border-gray-200 bg-white text-gray-800 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                 on:click=move |_| {
-                    if values.get().last().map_or(true, |v| !v.get().is_empty()) {
-                        values
-                            .update(|v| {
-                                v.push(FormValue::Ok("".to_string()));
+                    if values.get().last().map_or(true, |(_, v, _)| !v.is_empty()) {
+                        element
+                            .data
+                            .update(|data| {
+                                data.array_push(element.id, "".to_string());
                             });
                     }
                 }
