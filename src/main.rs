@@ -2,7 +2,10 @@
 use core::schema::Schemas;
 use std::{sync::Arc, time::Duration};
 
-use components::layout::MenuItem;
+use components::{
+    icon::{IconDocumentChartBar, IconQueueList, IconUserGroup},
+    layout::MenuItem,
+};
 use gloo_storage::{SessionStorage, Storage};
 use leptos::*;
 use leptos_meta::*;
@@ -10,16 +13,15 @@ use leptos_router::*;
 
 use crate::{
     components::{
-        layout::Layout,
+        layout::{Layout, LayoutBuilder},
         messages::{alert::init_alerts, modal::init_modals},
     },
     core::oauth::{oauth_refresh_token, AuthToken},
     pages::{
-        config::list::SettingsList,
+        config::{edit::SettingsEdit, list::SettingsList},
         directory::{
             domains::{edit::DomainCreate, list::DomainList},
             principals::{edit::PrincipalEdit, list::PrincipalList},
-            PrincipalType,
         },
         login::Login,
         notfound::NotFound,
@@ -27,7 +29,7 @@ use crate::{
             messages::{list::QueueList, manage::QueueManage},
             reports::{display::ReportDisplay, list::ReportList},
         },
-        reports::{display::IncomingReportDisplay, list::IncomingReportList, ReportType},
+        reports::{display::IncomingReportDisplay, list::IncomingReportList},
     },
 };
 
@@ -104,173 +106,108 @@ pub fn App() -> impl IntoView {
         }
     });
 
-    let is_logged_in = move || auth_token.get().is_logged_in();
+    let is_logged_in = create_memo(move |_| auth_token.get().is_logged_in());
 
     view! {
         <Router>
             <Routes>
+
                 <ProtectedRoute
                     path="/manage"
-                    view=|| {
-                        view! { <Layout menu_items=menu_items()/> }
+                    view=move || {
+                        view! { <Layout menu_items=LayoutBuilder::manage()/> }
                     }
 
                     redirect_path="/login"
-                    condition=is_logged_in
+                    condition=move || is_logged_in.get()
                 >
-                    <ProtectedRoute
-                        path="/directory/accounts"
-                        view=PrincipalList
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
-
-                    <ProtectedRoute
-                        path="/directory/account/:id?"
-                        view=move || {
-                            view! { <PrincipalEdit selected_type=PrincipalType::Individual/> }
-                        }
-
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
-                    <ProtectedRoute
-                        path="/directory/groups"
-                        view=PrincipalList
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
-                    <ProtectedRoute
-                        path="/directory/group/:id?"
-                        view=move || view! { <PrincipalEdit selected_type=PrincipalType::Group/> }
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
-
-                    <ProtectedRoute
-                        path="/directory/lists"
-                        view=PrincipalList
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
-                    <ProtectedRoute
-                        path="/directory/list/:id?"
-                        view=move || view! { <PrincipalEdit selected_type=PrincipalType::List/> }
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
                     <ProtectedRoute
                         path="/directory/domains"
                         view=DomainList
                         redirect_path="/login"
-                        condition=is_logged_in
+                        condition=move || is_logged_in.get()
                     />
                     <ProtectedRoute
-                        path="/directory/domain"
+                        path="/directory/domains/edit"
                         view=DomainCreate
                         redirect_path="/login"
-                        condition=is_logged_in
+                        condition=move || is_logged_in.get()
+                    />
+
+                    <ProtectedRoute
+                        path="/directory/:object"
+                        view=PrincipalList
+                        redirect_path="/login"
+                        condition=move || is_logged_in.get()
+                    />
+                    <ProtectedRoute
+                        path="/directory/:object/:id?/edit"
+                        view=PrincipalEdit
+                        redirect_path="/login"
+                        condition=move || is_logged_in.get()
                     />
                     <ProtectedRoute
                         path="/queue/messages"
                         view=QueueList
                         redirect_path="/login"
-                        condition=is_logged_in
+                        condition=move || is_logged_in.get()
                     />
                     <ProtectedRoute
                         path="/queue/message/:id"
                         view=QueueManage
                         redirect_path="/login"
-                        condition=is_logged_in
+                        condition=move || is_logged_in.get()
                     />
                     <ProtectedRoute
                         path="/queue/reports"
                         view=ReportList
                         redirect_path="/login"
-                        condition=is_logged_in
+                        condition=move || is_logged_in.get()
                     />
                     <ProtectedRoute
                         path="/queue/report/:id"
                         view=ReportDisplay
                         redirect_path="/login"
-                        condition=is_logged_in
+                        condition=move || is_logged_in.get()
                     />
                     <ProtectedRoute
-                        path="/reports/dmarc"
-                        view=move || view! { <IncomingReportList report_type=ReportType::Dmarc/> }
+                        path="/reports/:object"
+                        view=IncomingReportList
                         redirect_path="/login"
-                        condition=is_logged_in
+                        condition=move || is_logged_in.get()
                     />
                     <ProtectedRoute
-                        path="/reports/tls"
-                        view=move || view! { <IncomingReportList report_type=ReportType::Tls/> }
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
-                    <ProtectedRoute
-                        path="/reports/arf"
-                        view=move || view! { <IncomingReportList report_type=ReportType::Arf/> }
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
-                    <ProtectedRoute
-                        path="/reports/dmarc/:id"
-                        view=move || {
-                            view! { <IncomingReportDisplay report_type=ReportType::Dmarc/> }
-                        }
+                        path="/reports/:object/:id"
+                        view=IncomingReportDisplay
 
                         redirect_path="/login"
-                        condition=is_logged_in
-                    />
-                    <ProtectedRoute
-                        path="/reports/tls/:id"
-                        view=move || view! { <IncomingReportDisplay report_type=ReportType::Tls/> }
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
-                    <ProtectedRoute
-                        path="/reports/arf/:id"
-                        view=move || view! { <IncomingReportDisplay report_type=ReportType::Arf/> }
-                        redirect_path="/login"
-                        condition=is_logged_in
+                        condition=move || is_logged_in.get()
                     />
                 </ProtectedRoute>
-
                 <ProtectedRoute
                     path="/settings"
-                    view=|| {
-                        view! { <Layout menu_items=menu_items()/> }
+                    view=move || {
+                        view! { <Layout menu_items=LayoutBuilder::settings()/> }
                     }
 
                     redirect_path="/login"
-                    condition=is_logged_in
+                    condition=move || is_logged_in.get()
                 >
                     <ProtectedRoute
-                        path="/store"
-                        view=move || view! { <SettingsList id="store"/> }
+                        path="/:object"
+                        view=SettingsList
                         redirect_path="/login"
-                        condition=is_logged_in
+                        condition=move || is_logged_in.get()
+                    />
+                    <ProtectedRoute
+                        path="/:object/:id?/edit"
+                        view=SettingsEdit
+                        redirect_path="/login"
+                        condition=move || is_logged_in.get()
                     />
 
-                    <ProtectedRoute
-                        path="/directory"
-                        view=move || view! { <SettingsList id="directory"/> }
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
-                    <ProtectedRoute
-                        path="/spam-scores"
-                        view=move || view! { <SettingsList id="spam-scores"/> }
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
-                    <ProtectedRoute
-                        path="/spam-free"
-                        view=move || view! { <SettingsList id="spam-free"/> }
-                        redirect_path="/login"
-                        condition=is_logged_in
-                    />
                 </ProtectedRoute>
+
                 <Route path="/" view=Login/>
                 <Route path="/login" view=Login/>
                 <Route path="/*any" view=NotFound/>
@@ -280,42 +217,47 @@ pub fn App() -> impl IntoView {
     }
 }
 
-pub(crate) fn menu_items() -> Vec<MenuItem> {
-    vec![
-        MenuItem::parent_with_icon(
-            "Directory",
-            "users",
-            vec![
-                MenuItem::child("Accounts", "/manage/directory/accounts")
-                    .with_match_route("/manage/directory/account"),
-                MenuItem::child("Groups", "/manage/directory/groups")
-                    .with_match_route("/manage/directory/group"),
-                MenuItem::child("Lists", "/manage/directory/lists")
-                    .with_match_route("/manage/directory/list"),
-                MenuItem::child("Domains", "/manage/directory/domains")
-                    .with_match_route("/manage/directory/domain"),
-            ],
-        ),
-        MenuItem::parent_with_icon(
-            "Queues",
-            "queue",
-            vec![
-                MenuItem::child("Messages", "/manage/queue/messages")
-                    .with_match_route("/manage/queue/message"),
-                MenuItem::child("Reports", "/manage/queue/reports")
-                    .with_match_route("/manage/queue/report"),
-            ],
-        ),
-        MenuItem::parent_with_icon(
-            "Reports",
-            "report",
-            vec![
-                MenuItem::child("DMARC Aggregate", "/manage/reports/dmarc"),
-                MenuItem::child("TLS Aggregate", "/manage/reports/tls"),
-                MenuItem::child("Failures", "/manage/reports/arf"),
-            ],
-        ),
-    ]
+impl LayoutBuilder {
+    pub fn manage() -> Vec<MenuItem> {
+        LayoutBuilder::new("/manage")
+            .create("Directory")
+            .icon(view! { <IconUserGroup/> })
+            .create("Accounts")
+            .route("/directory/accounts")
+            .insert()
+            .create("Groups")
+            .route("/directory/groups")
+            .insert()
+            .create("Lists")
+            .route("/directory/lists")
+            .insert()
+            .create("Domains")
+            .route("/directory/domains")
+            .insert()
+            .insert()
+            .create("Queues")
+            .icon(view! { <IconQueueList/> })
+            .create("Messages")
+            .route("/queue/messages")
+            .insert()
+            .create("Reports")
+            .route("/queue/reports")
+            .insert()
+            .insert()
+            .create("Reports")
+            .icon(view! { <IconDocumentChartBar/> })
+            .create("DMARC Aggregate")
+            .route("/reports/dmarc")
+            .insert()
+            .create("TLS Aggregate")
+            .route("/reports/tls")
+            .insert()
+            .create("Failures")
+            .route("/reports/arf")
+            .insert()
+            .insert()
+            .menu_items
+    }
 }
 
 pub fn build_schemas() -> Arc<Schemas> {

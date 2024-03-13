@@ -67,8 +67,8 @@ impl Builder<Schemas, ()> {
                 [Transformer::Trim],
                 [
                     Validator::Required,
-                    Validator::MinValue(0),
-                    Validator::MaxValue(1024 * 1024),
+                    Validator::MinValue(0.into()),
+                    Validator::MaxValue((1024 * 1024).into()),
                 ],
             )
             .build()
@@ -150,7 +150,10 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
-                [Validator::MinValue(1), Validator::MaxValue(8192)],
+                [
+                    Validator::MinValue(0.into()),
+                    Validator::MaxValue(8192.into()),
+                ],
             )
             .new_field("pool.timeout.create")
             .typ(Type::Duration)
@@ -178,7 +181,7 @@ impl Builder<Schemas, ()> {
             .new_field("lookup.domains")
             .label("Local Domains")
             .help("List of local domains")
-            .typ(Type::InputMulti)
+            .typ(Type::Array)
             .input_check([Transformer::Trim], [Validator::IsHost])
             .display_if_eq("type", ["lmtp", "smtp", "imap"])
             .build()
@@ -190,7 +193,10 @@ impl Builder<Schemas, ()> {
             .display_if_eq("type", ["lmtp", "smtp"])
             .input_check(
                 [Transformer::Trim],
-                [Validator::MinValue(1), Validator::MaxValue(1000)],
+                [
+                    Validator::MinValue(0.into()),
+                    Validator::MaxValue(1000.into()),
+                ],
             )
             .new_field("limits.rcpt")
             .label("Max Recipients")
@@ -295,7 +301,7 @@ impl Builder<Schemas, ()> {
             .label("Name")
             .help("LDAP attribute for the user's account name")
             .placeholder("uid")
-            .typ(Type::InputMulti)
+            .typ(Type::Array)
             .new_field("attributes.class")
             .label("Type")
             .help("LDAP attribute for the user's account type, if missing defaults to individual.")

@@ -5,7 +5,10 @@ use crate::core::schema::{Source, Type};
 use super::FormElement;
 
 #[component]
-pub fn Select(element: FormElement) -> impl IntoView {
+pub fn Select(
+    element: FormElement,
+    #[prop(optional, into)] disabled: MaybeSignal<bool>,
+) -> impl IntoView {
     let options = match &element
         .data
         .get_untracked()
@@ -16,7 +19,7 @@ pub fn Select(element: FormElement) -> impl IntoView {
         .typ_
     {
         Type::Select(Source::Static(options)) => options
-            .into_iter()
+            .iter()
             .map(|(value, label)| (value.to_string(), label.to_string()))
             .collect::<Vec<_>>(),
         Type::Select(Source::Dynamic { schema, field }) => {
@@ -39,9 +42,11 @@ pub fn Select(element: FormElement) -> impl IntoView {
                 element
                     .data
                     .update(|data| {
-                        data.set(element.id, event_target_value(&ev));
+                        data.update(element.id, event_target_value(&ev));
                     });
             }
+
+            disabled=move || disabled.get()
         >
 
             <For

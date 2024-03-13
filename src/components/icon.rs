@@ -258,3 +258,56 @@ pub fn IconDocumentChartBar(
         </SvgWrapper>
     }
 }
+
+#[component]
+pub fn IconInfo(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"></path>
+            <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"></path>
+
+        </SvgWrapper>
+    }
+}
+
+#[component]
+pub fn IconUserGroup(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <path d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"></path>
+
+        </SvgWrapper>
+    }
+}
+
+#[component]
+pub fn IconQueueList(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <path d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z"></path>
+
+        </SvgWrapper>
+    }
+}
+
+#[component]
+pub fn IconCircleStack(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <path d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"></path>
+
+        </SvgWrapper>
+    }
+}

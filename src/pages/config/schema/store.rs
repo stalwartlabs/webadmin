@@ -69,7 +69,7 @@ impl Builder<Schemas, ()> {
                 ("none", "None"),
                 ("lz4", "LZ4"),
             ])))
-            .display_if_ne("type", ["redis", "memory", "elasticsearch"])
+            .display_if_ne("type", ["redis", "memory", "elasticsearch", "s3"])
             .build()
             // Path
             .new_field("path")
@@ -145,7 +145,7 @@ impl Builder<Schemas, ()> {
             .new_field("timeout")
             .label("Timeout")
             .help("Connection timeout to the database")
-            .display_if_eq("type", ["postgresql", "mysql", "redis"])
+            .display_if_eq("type", ["postgresql", "mysql", "redis", "s3"])
             .typ(Type::Duration)
             .default("15s")
             .build()
@@ -154,6 +154,7 @@ impl Builder<Schemas, ()> {
             .label("Purge Frequency")
             .help("How often to purge the database. Expects a cron expression")
             .display_if_ne("type", ["redis", "memory", "elasticsearch"])
+            .default("0 3 *")
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
@@ -165,13 +166,13 @@ impl Builder<Schemas, ()> {
             .label("Thread Pool Size")
             .help("Number of worker threads to use for the store, defaults to the number of cores")
             .display_if_eq("type", ["rocksdb", "sqlite"])
+            .placeholder("8")
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
                 [
-                    Validator::Required,
-                    Validator::MinValue(1),
-                    Validator::MaxValue(64),
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue(64.into()),
                 ],
             )
             .build()
@@ -184,7 +185,10 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
-                [Validator::MinValue(1), Validator::MaxValue(8192)],
+                [
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue(8192.into()),
+                ],
             )
             .build()
             .new_field("pool.min-connections")
@@ -195,7 +199,10 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
-                [Validator::MinValue(1), Validator::MaxValue(8192)],
+                [
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue(8192.into()),
+                ],
             )
             .build()
             // TLS
@@ -218,8 +225,10 @@ impl Builder<Schemas, ()> {
             .label("URL")
             .help("URL of the store")
             .display_if_eq("type", ["elasticsearch"])
-            .default("https://localhost:9200")
-            .typ(Type::InputMulti)
+            .display_if_eq("redis-type", ["single"])
+            .default_if_eq("type", ["elasticsearch"], "https://localhost:9200")
+            .default_if_eq("redis-type", ["single"], "redis://127.0.0.1")
+            .typ(Type::Input)
             .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
             .build()
             // SQL directory specific
@@ -278,21 +287,24 @@ impl Builder<Schemas, ()> {
             ))
             .display_if_eq("type", ["rocksdb"])
             .default("16834")
-            .typ(Type::Input)
+            .typ(Type::Size)
             .input_check(
                 [Transformer::Trim],
-                [Validator::MinValue(1024), Validator::MaxValue(1024 * 1024)],
+                [
+                    Validator::MinValue(1024.into()),
+                    Validator::MaxValue((1024 * 1024).into()),
+                ],
             )
             .new_field("settings.write-buffer-size")
             .label("Write buffer size")
             .help("Size of the write buffer in bytes, used to batch writes to the store")
             .default("134217728")
-            .typ(Type::Input)
+            .typ(Type::Size)
             .input_check(
                 [Transformer::Trim],
                 [
-                    Validator::MinValue(8192),
-                    Validator::MaxValue(1024 * 1024 * 1024),
+                    Validator::MinValue(8192.into()),
+                    Validator::MaxValue((1024 * 1024 * 1024).into()),
                 ],
             )
             .build()
@@ -321,7 +333,10 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
-                [Validator::MinValue(1), Validator::MaxValue(1000)],
+                [
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue(1000.into()),
+                ],
             )
             .new_field("ids.machine")
             .label("Machine Id")
@@ -340,12 +355,12 @@ impl Builder<Schemas, ()> {
             .help("Maximum size of a packet in bytes")
             .display_if_eq("type", ["mysql"])
             .placeholder("1073741824")
-            .typ(Type::Input)
+            .typ(Type::Size)
             .input_check(
                 [Transformer::Trim],
                 [
-                    Validator::MinValue(1024),
-                    Validator::MaxValue(1024 * 1024 * 1024),
+                    Validator::MinValue(1024.into()),
+                    Validator::MaxValue((1024 * 1024 * 1024).into()),
                 ],
             )
             .build()
@@ -360,29 +375,35 @@ impl Builder<Schemas, ()> {
             .new_field("index.shards")
             .label("Number of Shards")
             .help("Number of shards for the index")
-            .placeholder("3")
+            .default("3")
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
-                [Validator::MinValue(1), Validator::MaxValue(1024 * 1024)],
+                [
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue((1024 * 1024).into()),
+                ],
             )
             .new_field("index.replicas")
             .label("Number of Replicas")
             .help("Number of replicas for the index")
-            .placeholder("0")
+            .default("0")
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
-                [Validator::MinValue(0), Validator::MaxValue(2048)],
+                [
+                    Validator::MinValue(0.into()),
+                    Validator::MaxValue(2048.into()),
+                ],
             )
             .build()
             // Redis specific
             .new_field("urls")
             .label("URL(s)")
             .help("URL(s) of the Redis server(s)")
-            .display_if_eq("type", ["redis"])
+            .display_if_eq("redis-type", ["cluster"])
             .default("redis://127.0.0.1")
-            .typ(Type::InputMulti)
+            .typ(Type::Array)
             .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
             .build()
             .new_field("retry.total")
@@ -393,7 +414,10 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
-                [Validator::MinValue(1), Validator::MaxValue(1024)],
+                [
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue(1024.into()),
+                ],
             )
             .new_field("retry.max-wait")
             .label("Max Wait")
@@ -410,16 +434,57 @@ impl Builder<Schemas, ()> {
             .default("true")
             .typ(Type::Checkbox)
             .build()
+            // S3 specific
+            .new_field("bucket")
+            .typ(Type::Input)
+            .label("Name")
+            .help("The S3 bucket where blobs (e-mail messages, Sieve scripts, etc.) will be stored")
+            .input_check([Transformer::Trim], [Validator::Required])
+            .placeholder("stalwart")
+            .display_if_eq("type", ["s3"])
+            .new_field("region")
+            .label("Region")
+            .help("The geographical region where the bucket resides")
+            .placeholder("us-east-1")
+            .new_field("key-prefix")
+            .label("Key Prefix")
+            .help("A prefix that will be added to the keys of all objects stored in the S3 bucket")
+            .input_check([Transformer::Trim], [])
+            .new_field("endpoint")
+            .help(concat!(
+                "The network address (hostname and optionally a port) of the S3 service. ",
+                "If you are using a well-known S3 service like Amazon S3, this setting can ",
+                "be left blank, and the endpoint will be derived from the region. For ",
+                "S3-compatible services, you will need to specify the endpoint explicitly"
+            ))
+            .label("Endpoint")
+            .new_field("profile")
+            .label("Profile")
+            .help(concat!(
+                "Used when retrieving credentials from a shared credentials file. If specified, ",
+                "the server will use the access key ID, secret access key, and session token (if ",
+                "available) associated with the given profile"
+            ))
+            .new_field("access-key")
+            .label("Access Key")
+            .help("Identifies the S3 account")
+            .new_field("secret-key")
+            .label("Secret Key")
+            .help("The secret key for the S3 account")
+            .typ(Type::Secret)
+            .new_field("security-token")
+            .label("Security Token")
+            .build()
             // FS specific
             .new_field("depth")
             .label("Nested Depth")
             .help("Maximum depth of nested directories")
             .display_if_eq("type", ["fs"])
             .default("2")
-            .typ(Type::InputMulti)
+            .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
-                [Validator::MinValue(0), Validator::MaxValue(5)],
+                [Validator::MinValue(0.into()), Validator::MaxValue(5.into())],
             )
             .build()
             // Form layouts
@@ -437,19 +502,43 @@ impl Builder<Schemas, ()> {
                 "url",
                 "urls",
                 "max-allowed-packet",
+                "region",
+                "endpoint",
                 "cloud-id",
+                "profile",
                 "timeout",
             ])
+            .build()
+            .new_form_section()
+            .title("Bucket")
+            .display_if_eq("type", ["s3"])
+            .fields(["bucket", "key-prefix"])
+            .build()
+            .new_form_section()
             .title("Authentication")
-            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch"])
+            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch", "s3"])
             .display_if_eq("redis-type", ["cluster"])
-            .fields(["user", "password"])
+            .fields([
+                "user",
+                "password",
+                "access-key",
+                "secret-key",
+                "security-token",
+            ])
             .build()
             .new_form_section()
             .title("Storage settings")
             .display_if_eq(
                 "type",
-                ["postgresql", "mysql", "sqlite", "rocksdb", "foundationdb"],
+                [
+                    "postgresql",
+                    "mysql",
+                    "sqlite",
+                    "rocksdb",
+                    "foundationdb",
+                    "fs",
+                    "s3",
+                ],
             )
             .fields([
                 "compression",
@@ -509,6 +598,11 @@ impl Builder<Schemas, ()> {
                 "query.expand",
                 "query.domains",
             ])
+            .build()
+            .new_form_section()
+            .title("Index")
+            .display_if_eq("type", ["elasticsearch"])
+            .fields(["index.shards", "index.replicas"])
             .build()
             .list_title("Stores")
             .list_subtitle("Manage data, blob, full-text, and lookup stores")

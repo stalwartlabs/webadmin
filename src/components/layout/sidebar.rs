@@ -9,7 +9,6 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
 
     view! {
         <div
-            id="application-sidebar"
             class="hs-overlay hs-overlay-open:translate-x-0 -translate-x-full transition-all duration-300 transform fixed top-0 start-0 bottom-0 z-[60] w-64 bg-white border-e border-gray-200 pt-7 pb-10 overflow-y-auto lg:block lg:translate-x-0 lg:end-auto lg:bottom-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-slate-700 dark:[&::-webkit-scrollbar-thumb]:bg-slate-500 dark:bg-gray-800 dark:border-gray-700"
             class:hidden=move || !show_sidebar.get()
             class:open=move || show_sidebar.get()
@@ -47,14 +46,14 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                         .iter()
                                         .any(|i| {
                                             i
-                                                .match_route
+                                                .route
                                                 .as_ref()
                                                 .map_or(false, |f| current_route.get().starts_with(f))
                                                 || i
                                                     .children
                                                     .iter()
                                                     .any(|i| {
-                                                        i.match_route
+                                                        i.route
                                                             .as_ref()
                                                             .map_or(false, |f| current_route.get().starts_with(f))
                                                     })
@@ -69,23 +68,7 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                         on:click=move |_| is_displayed.update(|v| *v = !*v)
                                     >
 
-                                        <svg
-                                            class="flex-shrink-0 size-4"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="24"
-                                            height="24"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                        >
-                                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                                            <circle cx="9" cy="7" r="4"></circle>
-                                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                                        </svg>
+                                        {item.icon}
 
                                         {item.name}
 
@@ -151,7 +134,7 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                                             .any(|i| {
                                                                 is_displayed.get()
                                                                     || i
-                                                                        .match_route
+                                                                        .route
                                                                         .as_ref()
                                                                         .map_or(false, |f| current_route.get().starts_with(f))
                                                             })
@@ -213,7 +196,7 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                                                     >
 
                                                                         {
-                                                                            let route = item.match_route.clone().unwrap();
+                                                                            let route = item.route.clone().unwrap();
                                                                             view! {
                                                                                 <li>
                                                                                     <a
@@ -245,7 +228,7 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                                     }
                                                         .into_view()
                                                 } else {
-                                                    let route = item.match_route.unwrap();
+                                                    let route = item.route.clone().unwrap();
                                                     view! {
                                                         <li>
                                                             <a
@@ -290,21 +273,7 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                             view! {
                                 <li>
                                     <a class=class href=route>
-                                        <svg
-                                            class="flex-shrink-0 size-4"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="24"
-                                            height="24"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                        >
-                                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                                        </svg>
+                                        {item.icon}
                                         {item.name}
                                     </a>
                                 </li>

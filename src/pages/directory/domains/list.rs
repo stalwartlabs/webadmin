@@ -181,7 +181,7 @@ pub fn DomainList() -> impl IntoView {
                         text=format!("Add {}", "domain")
                         color=Color::Blue
                         on_click=move |_| {
-                            use_navigate()("/manage/directory/domain", Default::default());
+                            use_navigate()("/manage/directory/domains/edit", Default::default());
                         }
                     >
 
@@ -243,7 +243,7 @@ pub fn DomainList() -> impl IntoView {
 
                                         button_action=Callback::new(move |_| {
                                             use_navigate()(
-                                                "/manage/directory/domain",
+                                                "/manage/directory/domains/edit",
                                                 Default::default(),
                                             );
                                         })

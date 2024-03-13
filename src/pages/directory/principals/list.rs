@@ -37,6 +37,24 @@ const PAGE_SIZE: u32 = 10;
 
 #[component]
 pub fn PrincipalList() -> impl IntoView {
+    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
+    provide_context(selected);
+
+    let params = use_params_map();
+    let selected_type = create_memo(move |_| {
+        selected.set(Default::default());
+        match params()
+            .get("object")
+            .map(|id| id.as_str())
+            .unwrap_or_default()
+        {
+            "accounts" => PrincipalType::Individual,
+            "groups" => PrincipalType::Group,
+            "lists" => PrincipalType::List,
+            _ => PrincipalType::Individual,
+        }
+    });
+
     let query = use_query_map();
     let page = create_memo(move |_| {
         query
@@ -60,26 +78,12 @@ pub fn PrincipalList() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let modal = use_modals();
-    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
-    provide_context(selected);
-
-    let selected_type = use_route()
-        .original_path()
-        .split('/')
-        .rev()
-        .find(|v| !v.is_empty())
-        .map(|t| match t {
-            "accounts" => PrincipalType::Individual,
-            "groups" => PrincipalType::Group,
-            "lists" => PrincipalType::List,
-            _ => PrincipalType::Individual,
-        })
-        .unwrap_or(PrincipalType::Individual);
 
     let principals = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
             let auth = auth.get();
+            let selected_type = selected_type.get();
 
             async move {
                 let principal_names = HttpRequest::get("/api/principal")
@@ -129,24 +133,37 @@ pub fn PrincipalList() -> impl IntoView {
                 "Deleted {}.",
                 maybe_plural(
                     items.len(),
-                    selected_type.item_name(false),
-                    selected_type.item_name(true)
+                    selected_type.get().item_name(false),
+                    selected_type.get().item_name(true)
                 )
             )));
         }
     });
 
     let total_results = create_rw_signal(None::<u32>);
-    let (title, subtitle) = match selected_type {
-        PrincipalType::Individual => ("Accounts", "user accounts"),
-        PrincipalType::Group => ("Groups", "groups"),
-        PrincipalType::List => ("Mailing Lists", "mailing lists"),
-        _ => unreachable!("Invalid type."),
-    };
+    let title = Signal::derive(move || {
+        match selected_type.get() {
+            PrincipalType::Individual => "Accounts",
+            PrincipalType::Group => "Groups",
+            PrincipalType::List => "Mailing Lists",
+            _ => unreachable!("Invalid type."),
+        }
+        .to_string()
+    });
+    let subtitle = Signal::derive(move || {
+        match selected_type.get() {
+            PrincipalType::Individual => "Manage user accounts",
+            PrincipalType::Group => "Manage groups",
+            PrincipalType::List => "Manage mailing lists",
+            _ => unreachable!("Invalid type."),
+        }
+        .to_string()
+    });
 
     view! {
         <ListSection>
-            <ListTable title=title subtitle=format!("Manage {}", subtitle)>
+            <ListTable title=title subtitle=subtitle>
+
                 <Toolbar slot>
                     <SearchBox
                         value=filter
@@ -155,7 +172,7 @@ pub fn PrincipalList() -> impl IntoView {
                                 &UrlBuilder::new(
                                         format!(
                                             "/manage/directory/{}",
-                                            selected_type.resource_name(true),
+                                            selected_type.get().resource_name(),
                                         ),
                                     )
                                     .with_parameter("filter", value)
@@ -177,8 +194,8 @@ pub fn PrincipalList() -> impl IntoView {
                             if to_delete > 0 {
                                 let text = maybe_plural(
                                     to_delete,
-                                    selected_type.item_name(false),
-                                    selected_type.item_name(true),
+                                    selected_type.get().item_name(false),
+                                    selected_type.get().item_name(true),
                                 );
                                 modal
                                     .set(
@@ -206,13 +223,16 @@ pub fn PrincipalList() -> impl IntoView {
                     </ToolbarButton>
 
                     <ToolbarButton
-                        text=format!("Add {}", selected_type.item_name(false))
+                        text=create_memo(move |_| {
+                            format!("Create a new {}", selected_type.get().item_name(false))
+                        })
+
                         color=Color::Blue
                         on_click=move |_| {
                             use_navigate()(
                                 &format!(
-                                    "/manage/directory/{}",
-                                    selected_type.resource_name(false),
+                                    "/manage/directory/{}/edit",
+                                    selected_type.get().resource_name(),
                                 ),
                                 Default::default(),
                             );
@@ -239,7 +259,7 @@ pub fn PrincipalList() -> impl IntoView {
                         Some(Ok(principals)) if !principals.items.is_empty() => {
                             total_results.set(Some(principals.total as u32));
                             let principals_ = principals.clone();
-                            let headers = match selected_type {
+                            let headers = match selected_type.get() {
                                 PrincipalType::Individual => {
                                     vec![
                                         "Name".to_string(),
@@ -275,7 +295,6 @@ pub fn PrincipalList() -> impl IntoView {
                                 view! {
                                     <ColumnList
                                         headers=headers
-
                                         select_all=Callback::new(move |_| {
                                             principals_
                                                 .items
@@ -290,9 +309,8 @@ pub fn PrincipalList() -> impl IntoView {
                                             key=|principal| principal.name.clone().unwrap_or_default()
                                             let:principal
                                         >
-                                            <PrincipalItem principal selected_type/>
+                                            <PrincipalItem principal selected_type=selected_type.get()/>
                                         </For>
-
                                     </ColumnList>
                                 }
                                     .into_view(),
@@ -307,14 +325,14 @@ pub fn PrincipalList() -> impl IntoView {
                                         subtitle="Your search did not yield any results."
                                         button_text=format!(
                                             "Create a new {}",
-                                            selected_type.item_name(false),
+                                            selected_type.get().item_name(false),
                                         )
 
                                         button_action=Callback::new(move |_| {
                                             use_navigate()(
                                                 &format!(
-                                                    "/manage/directory/{}",
-                                                    selected_type.resource_name(false),
+                                                    "/manage/directory/{}/edit",
+                                                    selected_type.get().resource_name(),
                                                 ),
                                                 Default::default(),
                                             );
@@ -339,7 +357,7 @@ pub fn PrincipalList() -> impl IntoView {
                                 &UrlBuilder::new(
                                         format!(
                                             "/manage/directory/{}",
-                                            selected_type.resource_name(true),
+                                            selected_type.get().resource_name(),
                                         ),
                                     )
                                     .with_parameter("page", page.to_string())
@@ -372,8 +390,8 @@ fn PrincipalItem(principal: Principal, selected_type: PrincipalType) -> impl Int
         .unwrap_or_default();
     let principal_id = principal.name.as_deref().unwrap_or_default().to_string();
     let manage_url = format!(
-        "/manage/directory/{}/{}",
-        selected_type.resource_name(false),
+        "/manage/directory/{}/{}/edit",
+        selected_type.resource_name(),
         principal_id
     );
     let num_members = principal.members.len();

@@ -1,208 +1,193 @@
+use std::sync::Arc;
 
-use std::{sync::Arc, vec};
-
-use humansize::{format_size, DECIMAL};
-use leptos::{html::Form, *};
+use ahash::AHashMap;
+use leptos::*;
 use leptos_router::{use_navigate, use_params_map};
-use pwhash::sha512_crypt;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     components::{
         form::{
-            button::Button, input::{InputPassword, InputSize, InputText}, select::Select, stacked_badge::StackedBadge, stacked_input::StackedInput, value_is_email, value_is_not_empty, value_lowercase, value_remove_spaces, value_trim, ButtonBar, Form, FormItem, FormListValidator, FormSection, FormValidator, StringValidateFn, ValidateCb
+            button::Button,
+            input::{InputPassword, InputSize, InputSwitch, InputText},
+            select::Select,
+            stacked_input::StackedInput,
+            Form, FormButtonBar, FormElement, FormItem, FormSection,
         },
         messages::alert::{use_alerts, Alert},
         skeleton::Skeleton,
         Color,
     },
     core::{
+        form::FormData,
         http::{self, HttpRequest},
         oauth::use_authorization,
     },
-    pages::config::{schema::Schemas, Settings, Type},
+    pages::config::{Schema, SchemaType, Schemas, Settings, Type, UpdateSettings},
 };
 
 #[derive(Clone, Serialize, Deserialize, Default)]
-pub struct FetchSettings {
+struct FetchSettings {
     pub items: Settings,
     pub total: u64,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+enum FetchResult {
+    Update(Settings),
+    Create,
+    NotFound,
+}
 
 #[component]
-pub fn SettingsEdit(id: &'static str) -> impl IntoView {
-    let schema = expect_context::<Arc<Schemas>>().get(id);
+pub fn SettingsEdit() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let params = use_params_map();
-    let schema_ = schema.clone();
-    let current_schema = create_memo(move |_| schema_.clone());
+
+    let schemas = expect_context::<Arc<Schemas>>();
+    let current_schema = create_memo(move |_| {
+        if let Some(schema) = params()
+            .get("object")
+            .and_then(|id| schemas.schemas.get(id.as_str()))
+        {
+            schema.clone()
+        } else {
+            use_navigate()("/404", Default::default());
+            Arc::new(Schema::default())
+        }
+    });
 
     let fetch_settings = create_resource(
         move || params().get("id").cloned().unwrap_or_default(),
         move |name| {
             let auth = auth.get();
             let schema = current_schema.get();
+            let is_create = name.is_empty();
 
             async move {
-                if !name.is_empty() {
-                    HttpRequest::get("/api/settings")
-                    .with_authorization(&auth)
-                    .with_parameter("prefix", format!("{}.{}", schema.prefix.unwrap(), name))
-                    .send::<FetchSettings>().await
-                    .map(|mut list| {
-                        if !list.items.is_empty() {
-                            list.items.insert("_id".to_string(), name.to_string());
+                match schema.typ {
+                    SchemaType::Record { prefix, .. } => {
+                        if !is_create {
+                            HttpRequest::get("/api/settings/list")
+                                .with_authorization(&auth)
+                                .with_parameter("prefix", format!("{prefix}.{name}"))
+                                .send::<FetchSettings>()
+                                .await
+                                .map(|mut list| {
+                                    if !list.items.is_empty() {
+                                        list.items.insert("_id".to_string(), name.to_string());
+                                        FetchResult::Update(list.items)
+                                    } else {
+                                        FetchResult::NotFound
+                                    }
+                                })
+                        } else {
+                            Ok(FetchResult::Create)
                         }
-                        list.items
+                    }
+                    SchemaType::Entry { prefix } => {
+                        if !is_create {
+                            HttpRequest::get("/api/settings/keys")
+                                .with_authorization(&auth)
+                                .with_parameter("keys", format!("{prefix}.{name}"))
+                                .send::<AHashMap<String, Option<String>>>()
+                                .await
+                                .map(|list| {
+                                    if let Some(value) = list.into_values().next().flatten() {
+                                        let mut settings = Settings::new();
+                                        settings.insert("_id".to_string(), name.to_string());
+                                        settings.insert("_value".to_string(), value);
+                                        FetchResult::Update(settings)
+                                    } else {
+                                        FetchResult::NotFound
+                                    }
+                                })
+                        } else {
+                            Ok(FetchResult::Create)
+                        }
+                    }
+                    SchemaType::List => HttpRequest::get("/api/settings/keys")
+                        .with_authorization(&auth)
+                        .with_parameter(
+                            "keys",
+                            schema
+                                .fields
+                                .values()
+                                .map(|field| field.id)
+                                .collect::<Vec<_>>()
+                                .join(","),
+                        )
+                        .send::<AHashMap<String, Option<String>>>()
+                        .await
+                        .map(|mut list| {
+                            let mut settings = Settings::new();
+                            for (name, value) in list.drain() {
+                                if let Some(value) = value {
+                                    settings.insert(name, value);
+                                }
+                            }
 
-                    })
-                    
-                } else {
-                    Ok(schema.create())
+                            if !list.is_empty() {
+                                FetchResult::Update(settings)
+                            } else {
+                                FetchResult::Create
+                            }
+                        }),
                 }
             }
         },
     );
     let (pending, set_pending) = create_signal(false);
+    let data = FormData::default().into_signal();
 
-    let settings = create_rw_signal(Settings::default());
-    let login = FormValidator::new(String::new());
-    let name = FormValidator::new(String::new());
-    let typ: RwSignal<Type> = create_rw_signal(selected_type);
-    let password = FormValidator::new(String::new());
-    let quota = create_rw_signal(0u64);
-    let member_of = create_rw_signal(Vec::<String>::new());
-    let members = create_rw_signal(Vec::<String>::new());
-    let email = FormValidator::new(String::new());
-    let aliases = FormListValidator::new(Vec::<String>::new());
-
-    let validate = move || {
-        let aliases = aliases.validate([value_trim, value_lowercase], [value_is_email])?;
-
-        Some(Settings {
-            typ: typ.get().into(),
-            quota: quota.get().into(),
-            name: login
-                .validate([value_remove_spaces, value_lowercase], [value_is_not_empty])?
-                .into(),
-            secrets: {
-                let password = password.signal().get().ok()?;
-                if !password.is_empty() {
-                    vec![sha512_crypt::hash(password).unwrap()]
-                } else {
-                    vec![]
-                }
-            },
-            emails: [email.validate([value_trim, value_lowercase], [value_is_email])?]
-                .into_iter()
-                .chain(aliases)
-                .filter(|x| !x.is_empty())
-                .collect::<Vec<_>>(),
-            member_of: member_of.get(),
-            members: members.get(),
-            description: name
-                .validate::<_, [_; 0], _, StringValidateFn>([value_trim], [])?
-                .into(),
-            ..Default::default()
-        })
-    };
-
-    let save_changes = create_action(move |changes: &Settings| {
-        let current = current_settings.get();
+    let save_changes = create_action(move |changes: &Arc<Vec<UpdateSettings>>| {
         let changes = changes.clone();
         let auth = auth.get();
+        let schema = current_schema.get();
+
+        log::debug!("Saving changes: {:#?}", changes);
 
         async move {
             set_pending.set(true);
-            let result = if !current.is_blank() {
-                let name = current.name.clone().unwrap_or_default();
-                let updates = current.into_updates(changes);
-
-                if !updates.is_empty() {
-                    HttpRequest::patch(format!("/api/settings/{name}"))
-                        .with_authorization(&auth)
-                        .with_body(updates)
-                        .unwrap()
-                        .send::<()>()
-                        .await
-                } else {
-                    Ok(())
-                }
-            } else {
-                HttpRequest::post("/api/settings")
-                    .with_authorization(&auth)
-                    .with_body(changes)
-                    .unwrap()
-                    .send::<u32>()
-                    .await
-                    .map(|_| ())
-            };
-            set_pending.set(false);
-
-            match result {
+            match HttpRequest::post("/api/settings")
+                .with_authorization(&auth)
+                .with_body(changes)
+                .unwrap()
+                .send::<Option<String>>()
+                .await
+                .map(|_| ())
+            {
                 Ok(_) => {
-                    use_navigate()(
-                        &format!("/manage/directory/{}", selected_type.resource_name(true)),
-                        Default::default(),
-                    );
+                    set_pending.set(false);
+                    use_navigate()(&format!("/settings/{}", schema.id), Default::default());
                 }
                 Err(err) => {
-                    alert.set(Alert::from(err));
+                    set_pending.set(false);
+                    match err {
+                        http::Error::Unauthorized => {
+                            use_navigate()("/login", Default::default());
+                        }
+                        http::Error::Server { error, .. } if error == "assertFailed" => {
+                            alert
+                                .set(Alert::error("Record already exists").with_details(
+                                    "Another record with the same ID already exists",
+                                ));
+                        }
+                        err => {
+                            alert.set(Alert::from(err));
+                        }
+                    }
                 }
             }
         }
     });
 
-    let form = schema.form.sections.iter().map(|section| {
-        let do_hide = create_memo(move |_| {
-            section.display(&settings.get())
-        });
-        let title = section.title.map(|s| s.to_string());
-
-        let components = section.fields.iter().cloned().map(|field| {
-            let component = match field.typ_ {
-                Type::Input => view! { <br/> }.into_view(),
-                Type::InputMulti => todo!(),
-                Type::Secret => todo!(),
-                Type::Text => todo!(),
-                Type::Expression => todo!(),
-                Type::Select(_) => todo!(),
-                Type::Checkbox => todo!(),
-                Type::Duration => todo!(),
-            };
-            let hide = create_memo(move |_| {
-                field.display(&settings.get())
-            });
-            let placeholder = create_memo(move |_| {
-                field.placeholder(&settings.get()).unwrap_or_default().to_string()
-            });
-
-
-            view! {
-                <FormItem label=field.label_form>
-                    <InputText
-                        placeholder=placeholder
-
-                        value=name
-                    />
-                </FormItem>
-            }
-
-        }).collect_view();
-
-        view! {
-            <FormSection title=title hide=do_hide>
-                {components}
-            </FormSection>
-        }
-
-    }).collect_view();
-
-
     view! {
-        <Form title=title subtitle=subtitle>
+        <Form
+            title=Signal::derive(move || current_schema.get().form.title.to_string())
+            subtitle=Signal::derive(move || current_schema.get().form.subtitle.to_string())
+        >
 
             <Transition fallback=Skeleton set_pending>
 
@@ -212,11 +197,8 @@ pub fn SettingsEdit(id: &'static str) -> impl IntoView {
                         use_navigate()("/login", Default::default());
                         Some(view! { <div></div> }.into_view())
                     }
-                    Some(Err(http::Error::NotFound)) => {
-                        let url = format!(
-                            "/manage/directory/{}",
-                            selected_type.resource_name(true),
-                        );
+                    Some(Err(http::Error::NotFound) | Ok(FetchResult::NotFound)) => {
+                        let url = format!("/settings/{}", current_schema.get().id);
                         use_navigate()(&url, Default::default());
                         Some(view! { <div></div> }.into_view())
                     }
@@ -224,165 +206,138 @@ pub fn SettingsEdit(id: &'static str) -> impl IntoView {
                         alert.set(Alert::from(err));
                         Some(view! { <div></div> }.into_view())
                     }
-                    Some(Ok(settings)) => {
-                        login.update(settings.name.clone().unwrap_or_default());
-                        typ.set(settings.typ.unwrap_or(selected_type));
-                        name.update(settings.description.clone().unwrap_or_default());
-                        password.update(String::new());
-                        quota.set(settings.quota.unwrap_or_default());
-                        member_of.set(settings.member_of.clone());
-                        members.set(settings.members.clone());
-                        email.update(settings.emails.first().cloned().unwrap_or_default());
-                        aliases.update(settings.emails.iter().skip(1).cloned().collect::<Vec<_>>());
-                        let used_quota = settings.used_quota.unwrap_or_default();
-                        let total_quota = settings.quota.unwrap_or_default();
-                        current_settings.set(settings);
+                    Some(Ok(result)) => {
+                        let (is_create, settings) = match result {
+                            FetchResult::Update(settings) => (false, Some(settings)),
+                            FetchResult::Create => (true, None),
+                            FetchResult::NotFound => unreachable!(),
+                        };
+                        let schema = current_schema.get();
+                        let sections = schema.form.sections.iter().cloned();
+                        data.set(FormData::from_settings(schema.clone(), settings));
                         Some(
-                            view! {
-                                <FormItem label=match selected_type {
-                                    Type::Individual => "Login name",
-                                    _ => "Name",
-                                }>
-                                    <InputText
-                                        placeholder=match selected_type {
-                                            Type::Individual => "Login name",
-                                            _ => "Short Name",
-                                        }
+                            sections
+                                .map(|section| {
+                                    let title = section.title.map(|s| s.to_string());
+                                    let section_ = section.clone();
+                                    let hide_section = create_memo(move |_| {
+                                        !section_.display(&data.get())
+                                    });
+                                    let components = section
+                                        .fields
+                                        .iter()
+                                        .cloned()
+                                        .map(|field| {
+                                            let is_disabled = field.readonly && !is_create;
+                                            let field_label = field.label_form;
+                                            let help = field.help;
+                                            let field_ = field.clone();
+                                            let hide_label = create_memo(move |_| {
+                                                !field_.display(&data.get())
+                                            });
+                                            let field_ = field.clone();
+                                            let is_optional = create_memo(move |_| {
+                                                !field_.is_required(&data.get())
+                                            });
+                                            let component = match field.typ_ {
+                                                Type::Input | Type::Duration => {
+                                                    view! {
+                                                        <InputText
+                                                            element=FormElement::new(field.id, data)
+                                                            placeholder=create_memo(move |_| {
+                                                                field
+                                                                    .placeholder(&data.get())
+                                                                    .unwrap_or_default()
+                                                                    .to_string()
+                                                            })
 
-                                        value=login
-                                    />
-                                </FormItem>
-
-                                <FormItem label=match selected_type {
-                                    Type::Individual => "Name",
-                                    _ => "Description",
-                                }>
-                                    <InputText
-                                        placeholder=match selected_type {
-                                            Type::Individual => "Full Name",
-                                            _ => "Description",
-                                        }
-
-                                        value=name
-                                    />
-                                </FormItem>
-
-                                <Show when=move || matches!(selected_type, Type::Individual)>
-                                    <FormItem label="Type">
-                                        <Select
-                                            value=typ
-                                            options=vec![Type::Individual, Type::Superuser]
-                                        />
-
-                                    </FormItem>
-
-                                    <FormItem label="Password">
-                                        <InputPassword value=password/>
-                                    </FormItem>
-                                </Show>
-
-                                <FormItem label="Email">
-                                    <InputText placeholder="user@example.org" value=email/>
-                                </FormItem>
-
-                                <FormItem label="Aliases">
-                                    <StackedInput
-                                        values=aliases
-                                        placeholder="Email"
-                                        add_button_text="Add Email".to_string()
-                                    />
-                                </FormItem>
-
-                                <Show when=move || matches!(selected_type, Type::Individual)>
-                                    <FormItem label="Disk quota">
-                                        <div class="relative">
-                                            <InputSize value=quota/>
-                                            <Show when=move || { total_quota > 0 }>
-                                                <p class="mt-3">
-                                                    <label class="inline-flex items-center gap-x-1 text-xs text-black-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600">
-
-                                                        {format!(
-                                                            "{} used ({:.1}%)",
-                                                            format_size(used_quota, DECIMAL),
-                                                            (used_quota as f64 / total_quota as f64) * 100.0,
-                                                        )}
-
-                                                    </label>
-                                                </p>
-
-                                            </Show>
-
-                                        </div>
-                                    </FormItem>
-                                </Show>
-
-                                <Show when=move || {
-                                    matches!(selected_type, Type::Group | Type::List)
-                                }>
-                                    <FormItem label="Members">
-                                        <StackedBadge
-                                            color=Color::Green
-                                            values=members
-
-                                            add_button_text="Add member".to_string()
-                                            validate_item=Callback::new(move |(value, cb)| {
-                                                settings_is_valid
-                                                    .dispatch((
-                                                        value,
-                                                        cb,
-                                                        if selected_type == Type::Group {
-                                                            vec![Type::Individual, Type::Group]
-                                                        } else {
-                                                            vec![Type::Individual]
-                                                        },
-                                                    ));
-                                            })
-                                        />
-
-                                    </FormItem>
-                                </Show>
-
-                                <Show when=move || {
-                                    matches!(selected_type, Type::Individual | Type::Group)
-                                }>
-                                    <FormItem label="Member of">
-                                        <StackedBadge
-                                            color=Color::Blue
-
-                                            values=member_of
-
-                                            add_button_text="Add to group".to_string()
-                                            validate_item=Callback::new(move |(value, cb)| {
-                                                settings_is_valid
-                                                    .dispatch((
-                                                        value,
-                                                        cb,
-                                                        if selected_type == Type::Group {
-                                                            vec![Type::Group]
-                                                        } else {
-                                                            vec![Type::Group, Type::List]
-                                                        },
-                                                    ));
-                                            })
-                                        />
-
-                                    </FormItem>
-                                </Show>
-                            }
-                                .into_view(),
+                                                            disabled=is_disabled
+                                                        />
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Array => {
+                                                    view! {
+                                                        <StackedInput
+                                                            add_button_text="Add".to_string()
+                                                            element=FormElement::new(field.id, data)
+                                                            placeholder=create_memo(move |_| {
+                                                                field
+                                                                    .placeholder(&data.get())
+                                                                    .unwrap_or_default()
+                                                                    .to_string()
+                                                            })
+                                                        />
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Secret => {
+                                                    view! {
+                                                        <InputPassword element=FormElement::new(field.id, data)/>
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Text => todo!(),
+                                                Type::Expression => todo!(),
+                                                Type::Select(_) => {
+                                                    view! {
+                                                        <Select
+                                                            element=FormElement::new(field.id, data)
+                                                            disabled=is_disabled
+                                                        />
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Size => {
+                                                    view! {
+                                                        <InputSize element=FormElement::new(field.id, data)/>
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Checkbox => {
+                                                    view! {
+                                                        <InputSwitch element=FormElement::new(field.id, data)/>
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Duration => view! { <p>checkbox</p> }.into_view(),
+                                            };
+                                            view! {
+                                                <FormItem
+                                                    label=field_label
+                                                    hide=hide_label
+                                                    is_optional=is_optional
+                                                    tooltip=help.unwrap_or_default()
+                                                >
+                                                    {component}
+                                                </FormItem>
+                                            }
+                                        })
+                                        .collect_view();
+                                    view! {
+                                        <FormSection
+                                            title=title.unwrap_or_default()
+                                            hide=hide_section
+                                        >
+                                            {components}
+                                        </FormSection>
+                                    }
+                                        .into_view()
+                                })
+                                .collect_view(),
                         )
                     }
                 }}
 
             </Transition>
 
-            <ButtonBar>
+            <FormButtonBar>
                 <Button
                     text="Cancel"
                     color=Color::Gray
                     on_click=move |_| {
                         use_navigate()(
-                            &format!("/manage/directory/{}", selected_type.resource_name(true)),
+                            &format!("/settings/{}", current_schema.get().id),
                             Default::default(),
                         );
                     }
@@ -392,14 +347,16 @@ pub fn SettingsEdit(id: &'static str) -> impl IntoView {
                     text="Save changes"
                     color=Color::Blue
                     on_click=Callback::new(move |_| {
-                        if let Some(changes) = validate() {
-                            save_changes.dispatch(changes);
-                        }
+                        data.update(|data| {
+                            if data.validate_form() {
+                                save_changes.dispatch(Arc::new(data.build_update()));
+                            }
+                        });
                     })
 
                     disabled=pending
                 />
-            </ButtonBar>
+            </FormButtonBar>
 
         </Form>
     }

@@ -16,10 +16,10 @@ pub struct Builder<P, I> {
     pub item: I,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub enum Type<S, F> {
     Input,
-    InputMulti,
+    Array,
     Secret,
     Text,
     #[default]
@@ -27,14 +27,15 @@ pub enum Type<S, F> {
     Select(Source<S, F>),
     Checkbox,
     Duration,
+    Size,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Field {
     pub id: &'static str,
     pub label_form: &'static str,
     pub label_column: &'static str,
-    pub help: Value<&'static str>,
+    pub help: Option<&'static str>,
     pub checks: Value<InputCheck>,
     pub typ_: Type<Arc<Schema>, Arc<Field>>,
     pub default: Value<&'static str>,
@@ -43,16 +44,28 @@ pub struct Field {
     pub readonly: bool,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Schema {
     pub id: &'static str,
     pub name_singular: &'static str,
     pub name_plural: &'static str,
     pub fields: AHashMap<&'static str, Arc<Field>>,
-    pub prefix: Option<&'static str>,
-    pub suffix: Option<&'static str>,
+    pub typ: SchemaType,
     pub list: List,
     pub form: Form,
+}
+
+#[derive(Clone, Default, Debug)]
+pub enum SchemaType {
+    Record {
+        prefix: &'static str,
+        suffix: &'static str,
+    },
+    Entry {
+        prefix: &'static str,
+    },
+    #[default]
+    List,
 }
 
 impl PartialEq for Schema {
@@ -63,7 +76,7 @@ impl PartialEq for Schema {
 
 impl Eq for Schema {}
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct List {
     pub title: &'static str,
     pub subtitle: &'static str,
@@ -72,7 +85,7 @@ pub struct List {
     pub page_size: u32,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Form {
     pub title: &'static str,
     pub subtitle: &'static str,
@@ -80,7 +93,7 @@ pub struct Form {
     pub actions: Vec<Action>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Action {
     Create,
     Save,
@@ -90,39 +103,39 @@ pub enum Action {
     Search,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Section {
     pub title: Option<&'static str>,
     pub display: Vec<Eval>,
     pub fields: Vec<Arc<Field>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Source<S, F> {
     Static(&'static [(&'static str, &'static str)]),
     Dynamic { schema: S, field: F },
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Value<T> {
     pub if_thens: Vec<IfThen<T>>,
     pub default: Option<T>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct IfThen<T> {
     pub eval: Eval,
     pub value: T,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Eval {
     pub field: Arc<Field>,
     pub values: Vec<&'static str>,
     pub condition: Condition,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Condition {
     MatchAny,
     MatchNone,
@@ -139,6 +152,7 @@ pub enum Transformer {
     Trim,
     RemoveSpaces,
     Lowercase,
+    Uppercase,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -155,8 +169,8 @@ pub enum Validator {
     IsRegexPattern,
     MinLength(usize),
     MaxLength(usize),
-    MinValue(i64),
-    MaxValue(i64),
+    MinValue(NumberType),
+    MaxValue(NumberType),
     MinItems(usize),
     MaxItems(usize),
     IsValidExpression {
@@ -166,6 +180,14 @@ pub enum Validator {
     },
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum NumberType {
+    Integer(i64),
+    Float(f64),
+}
+
+impl Eq for NumberType {}
+
 impl Schemas {
     pub fn get(&self, id: &str) -> Arc<Schema> {
         self.schemas.get(id).cloned().unwrap_or_else(|| {
@@ -174,10 +196,17 @@ impl Schemas {
     }
 
     pub fn build_form(&self, id: &str) -> FormData {
+        self.get(id).into()
+    }
+}
+
+impl From<Arc<Schema>> for FormData {
+    fn from(schema: Arc<Schema>) -> Self {
         FormData {
             values: Default::default(),
             errors: Default::default(),
-            schema: self.get(id),
+            schema,
+            is_update: false,
         }
     }
 }
@@ -203,28 +232,18 @@ impl Schema {
         self.form.actions.iter().any(|a| *a == action)
     }
 
-    pub fn to_settings(&self) -> Settings {
-        let mut settings = Settings::default();
-        settings.insert("_id".to_string(), "".to_string());
-
-        // Add default values for fields that don't have if-thens
-        for field in self.fields.values() {
-            if field.default.if_thens.is_empty() {
-                if let Some(default) = field.default.default.as_ref() {
-                    settings.insert(field.id.to_string(), default.to_string());
-                }
-            }
+    pub fn unwrap_prefix(&self) -> &str {
+        match self.typ {
+            SchemaType::Record { prefix, .. } | SchemaType::Entry { prefix } => prefix,
+            SchemaType::List => panic!("Schema type is not Record or Entry."),
         }
+    }
 
-        // Add default values for fields that depend on other fields
-        for field in self.fields.values() {
-            if !field.default.if_thens.is_empty() {
-                if let Some(value) = field.default.eval(&settings) {
-                    settings.insert(field.id.to_string(), value.to_string());
-                }
-            }
+    pub fn try_unwrap_suffix(&self) -> Option<&str> {
+        match self.typ {
+            SchemaType::Record { suffix, .. } => Some(suffix),
+            SchemaType::Entry { .. } | SchemaType::List => None,
         }
-        settings
     }
 }
 
@@ -267,15 +286,11 @@ impl Field {
     }
 
     pub fn display(&self, settings: &impl SettingsValue) -> bool {
-        self.display.iter().any(|eval| eval.eval(settings))
+        self.display.is_empty() || self.display.iter().any(|eval| eval.eval(settings))
     }
 
     pub fn placeholder(&self, settings: &impl SettingsValue) -> Option<&str> {
         self.placeholder.eval(settings).copied()
-    }
-
-    pub fn help(&self, settings: &impl SettingsValue) -> Option<&str> {
-        self.help.eval(settings).copied()
     }
 
     pub fn default(&self, settings: &impl SettingsValue) -> Option<&str> {
@@ -284,6 +299,18 @@ impl Field {
 
     pub fn input_check(&self, settings: &impl SettingsValue) -> Option<&InputCheck> {
         self.checks.eval(settings)
+    }
+
+    pub fn is_required(&self, settings: &impl SettingsValue) -> bool {
+        matches!(self.typ_, Type::Checkbox | Type::Select(_))
+            || self
+                .input_check(settings)
+                .map(|c| c.validators.iter().any(|v| *v == Validator::Required))
+                .unwrap_or_default()
+    }
+
+    pub fn is_multivalue(&self) -> bool {
+        matches!(self.typ_, Type::Array | Type::Expression)
     }
 }
 
@@ -322,7 +349,7 @@ impl Source<Arc<Schema>, Arc<Field>> {
 
 impl Section {
     pub fn display(&self, settings: &impl SettingsValue) -> bool {
-        self.display.iter().any(|eval| eval.eval(settings))
+        self.display.is_empty() || self.display.iter().any(|eval| eval.eval(settings))
     }
 }
 
@@ -415,12 +442,21 @@ impl Builder<Schemas, Schema> {
     }
 
     pub fn prefix(mut self, prefix: &'static str) -> Self {
-        self.item.prefix = Some(prefix);
+        if matches!(self.item.typ, SchemaType::List) {
+            self.item.typ = SchemaType::Entry { prefix };
+        } else {
+            panic!("Schema type is not List.");
+        }
         self
     }
 
     pub fn suffix(mut self, suffix: &'static str) -> Self {
-        self.item.suffix = Some(suffix);
+        match self.item.typ {
+            SchemaType::Entry { prefix } => {
+                self.item.typ = SchemaType::Record { prefix, suffix };
+            }
+            _ => panic!("Schema type is not Record."),
+        }
         self
     }
 
@@ -528,11 +564,11 @@ impl Builder<(Schemas, Schema), Field> {
     }
 
     pub fn help(mut self, help: &'static str) -> Self {
-        self.item.help.push_else(help);
+        self.item.help = Some(help);
         self
     }
 
-    pub fn help_if_eq(
+    /*pub fn help_if_eq(
         mut self,
         field: &'static str,
         conditions: impl IntoIterator<Item = &'static str>,
@@ -542,7 +578,7 @@ impl Builder<(Schemas, Schema), Field> {
             .help
             .push_if_matches_eq(self.field(field), conditions, value);
         self
-    }
+    }*/
 
     pub fn readonly(mut self) -> Self {
         self.item.readonly = true;
@@ -827,11 +863,24 @@ impl From<Type<&'static str, &'static str>> for Type<Arc<Schema>, Arc<Field>> {
             Type::Duration => Type::Duration,
             Type::Expression => Type::Expression,
             Type::Input => Type::Input,
-            Type::InputMulti => Type::InputMulti,
+            Type::Array => Type::Array,
             Type::Secret => Type::Secret,
             Type::Text => Type::Text,
+            Type::Size => Type::Size,
             Type::Select(Source::Static(items)) => Type::Select(Source::Static(items)),
             Type::Select(_) => unreachable!(),
         }
+    }
+}
+
+impl From<i64> for NumberType {
+    fn from(value: i64) -> Self {
+        NumberType::Integer(value)
+    }
+}
+
+impl From<f64> for NumberType {
+    fn from(value: f64) -> Self {
+        NumberType::Float(value)
     }
 }

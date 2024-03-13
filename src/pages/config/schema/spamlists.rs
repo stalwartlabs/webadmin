@@ -38,8 +38,8 @@ impl Builder<Schemas, ()> {
             .label("Tag name")
             .help("The spam tag name")
             .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::IsGlobPattern],
+                [Transformer::RemoveSpaces, Transformer::Uppercase],
+                [Validator::Required, Validator::IsId],
             )
             .build()
             .new_value_field()
@@ -49,8 +49,8 @@ impl Builder<Schemas, ()> {
                 [Transformer::Trim],
                 [
                     Validator::Required,
-                    Validator::MinValue(-100),
-                    Validator::MaxValue(100),
+                    Validator::MinValue((-100.0).into()),
+                    Validator::MaxValue(100.0.into()),
                 ],
             )
             .build()

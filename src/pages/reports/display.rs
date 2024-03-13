@@ -33,15 +33,28 @@ enum ReportWrapper {
 }
 
 #[component]
-pub fn IncomingReportDisplay(report_type: ReportType) -> impl IntoView {
+pub fn IncomingReportDisplay() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let params = use_params_map();
+    let report_type = create_memo(move |_| {
+        match params()
+            .get("object")
+            .map(|id| id.as_str())
+            .unwrap_or_default()
+        {
+            "dmarc" => ReportType::Dmarc,
+            "tls" => ReportType::Tls,
+            "arf" => ReportType::Arf,
+            _ => ReportType::Dmarc,
+        }
+    });
     let fetch_report = create_resource(
         move || params().get("id").cloned().unwrap_or_default(),
         move |id| {
             let auth = auth.get();
             let id = id.clone();
+            let report_type = report_type.get();
 
             async move {
                 match report_type {
@@ -80,7 +93,7 @@ pub fn IncomingReportDisplay(report_type: ReportType) -> impl IntoView {
                 }
                 Some(Err(http::Error::NotFound)) => {
                     use_navigate()(
-                        &format!("/manage/reports/{}", report_type.as_str()),
+                        &format!("/manage/reports/{}", report_type.get().as_str()),
                         Default::default(),
                     );
                     Some(view! { <div></div> }.into_view())

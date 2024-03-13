@@ -26,8 +26,6 @@ pub fn ListTable(
     toolbar: Toolbar,
     footer: Footer,
 ) -> impl IntoView {
-    let has_title = !title.get().is_empty();
-
     view! {
         <div class="flex flex-col">
             <div class="-m-1.5 overflow-x-auto">
@@ -35,21 +33,24 @@ pub fn ListTable(
                     <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden dark:bg-slate-900 dark:border-gray-700">
                         <div class="px-6 py-4 grid gap-3 md:flex md:justify-between md:items-center border-b border-gray-200 dark:border-gray-700">
 
-                            {if has_title {
-                                Some(
-                                    view! {
-                                        <div>
-                                            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                                                {move || title.get()}
-                                            </h2>
-                                            <p class="text-sm text-gray-600 dark:text-gray-400">
-                                                {move || subtitle.get()}
-                                            </p>
-                                        </div>
-                                    },
-                                )
-                            } else {
-                                None
+                            {move || {
+                                let title = title.get();
+                                if !title.is_empty() {
+                                    Some(
+                                        view! {
+                                            <div>
+                                                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                                                    {title}
+                                                </h2>
+                                                <p class="text-sm text-gray-600 dark:text-gray-400">
+                                                    {subtitle.get()}
+                                                </p>
+                                            </div>
+                                        },
+                                    )
+                                } else {
+                                    None
+                                }
                             }}
                             <div>
                                 <div class="inline-flex gap-x-2">{(toolbar.children)()}</div>

@@ -37,7 +37,7 @@ use chrono_humanize::{Accuracy, HumanTime, Tense};
 const PAGE_SIZE: u32 = 10;
 
 #[component]
-pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
+pub fn IncomingReportList() -> impl IntoView {
     let query = use_query_map();
     let page = create_memo(move |_| {
         query
@@ -57,7 +57,19 @@ pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
             })
         })
     });
-    let report_class = report_type.as_str();
+    let params = use_params_map();
+    let report_type = create_memo(move |_| {
+        match params()
+            .get("object")
+            .map(|id| id.as_str())
+            .unwrap_or_default()
+        {
+            "dmarc" => ReportType::Dmarc,
+            "tls" => ReportType::Tls,
+            "arf" => ReportType::Arf,
+            _ => ReportType::Dmarc,
+        }
+    });
 
     let auth = use_authorization();
     let alert = use_alerts();
@@ -69,9 +81,10 @@ pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
         move || (page(), filter()),
         move |(page, filter)| {
             let auth = auth.get();
+            let report_type = report_type.get();
 
             async move {
-                let ids = HttpRequest::get(format!("/api/reports/{report_class}"))
+                let ids = HttpRequest::get(format!("/api/reports/{}", report_type.as_str()))
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
@@ -114,6 +127,7 @@ pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
     let delete_action = create_action(move |items: &HashSet<String>| {
         let items = items.clone();
         let auth = auth.get();
+        let report_class = report_type.get().as_str();
 
         async move {
             let mut total_deleted = 0;
@@ -165,17 +179,22 @@ pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
     // Domains
     // Incidents
 
-    let (title, subtitle) = match report_type {
-        ReportType::Dmarc => (
-            "DMARC Aggregate Reports",
-            "View received DMARC aggregate reports",
-        ),
-        ReportType::Tls => ("TLS Reports", "View received TLS aggregate reports"),
-        ReportType::Arf => (
-            "Failure Reports",
-            "View received abuse and authentication failure reports",
-        ),
-    };
+    let title = create_memo(move |_| {
+        match report_type.get() {
+            ReportType::Dmarc => "DMARC Aggregate Reports",
+            ReportType::Tls => "TLS Reports",
+            ReportType::Arf => "Failure Reports",
+        }
+        .to_string()
+    });
+    let subtitle = create_memo(move |_| {
+        match report_type.get() {
+            ReportType::Dmarc => "View received DMARC aggregate reports",
+            ReportType::Tls => "View received TLS aggregate reports",
+            ReportType::Arf => "View received abuse and authentication failure reports",
+        }
+        .to_string()
+    });
 
     view! {
         <ListSection>
@@ -185,7 +204,9 @@ pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
                         value=filter
                         on_search=move |value| {
                             use_navigate()(
-                                &UrlBuilder::new(format!("/manage/reports/{report_class}"))
+                                &UrlBuilder::new(
+                                        format!("/manage/reports/{}", report_type.get().as_str()),
+                                    )
                                     .with_parameter("filter", value)
                                     .finish(),
                                 Default::default(),
@@ -256,7 +277,7 @@ pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
                         Some(Ok(reports)) if !reports.items.is_empty() => {
                             total_results.set(Some(reports.total as u32));
                             let reports_ = reports.clone();
-                            let headers = match report_type {
+                            let headers = match report_type.get() {
                                 ReportType::Dmarc => {
                                     vec![
                                         "From".to_string(),
@@ -340,7 +361,9 @@ pub fn IncomingReportList(report_type: ReportType) -> impl IntoView {
                         page_size=PAGE_SIZE
                         on_page_change=move |page: u32| {
                             use_navigate()(
-                                &UrlBuilder::new(format!("/manage/reports/{report_class}"))
+                                &UrlBuilder::new(
+                                        format!("/manage/reports/{}", report_type.get().as_str()),
+                                    )
                                     .with_parameter("page", page.to_string())
                                     .with_optional_parameter("filter", filter())
                                     .finish(),

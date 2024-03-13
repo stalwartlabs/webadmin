@@ -29,7 +29,7 @@ use crate::{
 };
 
 #[component]
-pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
+pub fn PrincipalEdit() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let params = use_params_map();
@@ -50,6 +50,18 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
             }
         },
     );
+    let selected_type = create_memo(move |_| {
+        match params()
+            .get("object")
+            .map(|id| id.as_str())
+            .unwrap_or_default()
+        {
+            "accounts" => PrincipalType::Individual,
+            "groups" => PrincipalType::Group,
+            "lists" => PrincipalType::List,
+            _ => PrincipalType::Individual,
+        }
+    });
     let (pending, set_pending) = create_signal(false);
 
     let current_principal = create_rw_signal(Principal::default());
@@ -106,6 +118,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
         let current = current_principal.get();
         let changes = changes.clone();
         let auth = auth.get();
+        let selected_type = selected_type.get();
 
         async move {
             set_pending.set(true);
@@ -137,7 +150,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
             match result {
                 Ok(_) => {
                     use_navigate()(
-                        &format!("/manage/directory/{}", selected_type.resource_name(true)),
+                        &format!("/manage/directory/{}", selected_type.resource_name()),
                         Default::default(),
                     );
                 }
@@ -148,15 +161,18 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
         }
     });
 
-    let subtitle = match selected_type {
-        PrincipalType::Individual => "Manage account details, password and email addresses.",
-        PrincipalType::Group => "Manage group members and member groups.",
-        PrincipalType::List => "Manage list details and members.",
-        _ => unreachable!(),
-    };
+    let subtitle = create_memo(move |_| {
+        match selected_type.get() {
+            PrincipalType::Individual => "Manage account details, password and email addresses.",
+            PrincipalType::Group => "Manage group members and member groups.",
+            PrincipalType::List => "Manage list details and members.",
+            _ => unreachable!(),
+        }
+        .to_string()
+    });
     let title = create_memo(move |_| {
         if let Some(name) = params().get("id") {
-            match selected_type {
+            match selected_type.get() {
                 PrincipalType::Individual => {
                     format!("Update '{name}' Account")
                 }
@@ -169,7 +185,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
                 _ => unreachable!(),
             }
         } else {
-            match selected_type {
+            match selected_type.get() {
                 PrincipalType::Individual => "Create Account",
                 PrincipalType::Group => "Create Group",
                 PrincipalType::List => "Create List",
@@ -193,7 +209,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
                     Some(Err(http::Error::NotFound)) => {
                         let url = format!(
                             "/manage/directory/{}",
-                            selected_type.resource_name(true),
+                            selected_type.get().resource_name(),
                         );
                         use_navigate()(&url, Default::default());
                         Some(view! { <div></div> }.into_view())
@@ -204,7 +220,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
                     }
                     Some(Ok(principal)) => {
                         data.update(|data| {
-                            data.from_principal(&principal, selected_type);
+                            data.from_principal(&principal, selected_type.get());
                         });
                         let used_quota = principal.used_quota.unwrap_or_default();
                         let total_quota = principal.quota.unwrap_or_default();
@@ -212,36 +228,49 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
                         Some(
                             view! {
                                 <FormSection>
-                                    <FormItem label=match selected_type {
-                                        PrincipalType::Individual => "Login name",
-                                        _ => "Name",
-                                    }>
+                                    <FormItem label=Signal::derive(move || {
+                                        match selected_type.get() {
+                                            PrincipalType::Individual => "Login name",
+                                            _ => "Name",
+                                        }
+                                            .to_string()
+                                    })>
+
                                         <InputText
-                                            placeholder=match selected_type {
-                                                PrincipalType::Individual => "Login name",
-                                                _ => "Short Name",
-                                            }
+                                            placeholder=Signal::derive(move || {
+                                                match selected_type.get() {
+                                                    PrincipalType::Individual => "Login name",
+                                                    _ => "Short Name",
+                                                }
+                                                    .to_string()
+                                            })
 
                                             element=FormElement::new("name", data)
                                         />
                                     </FormItem>
 
-                                    <FormItem label=match selected_type {
-                                        PrincipalType::Individual => "Name",
-                                        _ => "Description",
-                                    }>
+                                    <FormItem label=Signal::derive(move || {
+                                        match selected_type.get() {
+                                            PrincipalType::Individual => "Name",
+                                            _ => "Description",
+                                        }
+                                            .to_string()
+                                    })>
                                         <InputText
-                                            placeholder=match selected_type {
-                                                PrincipalType::Individual => "Full Name",
-                                                _ => "Description",
-                                            }
+                                            placeholder=Signal::derive(move || {
+                                                match selected_type.get() {
+                                                    PrincipalType::Individual => "Full Name",
+                                                    _ => "Description",
+                                                }
+                                                    .to_string()
+                                            })
 
                                             element=FormElement::new("description", data)
                                         />
                                     </FormItem>
 
                                     <Show when=move || {
-                                        matches!(selected_type, PrincipalType::Individual)
+                                        matches!(selected_type.get(), PrincipalType::Individual)
                                     }>
                                         <FormItem label="Type">
                                             <Select element=FormElement::new("type", data)/>
@@ -269,7 +298,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
                                     </FormItem>
 
                                     <Show when=move || {
-                                        matches!(selected_type, PrincipalType::Individual)
+                                        matches!(selected_type.get(), PrincipalType::Individual)
                                     }>
                                         <FormItem label="Disk quota">
                                             <div class="relative">
@@ -295,7 +324,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
 
                                     <Show when=move || {
                                         matches!(
-                                            selected_type,
+                                            selected_type.get(),
                                             PrincipalType::Group | PrincipalType::List
                                         )
                                     }>
@@ -310,7 +339,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
                                                         .dispatch((
                                                             value,
                                                             cb,
-                                                            if selected_type == PrincipalType::Group {
+                                                            if selected_type.get() == PrincipalType::Group {
                                                                 vec![PrincipalType::Individual, PrincipalType::Group]
                                                             } else {
                                                                 vec![PrincipalType::Individual]
@@ -324,7 +353,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
 
                                     <Show when=move || {
                                         matches!(
-                                            selected_type,
+                                            selected_type.get(),
                                             PrincipalType::Individual | PrincipalType::Group
                                         )
                                     }>
@@ -340,7 +369,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
                                                         .dispatch((
                                                             value,
                                                             cb,
-                                                            if selected_type == PrincipalType::Group {
+                                                            if selected_type.get() == PrincipalType::Group {
                                                                 vec![PrincipalType::Group]
                                                             } else {
                                                                 vec![PrincipalType::Group, PrincipalType::List]
@@ -366,7 +395,7 @@ pub fn PrincipalEdit(selected_type: PrincipalType) -> impl IntoView {
                     color=Color::Gray
                     on_click=move |_| {
                         use_navigate()(
-                            &format!("/manage/directory/{}", selected_type.resource_name(true)),
+                            &format!("/manage/directory/{}", selected_type.get().resource_name()),
                             Default::default(),
                         );
                     }
@@ -473,7 +502,7 @@ impl Builder<Schemas, ()> {
             )
             .build()
             .new_field("aliases")
-            .typ(Type::InputMulti)
+            .typ(Type::Array)
             .input_check(
                 [Transformer::Trim, Transformer::Lowercase],
                 [Validator::IsEmail],

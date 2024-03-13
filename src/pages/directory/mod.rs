@@ -249,14 +249,11 @@ impl PrincipalType {
         }
     }
 
-    pub fn resource_name(&self, list: bool) -> &'static str {
-        match (self, list) {
-            (PrincipalType::Individual, false) => "account",
-            (PrincipalType::Individual, true) => "accounts",
-            (PrincipalType::Group, false) => "group",
-            (PrincipalType::Group, true) => "groups",
-            (PrincipalType::List, false) => "list",
-            (PrincipalType::List, true) => "lists",
+    pub fn resource_name(&self) -> &'static str {
+        match self {
+            PrincipalType::Individual => "accounts",
+            PrincipalType::Group => "groups",
+            PrincipalType::List => "lists",
             _ => unimplemented!("resource_name for {:?}", self),
         }
     }

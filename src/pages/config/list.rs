@@ -25,14 +25,17 @@ use crate::{
         oauth::use_authorization,
         url::UrlBuilder,
     },
-    pages::{config::Schemas, maybe_plural, List},
+    pages::{
+        config::{SchemaType, Schemas},
+        maybe_plural, List,
+    },
 };
 
 use super::{Schema, Settings, UpdateSettings};
 
 #[component]
-pub fn SettingsList(id: &'static str) -> impl IntoView {
-    let schema = expect_context::<Arc<Schemas>>().get(id);
+pub fn SettingsList() -> impl IntoView {
+    let schemas = expect_context::<Arc<Schemas>>();
     let query = use_query_map();
     let page = create_memo(move |_| {
         query
@@ -52,17 +55,24 @@ pub fn SettingsList(id: &'static str) -> impl IntoView {
             })
         })
     });
-    let schema_ = schema.clone();
-    let current_schema = create_memo(move |_| schema_.clone());
-    let schema_id = schema.id;
-    let name_singular = schema.name_singular;
-    let name_plural = schema.name_plural;
-    let page_size = schema.list.page_size;
+    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
+    let params = use_params_map();
+    let current_schema = create_memo(move |_| {
+        if let Some(schema) = params()
+            .get("object")
+            .and_then(|id| schemas.schemas.get(id.as_str()))
+        {
+            selected.set(HashSet::new());
+            schema.clone()
+        } else {
+            use_navigate()("/404", Default::default());
+            Arc::new(Schema::default())
+        }
+    });
 
     let auth = use_authorization();
     let alert = use_alerts();
     let modal = use_modals();
-    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
     provide_context(selected);
 
     let settings = create_resource(
@@ -72,12 +82,12 @@ pub fn SettingsList(id: &'static str) -> impl IntoView {
             let schema = current_schema.get();
 
             async move {
-                HttpRequest::get("/api/settings")
+                HttpRequest::get("/api/settings/group")
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", schema.list.page_size.to_string())
-                    .with_parameter("prefix", schema.prefix.unwrap())
-                    .with_parameter("groupby", format!(".{}", schema.suffix.unwrap_or_default()))
+                    .with_parameter("prefix", schema.unwrap_prefix())
+                    .with_parameter("suffix", schema.try_unwrap_suffix().unwrap_or_default())
                     .with_optional_parameter("filter", filter)
                     .send::<List<Settings>>()
                     .await
@@ -94,14 +104,18 @@ pub fn SettingsList(id: &'static str) -> impl IntoView {
             let mut updates = Vec::with_capacity(items.len());
             for item in items.iter() {
                 if !item.is_empty() {
-                    if schema.suffix.is_some() {
-                        updates.push(UpdateSettings::Clear {
-                            prefix: format!("{}.{}.", schema.prefix.unwrap(), item),
-                        });
-                    } else {
-                        updates.push(UpdateSettings::Delete {
-                            keys: vec![format!("{}.{}", schema.prefix.unwrap(), item)],
-                        });
+                    match schema.typ {
+                        SchemaType::Record { prefix, .. } => {
+                            updates.push(UpdateSettings::Clear {
+                                prefix: format!("{prefix}.{item}."),
+                            });
+                        }
+                        SchemaType::Entry { prefix } => {
+                            updates.push(UpdateSettings::Delete {
+                                keys: vec![format!("{prefix}.{item}")],
+                            });
+                        }
+                        SchemaType::List => panic!("List schema type is not supported."),
                     }
                 }
             }
@@ -117,7 +131,7 @@ pub fn SettingsList(id: &'static str) -> impl IntoView {
                     settings.refetch();
                     alert.set(Alert::success(format!(
                         "Deleted {}.",
-                        maybe_plural(items.len(), name_singular, name_plural,)
+                        maybe_plural(items.len(), schema.name_singular, schema.name_plural,)
                     )));
                 }
                 Err(err) => {
@@ -130,13 +144,16 @@ pub fn SettingsList(id: &'static str) -> impl IntoView {
     let total_results = create_rw_signal(None::<u32>);
     view! {
         <ListSection>
-            <ListTable title=schema.list.title subtitle=schema.list.subtitle>
+            <ListTable
+                title=Signal::derive(move || { current_schema.get().list.title.to_string() })
+                subtitle=Signal::derive(move || { current_schema.get().list.subtitle.to_string() })
+            >
                 <Toolbar slot>
                     <SearchBox
                         value=filter
                         on_search=move |value| {
                             use_navigate()(
-                                &UrlBuilder::new(format!("/settings/{}", schema_id))
+                                &UrlBuilder::new(format!("/settings/{}", current_schema.get().id))
                                     .with_parameter("filter", value)
                                     .finish(),
                                 Default::default(),
@@ -154,7 +171,12 @@ pub fn SettingsList(id: &'static str) -> impl IntoView {
                         on_click=Callback::new(move |_| {
                             let to_delete = selected.get().len();
                             if to_delete > 0 {
-                                let text = maybe_plural(to_delete, name_singular, name_plural);
+                                let schema = current_schema.get();
+                                let text = maybe_plural(
+                                    to_delete,
+                                    schema.name_singular,
+                                    schema.name_plural,
+                                );
                                 modal
                                     .set(
                                         Modal::with_title("Confirm deletion")
@@ -181,10 +203,16 @@ pub fn SettingsList(id: &'static str) -> impl IntoView {
                     </ToolbarButton>
 
                     <ToolbarButton
-                        text=format!("Add {}", name_singular)
+                        text=Signal::derive(move || {
+                            format!("Create {}", current_schema.get().name_singular)
+                        })
+
                         color=Color::Blue
                         on_click=move |_| {
-                            use_navigate()(&format!("/settings/{}", schema_id), Default::default());
+                            use_navigate()(
+                                &format!("/settings/{}/edit", current_schema.get().id),
+                                Default::default(),
+                            );
                         }
                     >
 
@@ -258,11 +286,16 @@ pub fn SettingsList(id: &'static str) -> impl IntoView {
                                     <ZeroResults
                                         title="No results"
                                         subtitle="Your search did not yield any results."
-                                        button_text=format!("Create a new {}", name_singular)
+                                        button_text=Signal::derive(move || {
+                                            format!(
+                                                "Create a new {}",
+                                                current_schema.get().name_singular,
+                                            )
+                                        })
 
                                         button_action=Callback::new(move |_| {
                                             use_navigate()(
-                                                &format!("/settings/{}", schema_id),
+                                                &format!("/settings/{}/edit", current_schema.get().id),
                                                 Default::default(),
                                             );
                                         })
@@ -280,10 +313,10 @@ pub fn SettingsList(id: &'static str) -> impl IntoView {
                     <Pagination
                         current_page=page
                         total_results=total_results.read_only()
-                        page_size=page_size
+                        page_size=Signal::derive(move || current_schema.get().list.page_size)
                         on_page_change=move |page: u32| {
                             use_navigate()(
-                                &UrlBuilder::new(format!("/settings/{}", schema_id))
+                                &UrlBuilder::new(format!("/settings/{}", current_schema.get().id))
                                     .with_parameter("page", page.to_string())
                                     .with_optional_parameter("filter", filter())
                                     .finish(),
@@ -305,7 +338,7 @@ fn SettingsItem(settings: Settings, schema: Arc<Schema>) -> impl IntoView {
         .fields
         .iter()
         .map(|field| {
-            let value = field.display(&settings);
+            let value = field.label(&settings);
             view! { <ListTextItem>{value}</ListTextItem> }
         })
         .collect_view();
@@ -314,7 +347,7 @@ fn SettingsItem(settings: Settings, schema: Arc<Schema>) -> impl IntoView {
         .map(|s| s.to_string())
         .unwrap_or_default();
     let edit_link = if schema.can_edit() {
-        let edit_url = format!("/settings/{}/{}", schema.id, setting_id);
+        let edit_url = format!("/settings/{}/{}/edit", schema.id, setting_id);
         Some(view! {
             <ListItem subclass="px-6 py-1.5">
                 <a
