@@ -8,22 +8,21 @@ use serde::{Deserialize, Serialize};
 use crate::{
     components::{
         form::{
-            button::Button,
-            input::{InputPassword, InputSize, InputSwitch, InputText},
-            select::Select,
-            stacked_input::StackedInput,
-            Form, FormButtonBar, FormElement, FormItem, FormSection,
+            button::Button, expression::InputExpression, input::{InputDuration, InputPassword, InputSize, InputSwitch, InputText}, select::{Select, SelectCron}, stacked_input::StackedInput, Form, FormButtonBar, FormElement, FormItem, FormSection
         },
         messages::alert::{use_alerts, Alert},
         skeleton::Skeleton,
         Color,
     },
     core::{
-        form::FormData,
+        form::{ExternalSources, FormData},
         http::{self, HttpRequest},
         oauth::use_authorization,
     },
-    pages::config::{Schema, SchemaType, Schemas, Settings, Type, UpdateSettings},
+    pages::{
+        config::{Schema, SchemaType, Schemas, Settings, Type, UpdateSettings},
+        List,
+    },
 };
 
 #[derive(Clone, Serialize, Deserialize, Default)]
@@ -34,8 +33,13 @@ struct FetchSettings {
 
 #[derive(Clone, Serialize, Deserialize)]
 enum FetchResult {
-    Update(Settings),
-    Create,
+    Update {
+        settings: Settings,
+        external_sources: ExternalSources,
+    },
+    Create {
+        external_sources: ExternalSources,
+    },
     NotFound,
 }
 
@@ -66,6 +70,33 @@ pub fn SettingsEdit() -> impl IntoView {
             let is_create = name.is_empty();
 
             async move {
+                // Fetch external sources
+                let mut external_sources = ExternalSources::new();
+                for (schema, field) in schema.external_sources() {
+                    let items = HttpRequest::get("/api/settings/group")
+                        .with_authorization(&auth)
+                        .with_parameter("prefix", schema.unwrap_prefix())
+                        .with_parameter("suffix", schema.try_unwrap_suffix().unwrap_or_default())
+                        .with_parameter("field", field.id)
+                        .send::<List<Settings>>()
+                        .await?
+                        .items;
+
+                    external_sources.insert(
+                        format!("{}_{}", schema.id, field.id),
+                        items
+                            .into_iter()
+                            .filter_map(|mut item| {
+                                (
+                                    item.remove("_id")?,
+                                    item.remove(field.id).unwrap_or_default(),
+                                ).into()
+                            })
+                            .collect::<Vec<_>>(),
+                    );
+                }
+
+                // Fetch settings
                 match schema.typ {
                     SchemaType::Record { prefix, .. } => {
                         if !is_create {
@@ -77,13 +108,16 @@ pub fn SettingsEdit() -> impl IntoView {
                                 .map(|mut list| {
                                     if !list.items.is_empty() {
                                         list.items.insert("_id".to_string(), name.to_string());
-                                        FetchResult::Update(list.items)
+                                        FetchResult::Update {
+                                            settings: list.items,
+                                            external_sources,
+                                        }
                                     } else {
                                         FetchResult::NotFound
                                     }
                                 })
                         } else {
-                            Ok(FetchResult::Create)
+                            Ok(FetchResult::Create { external_sources })
                         }
                     }
                     SchemaType::Entry { prefix } => {
@@ -98,13 +132,16 @@ pub fn SettingsEdit() -> impl IntoView {
                                         let mut settings = Settings::new();
                                         settings.insert("_id".to_string(), name.to_string());
                                         settings.insert("_value".to_string(), value);
-                                        FetchResult::Update(settings)
+                                        FetchResult::Update {
+                                            settings,
+                                            external_sources,
+                                        }
                                     } else {
                                         FetchResult::NotFound
                                     }
                                 })
                         } else {
-                            Ok(FetchResult::Create)
+                            Ok(FetchResult::Create { external_sources })
                         }
                     }
                     SchemaType::List => HttpRequest::get("/api/settings/keys")
@@ -129,9 +166,12 @@ pub fn SettingsEdit() -> impl IntoView {
                             }
 
                             if !list.is_empty() {
-                                FetchResult::Update(settings)
+                                FetchResult::Update {
+                                    settings,
+                                    external_sources,
+                                }
                             } else {
-                                FetchResult::Create
+                                FetchResult::Create { external_sources }
                             }
                         }),
                 }
@@ -207,14 +247,21 @@ pub fn SettingsEdit() -> impl IntoView {
                         Some(view! { <div></div> }.into_view())
                     }
                     Some(Ok(result)) => {
-                        let (is_create, settings) = match result {
-                            FetchResult::Update(settings) => (false, Some(settings)),
-                            FetchResult::Create => (true, None),
+                        let (is_create, settings, external_sources) = match result {
+                            FetchResult::Update { settings, external_sources } => {
+                                (false, Some(settings), external_sources)
+                            }
+                            FetchResult::Create { external_sources } => {
+                                (true, None, external_sources)
+                            }
                             FetchResult::NotFound => unreachable!(),
                         };
                         let schema = current_schema.get();
                         let sections = schema.form.sections.iter().cloned();
-                        data.set(FormData::from_settings(schema.clone(), settings));
+                        data.set(
+                            FormData::from_settings(schema.clone(), settings)
+                                .with_external_sources(external_sources),
+                        );
                         Some(
                             sections
                                 .map(|section| {
@@ -240,7 +287,7 @@ pub fn SettingsEdit() -> impl IntoView {
                                                 !field_.is_required(&data.get())
                                             });
                                             let component = match field.typ_ {
-                                                Type::Input | Type::Duration => {
+                                                Type::Input | Type::Text => {
                                                     view! {
                                                         <InputText
                                                             element=FormElement::new(field.id, data)
@@ -277,8 +324,6 @@ pub fn SettingsEdit() -> impl IntoView {
                                                     }
                                                         .into_view()
                                                 }
-                                                Type::Text => todo!(),
-                                                Type::Expression => todo!(),
                                                 Type::Select(_) => {
                                                     view! {
                                                         <Select
@@ -294,13 +339,31 @@ pub fn SettingsEdit() -> impl IntoView {
                                                     }
                                                         .into_view()
                                                 }
-                                                Type::Checkbox => {
+                                                Type::Boolean => {
                                                     view! {
                                                         <InputSwitch element=FormElement::new(field.id, data)/>
                                                     }
                                                         .into_view()
                                                 }
-                                                Type::Duration => view! { <p>checkbox</p> }.into_view(),
+                                                Type::Duration => {
+                                                    view! {
+                                                        <InputDuration element=FormElement::new(field.id, data)/>
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Expression => {
+                                                    view! {
+                                                        <InputExpression element=FormElement::new(field.id, data)/>
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Cron => {
+                                                    view! {
+                                                        <SelectCron element=FormElement::new(field.id, data)/>
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Text => todo!(),
                                             };
                                             view! {
                                                 <FormItem

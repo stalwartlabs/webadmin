@@ -97,7 +97,7 @@ impl FormData {
                 FormValue::Array(values) if !values.is_empty() => {
                     let total_values = values.len();
                     if total_values > 1 {
-                        let pad_len = total_values.to_string().len();
+                        let pad_len = (total_values - 1).to_string().len();
 
                         for (idx, value) in values.iter().enumerate() {
                             key_values.push((format!("{key}.{idx:0>pad_len$}"), value.to_string()));
@@ -106,7 +106,30 @@ impl FormData {
                         key_values.push((key.to_string(), values.first().unwrap().to_string()));
                     }
                 }
-                FormValue::Expression(expr) if !expr.is_empty() => unimplemented!(),
+                FormValue::Expression(expr) if !expr.is_empty() => {
+                    if !expr.if_thens.is_empty() {
+                        let total_values = expr.if_thens.len();
+                        let pad_len = total_values.to_string().len();
+
+                        for (idx, if_then) in expr.if_thens.iter().enumerate() {
+                            key_values.push((
+                                format!("{key}.{idx:0>pad_len$}.if"),
+                                if_then.if_.to_string(),
+                            ));
+                            key_values.push((
+                                format!("{key}.{idx:0>pad_len$}.then"),
+                                if_then.then_.to_string(),
+                            ));
+                        }
+
+                        key_values.push((
+                            format!("{key}.{total_values:0>pad_len$}.else"),
+                            expr.else_.to_string(),
+                        ));
+                    } else {
+                        key_values.push((key.to_string(), expr.else_.to_string()));
+                    }
+                }
                 _ => (),
             }
         }
@@ -124,21 +147,28 @@ impl FormData {
 }
 
 pub trait ArrayValues {
-    fn array_values(&self, prefix: &str) -> impl Iterator<Item = (&str, &str)>;
+    fn array_values(&self, prefix: &str) -> Vec<(&str, &str)>;
 }
 
 impl ArrayValues for Settings {
-    fn array_values(&self, key: &str) -> impl Iterator<Item = (&str, &str)> {
+    fn array_values(&self, key: &str) -> Vec<(&str, &str)> {
         let full_prefix = key;
         let prefix = format!("{key}.");
 
-        self.iter().filter_map(move |(key, value)| {
-            if key.starts_with(&prefix) || key == full_prefix {
-                (key.as_str(), value.as_str()).into()
-            } else {
-                None
-            }
-        })
+        let mut results = self
+            .iter()
+            .filter_map(move |(key, value)| {
+                if key.starts_with(&prefix) || key == full_prefix {
+                    (key.as_str(), value.as_str()).into()
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // Sort by key
+        results.sort_by(|(l_key, _), (r_key, _)| l_key.cmp(r_key));
+        results
     }
 }
 

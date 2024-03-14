@@ -34,7 +34,14 @@ impl Builder<Schemas, ()> {
             .typ(Type::Select(Source::Dynamic {
                 schema: "store",
                 field: "type",
+                filter: Default::default(),
             }))
+            .source_filter_if_eq(
+                "type",
+                ["internal"],
+                &["foundationdb", "mysql", "postgresql", "sqlite", "rocksdb"],
+            )
+            .source_filter_if_eq("type", ["sql"], &["mysql", "postgresql", "sqlite"])
             .input_check([], [Validator::Required])
             .build()
             // Catch-all and subaddressing
@@ -45,11 +52,9 @@ impl Builder<Schemas, ()> {
             .typ(Type::Expression)
             .input_check(
                 [],
-                [Validator::IsValidExpression {
-                    variables: &["address"],
-                    functions: &[],
-                    constants: &[],
-                }],
+                [Validator::IsValidExpression(
+                    ExpressionValidator::default().variables(&["address"]),
+                )],
             )
             .default("true")
             .new_field("options.subaddressing")
@@ -132,7 +137,7 @@ impl Builder<Schemas, ()> {
             .help("Use TLS to connect to the remote server")
             .display_if_eq("type", ["imap", "smtp", "lmtp", "ldap"])
             .default("false")
-            .typ(Type::Checkbox)
+            .typ(Type::Boolean)
             .new_field("tls.allow-invalid-certs")
             .label("Allow Invalid Certs")
             .help("Allow invalid TLS certificates when connecting to the server")
@@ -146,7 +151,7 @@ impl Builder<Schemas, ()> {
                 "maintained simultaneously in the connection pool"
             ))
             .display_if_eq("type", ["imap", "smtp", "lmtp", "ldap"])
-            .default("10")
+            .placeholder("10")
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
@@ -162,14 +167,14 @@ impl Builder<Schemas, ()> {
                 "Maximum amount of time that the connection pool ",
                 "will wait for a new connection to be created"
             ))
-            .default("30s")
+            .placeholder("30s")
             .new_field("pool.timeout.wait")
             .label("Wait Timeout")
             .help(concat!(
                 "Maximum amount of time that the connection pool ",
                 "will wait for a connection to become available"
             ))
-            .default("30s")
+            .placeholder("30s")
             .new_field("pool.timeout.recycle")
             .label("Recycle Timeout")
             .help(concat!(
@@ -231,12 +236,14 @@ impl Builder<Schemas, ()> {
             .placeholder("cn=serviceuser,ou=svcaccts,dc=example,dc=org")
             .input_check([Transformer::Trim], [])
             .new_field("bind.secret")
+            .label("Bind Secret")
             .typ(Type::Secret)
             .new_field("bind.auth.enable")
             .label("Enable Bind Auth")
             .help("Use bind authentication for verifying credentials with the LDAP server")
-            .typ(Type::Checkbox)
+            .typ(Type::Boolean)
             .default("false")
+            .build()
             .new_field("bind.auth.dn")
             .label("Bind Auth DN")
             .help(concat!(
@@ -249,13 +256,16 @@ impl Builder<Schemas, ()> {
             .display_if_eq("bind.auth.enable", ["true"])
             .placeholder("cn=?,ou=svcaccts,dc=example,dc=org")
             .input_check([Transformer::Trim], [Validator::Required])
+            .build()
             .new_field("filter.name")
+            .display_if_eq("type", ["ldap"])
+            .input_check([Transformer::Trim], [Validator::Required])
             .label("Name")
-            .placeholder("(&(|(objectClass=posixAccount)(objectClass=posixGroup))(uid=?))")
+            .default("(&(|(objectClass=posixAccount)(objectClass=posixGroup))(uid=?))")
             .help("Filter used to search for objects based on the account name")
             .new_field("filter.email")
             .label("E-mail")
-            .placeholder(concat!(
+            .default(concat!(
                 "(&(|(objectClass=posixAccount)(objectClass=posixGroup))",
                 "(|(mail=?)(mailAlias=?)(mailList=?)))"
             ))
@@ -265,7 +275,7 @@ impl Builder<Schemas, ()> {
             ))
             .new_field("filter.verify")
             .label("Verify (VRFY)")
-            .placeholder(concat!(
+            .default(concat!(
                 "(&(|(objectClass=posixAccount)(objectClass=posixGroup))",
                 "(|(mail=*?*)(mailAlias=*?*)))"
             ))
@@ -276,7 +286,7 @@ impl Builder<Schemas, ()> {
             ))
             .new_field("filter.expand")
             .label("Expand (EXPN)")
-            .placeholder(concat!(
+            .default(concat!(
                 "(&(|(objectClass=posixAccount)(objectClass=posixGroup))",
                 "(mailList=?))"
             ))
@@ -287,7 +297,7 @@ impl Builder<Schemas, ()> {
             ))
             .new_field("filter.domains")
             .label("Local Domains")
-            .placeholder(concat!(
+            .default(concat!(
                 "(&(|(objectClass=posixAccount)(objectClass=posixGroup))",
                 "(|(mail=*@?)(mailAlias=*@?)))"
             ))
@@ -300,37 +310,37 @@ impl Builder<Schemas, ()> {
             .new_field("attributes.name")
             .label("Name")
             .help("LDAP attribute for the user's account name")
-            .placeholder("uid")
+            .default("uid")
             .typ(Type::Array)
             .new_field("attributes.class")
             .label("Type")
             .help("LDAP attribute for the user's account type, if missing defaults to individual.")
-            .placeholder("objectClass")
+            .default("objectClass")
             .new_field("attributes.description")
             .label("Description")
             .help("LDAP attributes used to store the user's description")
-            .placeholder("description")
+            .default("description")
             .new_field("attributes.secret")
             .label("Secret")
             .help("LDAP attribute for the user's password")
-            .placeholder("userPassword")
+            .default("userPassword")
             .new_field("attributes.groups")
             .label("Groups")
             .help("LDAP attributes for the groups that a user belongs to")
-            .placeholder("memberOf")
+            .default("memberOf")
             .new_field("attributes.email")
             .label("E-mail")
             .help("LDAP attribute for the user's primary email address")
-            .placeholder("mail")
+            .default("mail")
             .new_field("attributes.email-alias")
             .input_check([Transformer::Trim], [])
             .label("E-mail Aliases")
             .help("LDAP attribute for the user's email alias(es)")
-            .placeholder("mailAlias")
+            .default("mailAlias")
             .new_field("attributes.quota")
             .label("Disk Quota")
             .help("DAP attribute for the user's disk quota")
-            .placeholder("diskQuota")
+            .default("diskQuota")
             .build()
             // Form layouts
             .new_form_section()

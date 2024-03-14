@@ -155,11 +155,8 @@ impl Builder<Schemas, ()> {
             .help("How often to purge the database. Expects a cron expression")
             .display_if_ne("type", ["redis", "memory", "elasticsearch"])
             .default("0 3 *")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::IsCron],
-            )
+            .typ(Type::Cron)
+            .input_check([Transformer::Trim], [Validator::Required])
             .build()
             // Workers
             .new_field("pool.workers")
@@ -211,14 +208,14 @@ impl Builder<Schemas, ()> {
             .help("Use TLS to connect to the store")
             .display_if_eq("type", ["postgresql"])
             .default("false")
-            .typ(Type::Checkbox)
+            .typ(Type::Boolean)
             .build()
             .new_field("tls.allow-invalid-certs")
             .label("Allow Invalid Certs")
             .help("Allow invalid TLS certificates when connecting to the store")
             .display_if_eq("type", ["postgresql", "elasticsearch"])
             .default("false")
-            .typ(Type::Checkbox)
+            .typ(Type::Boolean)
             .build()
             // URL
             .new_field("url")
@@ -432,7 +429,7 @@ impl Builder<Schemas, ()> {
             .label("Read from replicas")
             .help("Whether to read from replicas")
             .default("true")
-            .typ(Type::Checkbox)
+            .typ(Type::Boolean)
             .build()
             // S3 specific
             .new_field("bucket")

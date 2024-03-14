@@ -1,3 +1,4 @@
+pub mod expr;
 pub mod form;
 pub mod http;
 pub mod oauth;

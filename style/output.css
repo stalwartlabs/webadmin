@@ -879,6 +879,10 @@ select {
   margin-inline-start: -1px;
 }
 
+.-mt-px {
+  margin-top: -1px;
+}
+
 .mb-2 {
   margin-bottom: 0.5rem;
 }
@@ -1092,6 +1096,11 @@ select {
 
 .min-w-8 {
   min-width: 2rem;
+}
+
+.min-w-fit {
+  min-width: -moz-fit-content;
+  min-width: fit-content;
 }
 
 .min-w-full {
@@ -1616,12 +1625,12 @@ select {
   padding-inline-end: 0.5rem;
 }
 
-.pe-20 {
-  padding-inline-end: 5rem;
-}
-
 .pe-3 {
   padding-inline-end: 0.75rem;
+}
+
+.pe-4 {
+  padding-inline-end: 1rem;
 }
 
 .pe-6 {
@@ -1654,10 +1663,6 @@ select {
 
 .ps-6 {
   padding-inline-start: 1.5rem;
-}
-
-.ps-9 {
-  padding-inline-start: 2.25rem;
 }
 
 .pt-10 {
@@ -2022,6 +2027,11 @@ select {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.first\:rounded-t-lg:first-child {
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
 .first\:border-transparent:first-child {
   border-color: transparent;
 }
@@ -2033,6 +2043,11 @@ select {
 .before\:first\:bg-transparent:first-child::before {
   content: var(--tw-content);
   background-color: transparent;
+}
+
+.last\:rounded-b-lg:last-child {
+  border-bottom-right-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
 }
 
 .last\:pb-0:last-child {
@@ -2668,6 +2683,10 @@ select {
     margin-right: auto;
   }
 
+  .sm\:mt-0 {
+    margin-top: 0px;
+  }
+
   .sm\:block {
     display: block;
   }
@@ -2755,6 +2774,28 @@ select {
   .sm\:text-9xl {
     font-size: 8rem;
     line-height: 1;
+  }
+
+  .sm\:first\:ms-0:first-child {
+    margin-inline-start: 0px;
+  }
+
+  .sm\:first\:rounded-s-lg:first-child {
+    border-start-start-radius: 0.5rem;
+    border-end-start-radius: 0.5rem;
+  }
+
+  .sm\:first\:rounded-se-none:first-child {
+    border-start-end-radius: 0px;
+  }
+
+  .sm\:last\:rounded-e-lg:last-child {
+    border-start-end-radius: 0.5rem;
+    border-end-end-radius: 0.5rem;
+  }
+
+  .sm\:last\:rounded-es-none:last-child {
+    border-end-start-radius: 0px;
   }
 }
 

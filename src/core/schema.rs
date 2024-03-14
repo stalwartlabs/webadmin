@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{hash::Hasher, sync::Arc};
 
 use ahash::AHashMap;
 
@@ -25,9 +25,10 @@ pub enum Type<S, F> {
     #[default]
     Expression,
     Select(Source<S, F>),
-    Checkbox,
+    Boolean,
     Duration,
     Size,
+    Cron,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -66,6 +67,12 @@ pub enum SchemaType {
     },
     #[default]
     List,
+}
+
+impl std::hash::Hash for Schema {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
 }
 
 impl PartialEq for Schema {
@@ -113,7 +120,11 @@ pub struct Section {
 #[derive(Clone, Debug)]
 pub enum Source<S, F> {
     Static(&'static [(&'static str, &'static str)]),
-    Dynamic { schema: S, field: F },
+    Dynamic {
+        schema: S,
+        field: F,
+        filter: Value<&'static [&'static str]>,
+    },
 }
 
 #[derive(Clone, Default, Debug)]
@@ -159,25 +170,26 @@ pub enum Transformer {
 pub enum Validator {
     Required,
     IsEmail,
-    IsCron,
     IsId,
     IsHost,
     IsDomain,
     IsPort,
     IsUrl,
-    IsGlobPattern,
-    IsRegexPattern,
+    IsRegex,
     MinLength(usize),
     MaxLength(usize),
     MinValue(NumberType),
     MaxValue(NumberType),
     MinItems(usize),
     MaxItems(usize),
-    IsValidExpression {
-        variables: &'static [&'static str],
-        functions: &'static [(&'static str, u32)],
-        constants: &'static [&'static str],
-    },
+    IsValidExpression(ExpressionValidator),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub struct ExpressionValidator {
+    pub variables: &'static [&'static str],
+    pub functions: &'static [(&'static str, u32)],
+    pub constants: &'static [&'static str],
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -205,6 +217,7 @@ impl From<Arc<Schema>> for FormData {
         FormData {
             values: Default::default(),
             errors: Default::default(),
+            external_sources: Default::default(),
             schema,
             is_update: false,
         }
@@ -244,6 +257,17 @@ impl Schema {
             SchemaType::Record { suffix, .. } => Some(suffix),
             SchemaType::Entry { .. } | SchemaType::List => None,
         }
+    }
+
+    pub fn external_sources(&self) -> impl Iterator<Item = (Arc<Schema>, Arc<Field>)> + '_ {
+        self.fields
+            .values()
+            .filter_map(|field_| match &field_.typ_ {
+                Type::Select(Source::Dynamic { schema, field, .. }) => {
+                    Some((schema.clone(), field.clone()))
+                }
+                _ => None,
+            })
     }
 }
 
@@ -302,7 +326,7 @@ impl Field {
     }
 
     pub fn is_required(&self, settings: &impl SettingsValue) -> bool {
-        matches!(self.typ_, Type::Checkbox | Type::Select(_))
+        matches!(self.typ_, Type::Boolean | Type::Select(_))
             || self
                 .input_check(settings)
                 .map(|c| c.validators.iter().any(|v| *v == Validator::Required))
@@ -528,6 +552,18 @@ impl Builder<Schemas, Schema> {
     }
 }
 
+impl<T, I> Type<T, I> {
+    pub fn label<'x>(&'x self, id: &'x str) -> &'x str {
+        match self {
+            Type::Select(Source::Static(items)) => items
+                .iter()
+                .find_map(|(k, v)| if *k == id { Some(*v) } else { None })
+                .unwrap_or(id),
+            _ => id,
+        }
+    }
+}
+
 impl Builder<(Schemas, Schema), Field> {
     fn field(&self, id: &'static str) -> Arc<Field> {
         self.parent
@@ -568,18 +604,6 @@ impl Builder<(Schemas, Schema), Field> {
         self
     }
 
-    /*pub fn help_if_eq(
-        mut self,
-        field: &'static str,
-        conditions: impl IntoIterator<Item = &'static str>,
-        value: &'static str,
-    ) -> Self {
-        self.item
-            .help
-            .push_if_matches_eq(self.field(field), conditions, value);
-        self
-    }*/
-
     pub fn readonly(mut self) -> Self {
         self.item.readonly = true;
         self
@@ -587,34 +611,45 @@ impl Builder<(Schemas, Schema), Field> {
 
     pub fn typ(mut self, typ_: Type<&'static str, &'static str>) -> Self {
         self.item.typ_ = match typ_ {
-            Type::Select(Source::Dynamic { schema, field }) => Type::Select(Source::Dynamic {
-                schema: self.schema(schema),
-                field: self.field(field),
-            }),
+            Type::Select(Source::Dynamic {
+                schema,
+                field,
+                filter,
+            }) => {
+                let schema = self.schema(schema);
+
+                Type::Select(Source::Dynamic {
+                    field: schema
+                        .fields
+                        .get(field)
+                        .unwrap_or_else(|| {
+                            panic!("Field {field:?} not found in schema {}.", schema.id)
+                        })
+                        .clone(),
+                    schema,
+                    filter,
+                })
+            }
             typ_ => typ_.into(),
         };
         self
     }
 
-    /*pub fn typ_if_eq(
+    pub fn source_filter_if_eq(
         mut self,
         field: &'static str,
         conditions: impl IntoIterator<Item = &'static str>,
-        typ_: Type<&'static str, &'static str>,
+        filters: &'static [&'static str],
     ) -> Self {
-        self.item.typ_.push_if_matches_eq(
-            self.field(field),
-            conditions,
-            match typ_ {
-                Type::Select(Source::Dynamic { schema, field }) => Type::Select(Source::Dynamic {
-                    schema: self.schema(schema),
-                    field: self.field(field),
-                }),
-                typ_ => typ_.into(),
-            },
-        );
+        let field = self.field(field);
+        match &mut self.item.typ_ {
+            Type::Select(Source::Dynamic { filter, .. }) => {
+                filter.push_if_matches_eq(field, conditions, filters);
+            }
+            _ => panic!("Field type is not a dynamic source."),
+        }
         self
-    }*/
+    }
 
     pub fn input_check_if_eq(
         mut self,
@@ -856,10 +891,27 @@ impl InputCheck {
     }
 }
 
+impl ExpressionValidator {
+    pub fn functions(mut self, functions: &'static [(&'static str, u32)]) -> Self {
+        self.functions = functions;
+        self
+    }
+
+    pub fn constants(mut self, constants: &'static [&'static str]) -> Self {
+        self.constants = constants;
+        self
+    }
+
+    pub fn variables(mut self, variables: &'static [&'static str]) -> Self {
+        self.variables = variables;
+        self
+    }
+}
+
 impl From<Type<&'static str, &'static str>> for Type<Arc<Schema>, Arc<Field>> {
     fn from(typ_: Type<&'static str, &'static str>) -> Self {
         match typ_ {
-            Type::Checkbox => Type::Checkbox,
+            Type::Boolean => Type::Boolean,
             Type::Duration => Type::Duration,
             Type::Expression => Type::Expression,
             Type::Input => Type::Input,
@@ -867,6 +919,7 @@ impl From<Type<&'static str, &'static str>> for Type<Arc<Schema>, Arc<Field>> {
             Type::Secret => Type::Secret,
             Type::Text => Type::Text,
             Type::Size => Type::Size,
+            Type::Cron => Type::Cron,
             Type::Select(Source::Static(items)) => Type::Select(Source::Static(items)),
             Type::Select(_) => unreachable!(),
         }

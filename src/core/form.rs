@@ -1,20 +1,28 @@
 use std::borrow::Cow;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use ahash::AHashMap;
 use leptos::RwSignal;
 
 use crate::pages::config::{ArrayValues, Settings};
 
+use super::expr::parser::ExpressionParser;
+use super::expr::tokenizer::Tokenizer;
+use super::expr::{Constant, ParseValue, Token};
 use super::schema::{NumberType, Type};
 
 use super::schema::{InputCheck, Schema, Transformer, Validator};
+
+pub type ExternalSources = AHashMap<String, Vec<(String, String)>>;
 
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct FormData {
     pub values: AHashMap<String, FormValue>,
     pub errors: AHashMap<String, FormError>,
+    pub external_sources: Arc<ExternalSources>,
     pub schema: Arc<Schema>,
     pub is_update: bool,
 }
@@ -23,29 +31,49 @@ pub struct FormData {
 pub enum FormValue {
     Value(String),
     Array(Vec<String>),
-    Expression(Vec<ExpressionValue>),
+    Expression(Expression),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Expression {
+    pub if_thens: Vec<ExpressionIfThen>,
+    pub else_: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ExpressionValue {
-    IfThen { expr: String, value: String },
-    Else { value: String },
+pub struct ExpressionIfThen {
+    pub if_: String,
+    pub then_: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FormError {
-    pub id: FormErrorId,
+    pub id: FormErrorType,
     pub error: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum FormErrorId {
-    Id(String),
-    Index(usize),
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FormErrorType {
+    Expression(ExpressionError<usize>),
+    Array(usize),
     None,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExpressionError<T> {
+    If(T),
+    Then(T),
+    Else,
+}
+
+impl Copy for ExpressionError<usize> {}
+
 impl FormData {
+    pub fn with_external_sources(mut self, sources: impl Into<Arc<ExternalSources>>) -> Self {
+        self.external_sources = sources.into();
+        self
+    }
+
     pub fn with_value(mut self, id: impl Into<String>, value: impl Into<FormValue>) -> Self {
         self.values.insert(id.into(), value.into());
         self
@@ -87,7 +115,6 @@ impl FormData {
         self.values.insert(id.to_string(), value);
         self.update_defaults(id);
         self.errors.remove(id);
-        let c = log::debug!("Values: {:?}", self.values);
     }
 
     pub fn remove(&mut self, id: &str) {
@@ -160,6 +187,106 @@ impl FormData {
             }
             _ => unreachable!(),
         };
+        self.errors.remove(id);
+    }
+
+    pub fn expr_if_thens<'x>(
+        &'x self,
+        id: &str,
+    ) -> Box<dyn Iterator<Item = &'x ExpressionIfThen> + 'x> {
+        match self.values.get(id) {
+            Some(FormValue::Expression(expr)) => Box::new(expr.if_thens.iter()),
+            _ => Box::new([].into_iter()),
+        }
+    }
+
+    pub fn expr_else(&self, id: &str) -> Option<&str> {
+        match self.values.get(id) {
+            Some(FormValue::Expression(expr)) => Some(expr.else_.as_str()),
+            Some(FormValue::Value(v)) => Some(v.as_str()),
+            _ => None,
+        }
+    }
+
+    pub fn expr_update_else(&mut self, id: &str, value: impl Into<String>) {
+        match self
+            .values
+            .entry(id.to_string())
+            .or_insert_with(|| FormValue::Expression(Expression::default()))
+        {
+            FormValue::Expression(expr) => {
+                expr.else_ = value.into();
+            }
+            FormValue::Value(_) => {
+                self.values.insert(
+                    id.to_string(),
+                    FormValue::Expression(Expression {
+                        else_: value.into(),
+                        ..Default::default()
+                    }),
+                );
+            }
+            _ => (),
+        }
+        self.errors.remove(id);
+    }
+
+    pub fn expr_push_if_then(
+        &mut self,
+        id: &str,
+        if_: impl Into<String>,
+        then_: impl Into<String>,
+    ) {
+        let if_then = ExpressionIfThen {
+            if_: if_.into(),
+            then_: then_.into(),
+        };
+
+        match self
+            .values
+            .entry(id.to_string())
+            .or_insert_with(|| FormValue::Expression(Expression::default()))
+        {
+            FormValue::Expression(expr) => {
+                expr.if_thens.push(if_then);
+            }
+            FormValue::Value(v) => {
+                let else_ = std::mem::take(v);
+                self.values.insert(
+                    id.to_string(),
+                    FormValue::Expression(Expression {
+                        if_thens: vec![if_then],
+                        else_,
+                    }),
+                );
+            }
+            _ => (),
+        }
+        self.errors.remove(id);
+    }
+
+    pub fn expr_delete_if_then(&mut self, id: &str, idx: usize) {
+        if let Some(FormValue::Expression(expr)) = self.values.get_mut(id) {
+            expr.if_thens.remove(idx);
+        }
+        self.errors.remove(id);
+    }
+
+    pub fn expr_update_if(&mut self, id: &str, idx: usize, if_: impl Into<String>) {
+        if let Some(FormValue::Expression(expr)) = self.values.get_mut(id) {
+            if let Some(if_then) = expr.if_thens.get_mut(idx) {
+                if_then.if_ = if_.into();
+            }
+        }
+        self.errors.remove(id);
+    }
+
+    pub fn expr_update_then(&mut self, id: &str, idx: usize, then_: impl Into<String>) {
+        if let Some(FormValue::Expression(expr)) = self.values.get_mut(id) {
+            if let Some(if_then) = expr.if_thens.get_mut(idx) {
+                if_then.then_ = then_.into();
+            }
+        }
         self.errors.remove(id);
     }
 
@@ -251,6 +378,7 @@ impl FormData {
 
     pub fn validate_form(&mut self) -> bool {
         if !self.errors.is_empty() {
+            log::debug!("Skipping validation, form has errors: {:#?}", self.errors);
             return false;
         }
 
@@ -266,8 +394,9 @@ impl FormData {
                     | Type::Secret
                     | Type::Text
                     | Type::Size
-                    | Type::Checkbox
+                    | Type::Boolean
                     | Type::Duration
+                    | Type::Cron
                     | Type::Select(_) => {
                         match check.check_value(self.value::<String>(field.id).unwrap_or_default())
                         {
@@ -282,7 +411,7 @@ impl FormData {
                                 self.errors.insert(
                                     field.id.to_string(),
                                     FormError {
-                                        id: FormErrorId::None,
+                                        id: FormErrorType::None,
                                         error: err.to_string(),
                                     },
                                 );
@@ -310,7 +439,7 @@ impl FormData {
                                     self.errors.insert(
                                         field.id.to_string(),
                                         FormError {
-                                            id: FormErrorId::Index(idx),
+                                            id: FormErrorType::Array(idx),
                                             error: err.to_string(),
                                         },
                                     );
@@ -325,7 +454,7 @@ impl FormData {
                                         self.errors.insert(
                                             field.id.to_string(),
                                             FormError {
-                                                id: FormErrorId::None,
+                                                id: FormErrorType::None,
                                                 error: format!(
                                                     "At least {} items are required",
                                                     min
@@ -339,7 +468,7 @@ impl FormData {
                                         self.errors.insert(
                                             field.id.to_string(),
                                             FormError {
-                                                id: FormErrorId::None,
+                                                id: FormErrorType::None,
                                                 error: format!("At most {} items are allowed", max),
                                             },
                                         );
@@ -349,7 +478,108 @@ impl FormData {
                             }
                         }
                     }
-                    Type::Expression => todo!(),
+                    Type::Expression => {
+                        let mut has_expression = false;
+                        let validator = *check
+                            .validators
+                            .iter()
+                            .find_map(|v| match v {
+                                Validator::IsValidExpression(v) => Some(v),
+                                _ => None,
+                            })
+                            .unwrap_or_else(|| {
+                                panic!("Missing expression validator for field {}", field.id)
+                            });
+                        log::debug!(
+                            "Validating expression for field {} with {:?}",
+                            field.id,
+                            self.values.get(field.id)
+                        );
+
+                        if let Some(FormValue::Expression(expr)) = self.values.get(field.id) {
+                            for (expr_item, expr_value) in expr
+                                .if_thens
+                                .iter()
+                                .enumerate()
+                                .flat_map(|(idx, if_then)| {
+                                    [
+                                        (ExpressionError::If(idx), &if_then.if_),
+                                        (ExpressionError::Then(idx), &if_then.then_),
+                                    ]
+                                })
+                                .chain([(ExpressionError::Else, &expr.else_)])
+                            {
+                                match ExpressionParser::new(Tokenizer::new(expr_value, |token| {
+                                    if validator.variables.contains(&token) {
+                                        Ok(Token::Variable(0))
+                                    } else if validator.constants.contains(&token) {
+                                        Ok(Token::Constant(Constant::Integer(0)))
+                                    } else if let Some((name, num_args)) =
+                                        validator.functions.iter().find(|(name, _)| name == &token)
+                                    {
+                                        Ok(Token::Function {
+                                            name: (*name).into(),
+                                            id: 0,
+                                            num_args: *num_args,
+                                        })
+                                    } else {
+                                        Duration::parse_value(token)
+                                            .map(|d| {
+                                                Token::Constant(Constant::Integer(
+                                                    d.as_secs() as i64
+                                                ))
+                                            })
+                                            .ok_or_else(|| {
+                                                format!(
+                                                    "Invalid variable or function name {:?}",
+                                                    token
+                                                )
+                                            })
+                                    }
+                                }))
+                                .parse()
+                                {
+                                    Ok(expr) => {
+                                        if matches!(expr_item, ExpressionError::Else) {
+                                            has_expression = true;
+                                        } else if expr.items.is_empty() {
+                                            self.errors.insert(
+                                                field.id.to_string(),
+                                                FormError {
+                                                    id: FormErrorType::Expression(expr_item),
+                                                    error: "This expression cannot be empty"
+                                                        .to_string(),
+                                                },
+                                            );
+                                            has_expression = true;
+                                            break;
+                                        }
+                                    }
+                                    Err(error) => {
+                                        self.errors.insert(
+                                            field.id.to_string(),
+                                            FormError {
+                                                id: FormErrorType::Expression(expr_item),
+                                                error,
+                                            },
+                                        );
+                                        has_expression = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if !has_expression && check.validators.contains(&Validator::Required) {
+                            self.errors.insert(
+                                field.id.to_string(),
+                                FormError {
+                                    id: FormErrorType::Expression(ExpressionError::Else),
+                                    error: "This field is required".to_string(),
+                                },
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -368,8 +598,9 @@ impl FormData {
                     | Type::Secret
                     | Type::Text
                     | Type::Select(_)
-                    | Type::Checkbox
+                    | Type::Boolean
                     | Type::Duration
+                    | Type::Cron
                     | Type::Size => {
                         if let Some(value) = settings.remove(field.id) {
                             data.set(field.id, value);
@@ -378,10 +609,98 @@ impl FormData {
                     Type::Array => {
                         data.array_set(
                             field.id,
-                            settings.array_values(field.id).map(|(_, value)| value),
+                            settings
+                                .array_values(field.id)
+                                .into_iter()
+                                .map(|(_, value)| value),
                         );
                     }
-                    Type::Expression => todo!(),
+                    Type::Expression => {
+                        let mut expr = Expression::default();
+                        if let Some(else_) = settings.remove(field.id) {
+                            expr.else_ = else_;
+                        } else {
+                            let mut last_if = "";
+                            let mut last_then = "";
+                            let mut last_array_pos = "";
+                            let field_prefix = format!("{}.", field.id);
+
+                            for (key, value) in settings.array_values(field.id) {
+                                let value = value.trim();
+                                if value.is_empty() {
+                                    log::warn!("Ignoring empty expression value");
+                                    continue;
+                                }
+
+                                if let Some((array_pos, statement)) = key
+                                    .strip_prefix(&field_prefix)
+                                    .and_then(|v| v.split_once('.'))
+                                {
+                                    if array_pos != last_array_pos {
+                                        if !last_array_pos.is_empty() {
+                                            if !last_if.is_empty() && !last_then.is_empty() {
+                                                expr.if_thens.push(ExpressionIfThen {
+                                                    if_: last_if.to_string(),
+                                                    then_: last_then.to_string(),
+                                                });
+                                            } else {
+                                                log::warn!("Ignoring incomplete expression in key {key:?} with value {value:?}.");
+                                            }
+                                            last_if = "";
+                                            last_then = "";
+                                        }
+                                        last_array_pos = array_pos;
+                                    }
+
+                                    match statement {
+                                        "if" => {
+                                            if last_if.is_empty() {
+                                                last_if = value;
+                                            } else {
+                                                log::warn!("Ignoring duplicate 'if' statement in key {key:?} with value {value:?}.");
+                                            }
+                                        }
+                                        "then" => {
+                                            if last_then.is_empty() {
+                                                last_then = value;
+                                            } else {
+                                                log::warn!("Ignoring duplicate 'then' statement in key {key:?} with value {value:?}.");
+                                            }
+                                        }
+                                        "else" => {
+                                            if expr.else_.is_empty() {
+                                                expr.else_ = value.to_string();
+                                            } else {
+                                                log::warn!("Ignoring duplicate 'else' statement in key {key:?} with value {value:?}.");
+                                            }
+                                        }
+                                        _ => {
+                                            log::warn!("Ignoring unknown expression key {key:?} with value {value:?}.")
+                                        }
+                                    }
+                                } else {
+                                    log::warn!("Ignoring unknown expression key {key:?} with value {value:?}.")
+                                }
+                            }
+
+                            if !last_if.is_empty() && !last_then.is_empty() {
+                                expr.if_thens.push(ExpressionIfThen {
+                                    if_: last_if.to_string(),
+                                    then_: last_then.to_string(),
+                                });
+                            } else if !last_if.is_empty() || !last_then.is_empty() {
+                                log::warn!("Ignoring incomplete expression with 'if' {last_if:?} and 'then' {last_then:?}.");
+                            }
+
+                            if !expr.if_thens.is_empty() && expr.else_.is_empty() {
+                                log::warn!("Missing 'else' statement in expression {:?}.", expr);
+                            }
+                        }
+
+                        if !expr.is_empty() {
+                            data.set(field.id, FormValue::Expression(expr));
+                        }
+                    }
                 }
             }
             data.is_update = true;
@@ -415,11 +734,6 @@ impl InputCheck {
                             return Err("This field must be a valid email address".into());
                         }
                     }
-                    Validator::IsCron => {
-                        if value.split_whitespace().count() != 3 {
-                            return Err("This field must be a valid cron expression".into());
-                        }
-                    }
                     Validator::IsId => {
                         if let Some(ch) = value
                             .chars()
@@ -448,11 +762,10 @@ impl InputCheck {
                             return Err("This field must be a valid domain name".into());
                         }
                     }
-                    Validator::IsGlobPattern => {
-                        let todo = 1;
-                    }
-                    Validator::IsRegexPattern => {
-                        let todo = 1;
+                    Validator::IsRegex => {
+                        if regex::Regex::new(&value).is_err() {
+                            return Err("This field must be a valid regular expression".into());
+                        }
                     }
                     Validator::MinLength(length) => {
                         if value.len() < *length {
@@ -531,5 +844,20 @@ impl From<&str> for FormValue {
 impl From<Vec<String>> for FormValue {
     fn from(value: Vec<String>) -> Self {
         FormValue::Array(value)
+    }
+}
+
+impl Expression {
+    pub fn is_empty(&self) -> bool {
+        self.if_thens.is_empty() && self.else_.is_empty()
+    }
+}
+
+impl ExpressionIfThen {
+    pub fn hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.if_.hash(&mut hasher);
+        self.then_.hash(&mut hasher);
+        hasher.finish()
     }
 }

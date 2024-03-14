@@ -71,13 +71,13 @@ pub fn InputText(
                 </svg>
             </div>
         </div>
-        <p
-            class="text-xs text-red-600 mt-2"
-            id="hs-validation-name-error-helper"
-            class:hidden=move || error.get().is_none()
-        >
-            {move || { error.get().unwrap_or_default() }}
-        </p>
+        {move || {
+            error
+                .get()
+                .map(|error| {
+                    view! { <p class="text-xs text-red-600 mt-2">{error}</p> }
+                })
+        }}
     }
 }
 
@@ -191,13 +191,13 @@ pub fn InputPassword(
             </button>
         </div>
 
-        <p
-            class="text-xs text-red-600 mt-2"
-            id="hs-validation-name-error-helper"
-            class:hidden=move || error.get().is_none()
-        >
-            {move || { error.get().unwrap_or_default() }}
-        </p>
+        {move || {
+            error
+                .get()
+                .map(|error| {
+                    view! { <p class="text-xs text-red-600 mt-2">{error}</p> }
+                })
+        }}
     }
 }
 
@@ -238,12 +238,19 @@ pub fn InputSize(
             0u64
         }
     });
+    let error = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .error_string(element.id)
+            .map(|s| s.to_string())
+    });
 
     view! {
         <div class="relative">
             <input
                 type="text"
-                class="py-2 px-3 ps-9 pe-20 block w-full border-gray-200 shadow-sm rounded-lg text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
+                class="py-2 px-3 block w-full border-gray-200 shadow-sm rounded-lg text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
                 prop:value=move || {
                     match display_value.get() {
                         0 => String::new(),
@@ -304,6 +311,125 @@ pub fn InputSize(
                 </select>
             </div>
         </div>
+
+        {move || {
+            error
+                .get()
+                .map(|error| {
+                    view! { <p class="text-xs text-red-600 mt-2">{error}</p> }
+                })
+        }}
+    }
+}
+
+#[component]
+pub fn InputDuration(
+    element: FormElement,
+    #[prop(optional, into)] disabled: MaybeSignal<bool>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    let value = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .value::<String>(element.id)
+            .unwrap_or_default()
+    });
+
+    let unit = create_memo(move |_| {
+        let value = value
+            .get()
+            .chars()
+            .filter(|c| c.is_ascii_alphabetic())
+            .collect::<String>();
+        match value.as_str() {
+            "ms" | "s" | "m" | "h" | "d" => value,
+            _ => "ms".to_string(),
+        }
+    });
+    let display_value = create_memo(move |_| {
+        value
+            .get()
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect::<String>()
+    });
+    let error = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .error_string(element.id)
+            .map(|s| s.to_string())
+    });
+
+    view! {
+        <div class="relative">
+            <input
+                type="text"
+                class="py-2 px-3 block w-full border-gray-200 shadow-sm rounded-lg text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
+                prop:value=move || { display_value.get() }
+
+                on:change=move |ev| {
+                    element
+                        .data
+                        .update(|data| {
+                            let value = match event_target_value(&ev).parse::<u64>().unwrap_or(0) {
+                                0 => "".to_string(),
+                                new_value => format!("{}{}", new_value, unit.get()),
+                            };
+                            data.update(element.id, value);
+                        });
+                }
+
+                {..attrs}
+                disabled=move || disabled.get()
+            />
+
+            <div class="absolute inset-y-0 end-0 flex items-center text-gray-500 pe-px">
+                <select
+                    class="block text-xs w-full border-transparent rounded-lg focus:ring-blue-600 focus:border-blue-600 dark:bg-gray-800"
+                    on:change=move |ev| {
+                        element
+                            .data
+                            .update(|data| {
+                                let mut value = display_value.get();
+                                if value.is_empty() {
+                                    value = "1".to_string();
+                                }
+                                data.update(
+                                    element.id,
+                                    format!("{}{}", value, event_target_value(&ev)),
+                                );
+                            });
+                    }
+                >
+
+                    <option selected=move || unit.get() == "ms" value="ms">
+                        ms
+                    </option>
+                    <option selected=move || unit.get() == "s" value="s">
+                        seconds
+                    </option>
+                    <option selected=move || unit.get() == "n" value="m">
+                        minutes
+                    </option>
+                    <option selected=move || unit.get() == "h" value="h">
+                        hours
+                    </option>
+                    <option selected=move || unit.get() == "d" value="d">
+                        days
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        {move || {
+            error
+                .get()
+                .map(|error| {
+                    view! { <p class="text-xs text-red-600 mt-2">{error}</p> }
+                })
+        }}
     }
 }
 

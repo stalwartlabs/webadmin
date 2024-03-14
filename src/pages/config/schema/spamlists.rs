@@ -19,7 +19,7 @@ impl Builder<Schemas, ()> {
             .help("The domain name to be added to the free domains list")
             .input_check(
                 [Transformer::Trim],
-                [Validator::Required, Validator::IsGlobPattern],
+                [Validator::Required, Validator::IsRegex],
             )
             .build()
             .new_form_section()

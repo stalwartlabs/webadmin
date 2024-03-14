@@ -224,7 +224,7 @@ pub fn PrincipalList() -> impl IntoView {
 
                     <ToolbarButton
                         text=create_memo(move |_| {
-                            format!("Create a new {}", selected_type.get().item_name(false))
+                            format!("Create {}", selected_type.get().item_name(false))
                         })
 
                         color=Color::Blue

@@ -1,6 +1,9 @@
 use leptos::*;
 
-use crate::core::form::FormErrorId;
+use crate::{
+    components::icon::{IconPlus, IconXMark},
+    core::form::FormErrorType,
+};
 
 use super::FormElement;
 
@@ -21,7 +24,7 @@ pub fn StackedInput(
                     idx,
                     value.to_string(),
                     error.as_ref().and_then(|e| {
-                        if e.id == FormErrorId::Index(idx) {
+                        if e.id == FormErrorType::Array(idx) {
                             Some(e.error.clone())
                         } else {
                             None
@@ -33,7 +36,7 @@ pub fn StackedInput(
     });
 
     view! {
-        <div id="hs-wrapper-for-copy" class="space-y-3">
+        <div class="space-y-3">
 
             <For
                 each=move || { values.get().into_iter() }
@@ -49,10 +52,9 @@ pub fn StackedInput(
                     let is_err = error.is_some();
                     let error = error.unwrap_or_default();
                     view! {
-                        <div id="hs-wrapper-for-copy" class="space-y-3">
+                        <div class="space-y-3">
                             <div class="relative">
                                 <input
-                                    id="af-account-email"
                                     type="text"
                                     class=move || {
                                         if !is_err {
@@ -85,28 +87,11 @@ pub fn StackedInput(
                                     }
                                 >
 
-                                    <svg
-                                        class="flex-shrink-0 size-4"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="24"
-                                        height="24"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    >
-                                        <path d="M18 6 6 18"></path>
-                                        <path d="m6 6 12 12"></path>
-                                    </svg>
+                                    <IconXMark/>
+
                                 </button>
                             </div>
-                            <p
-                                class="text-xs text-red-600 mt-2"
-                                id="hs-validation-name-error-helper"
-                                class:hidden=!is_err
-                            >
+                            <p class="text-xs text-red-600 mt-2" class:hidden=!is_err>
                                 {error}
                             </p>
                         </div>
@@ -131,21 +116,7 @@ pub fn StackedInput(
                 }
             >
 
-                <svg
-                    class="flex-shrink-0 size-3.5"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <path d="M5 12h14"></path>
-                    <path d="M12 5v14"></path>
-                </svg>
+                <IconPlus attr:class="flex-shrink-0 size-3.5"/>
                 {add_button_text}
             </button>
         </p>

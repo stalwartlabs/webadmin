@@ -311,3 +311,28 @@ pub fn IconCircleStack(
         </SvgWrapper>
     }
 }
+
+#[component]
+pub fn IconPlus(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <path d="M5 12h14"></path>
+            <path d="M12 5v14"></path>
+        </SvgWrapper>
+    }
+}
+
+#[component]
+pub fn IconCodeBracket(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <path d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"></path>
+        </SvgWrapper>
+    }
+}
