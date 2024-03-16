@@ -36,7 +36,7 @@ pub fn PrincipalEdit() -> impl IntoView {
     let fetch_principal = create_resource(
         move || params().get("id").cloned().unwrap_or_default(),
         move |name| {
-            let auth = auth.get();
+            let auth = auth.get_untracked();
 
             async move {
                 if !name.is_empty() {
@@ -428,7 +428,12 @@ impl FormData {
             "description",
             principal.description.clone().unwrap_or_default(),
         );
-        self.set("quota", principal.quota.unwrap_or_default().to_string());
+        match principal.quota {
+            Some(quota) if quota > 0 => {
+                self.set("quota", quota.to_string());
+            }
+            _ => {}
+        }
         self.set(
             "type",
             principal.typ.unwrap_or(default_type).id().to_string(),
@@ -513,7 +518,7 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [])
             .build()
             .new_field("type")
-            .typ(Type::Select(Source::Static(IDS)))
+            .typ(Type::Select{ source: Source::Static(IDS), multi: false})
             .default(PrincipalType::Individual.id())
             .build()
             .build()

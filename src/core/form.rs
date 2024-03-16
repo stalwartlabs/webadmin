@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -7,7 +8,7 @@ use std::time::Duration;
 use ahash::AHashMap;
 use leptos::RwSignal;
 
-use crate::pages::config::{ArrayValues, Settings};
+use crate::pages::config::{Settings, SettingsValues};
 
 use super::expr::parser::ExpressionParser;
 use super::expr::tokenizer::Tokenizer;
@@ -79,8 +80,25 @@ impl FormData {
         self
     }
 
+    pub fn get(&self, key: &str) -> Option<&str> {
+        self.values.get(key).and_then(|v| match v {
+            FormValue::Value(s) => Some(s.as_str()),
+            _ => None,
+        })
+    }
+
     pub fn set(&mut self, id: impl Into<String>, value: impl Into<FormValue>) {
         self.values.insert(id.into(), value.into());
+    }
+
+    pub fn new_error(&mut self, id: impl Into<String>, error: impl Into<String>) {
+        self.errors.insert(
+            id.into(),
+            FormError {
+                id: FormErrorType::None,
+                error: error.into(),
+            },
+        );
     }
 
     pub fn value<T: FromStr>(&self, id: &str) -> Option<T> {
@@ -112,6 +130,7 @@ impl FormData {
     pub fn update(&mut self, id: &str, value: impl Into<FormValue>) {
         let value = value.into();
         self.cascading_reset(id);
+        log::debug!("Updating field {id:?} with value {value:?}");
         self.values.insert(id.to_string(), value);
         self.update_defaults(id);
         self.errors.remove(id);
@@ -293,10 +312,11 @@ impl FormData {
     fn cascading_reset(&mut self, id: &str) {
         let schema = self.schema.clone();
         let mut ids = vec![id.to_string()];
+        let mut removed_fields = Vec::new();
 
         while let Some(id) = ids.pop() {
             // Remove the field
-            let c = log::debug!("removing {id:?}");
+            removed_fields.push(id.clone());
             let prefix = format!("{id}.");
             self.values
                 .retain(|k, _| k != &id && !k.starts_with(&prefix));
@@ -315,6 +335,8 @@ impl FormData {
                 }
             }
         }
+
+        let c = log::debug!("Removed fields {removed_fields:?}");
     }
 
     fn update_defaults(&mut self, id: &str) {
@@ -343,12 +365,22 @@ impl FormData {
         }
     }
 
-    pub fn apply_defaults(&mut self) {
+    pub fn apply_defaults(&mut self, only_required: bool) {
         // Add default values for top-level fields
         let schema = self.schema.clone();
         let mut added_fields = Vec::new();
         for field in schema.fields.values() {
-            if field.display.is_empty() && field.default.if_thens.is_empty() {
+            if field.display.is_empty()
+                && field.default.if_thens.is_empty()
+                && (!only_required
+                    || (!self.values.contains_key(field.id)
+                        && field.checks.if_thens.is_empty()
+                        && field
+                            .checks
+                            .default
+                            .as_ref()
+                            .map_or(false, |d| d.validators.contains(&Validator::Required))))
+            {
                 if let Some(default) = field.default.default.as_ref() {
                     self.set(field.id.to_string(), default.to_string());
                     added_fields.push(field.id);
@@ -356,12 +388,15 @@ impl FormData {
             }
         }
 
+        log::debug!(
+            "Applied defaults to fields {added_fields:?}: {:?}",
+            self.values
+        );
+
         // Add default values for fields that depend on top-level fields
         for field_id in added_fields {
             self.update_defaults(field_id);
         }
-
-        log::debug!("Applied defaults: {:#?}", self.values);
     }
 
     pub fn error(&self, id: &str) -> Option<&FormError> {
@@ -396,29 +431,24 @@ impl FormData {
                     | Type::Size
                     | Type::Boolean
                     | Type::Duration
+                    | Type::Rate
                     | Type::Cron
-                    | Type::Select(_) => {
+                    | Type::Select { multi: false, .. } => {
                         match check.check_value(self.value::<String>(field.id).unwrap_or_default())
                         {
                             Ok(value) => {
                                 if !value.is_empty() {
-                                    self.update(field.id, value);
+                                    self.values.insert(field.id.into(), value.into());
                                 } else {
-                                    self.remove(field.id);
+                                    self.values.remove(field.id);
                                 }
                             }
                             Err(err) => {
-                                self.errors.insert(
-                                    field.id.to_string(),
-                                    FormError {
-                                        id: FormErrorType::None,
-                                        error: err.to_string(),
-                                    },
-                                );
+                                self.new_error(field.id, err);
                             }
                         }
                     }
-                    Type::Array => {
+                    Type::Array | Type::Select { multi: true, .. } => {
                         let mut total_values = 0;
                         for (idx, result) in self
                             .array_value(field.id)
@@ -449,28 +479,24 @@ impl FormData {
 
                         for validator in &check.validators {
                             match validator {
+                                Validator::Required => {
+                                    if total_values == 0 {
+                                        self.new_error(field.id, "This field is required");
+                                    }
+                                }
                                 Validator::MinItems(min) => {
                                     if total_values < *min {
-                                        self.errors.insert(
-                                            field.id.to_string(),
-                                            FormError {
-                                                id: FormErrorType::None,
-                                                error: format!(
-                                                    "At least {} items are required",
-                                                    min
-                                                ),
-                                            },
+                                        self.new_error(
+                                            field.id,
+                                            format!("At least {min} items are required"),
                                         );
                                     }
                                 }
                                 Validator::MaxItems(max) => {
                                     if total_values > *max {
-                                        self.errors.insert(
-                                            field.id.to_string(),
-                                            FormError {
-                                                id: FormErrorType::None,
-                                                error: format!("At most {} items are allowed", max),
-                                            },
+                                        self.new_error(
+                                            field.id,
+                                            format!("At most {max} items are allowed"),
                                         );
                                     }
                                 }
@@ -490,11 +516,6 @@ impl FormData {
                             .unwrap_or_else(|| {
                                 panic!("Missing expression validator for field {}", field.id)
                             });
-                        log::debug!(
-                            "Validating expression for field {} with {:?}",
-                            field.id,
-                            self.values.get(field.id)
-                        );
 
                         if let Some(FormValue::Expression(expr)) = self.values.get(field.id) {
                             for (expr_item, expr_value) in expr
@@ -597,16 +618,17 @@ impl FormData {
                     Type::Input
                     | Type::Secret
                     | Type::Text
-                    | Type::Select(_)
+                    | Type::Select { multi: false, .. }
                     | Type::Boolean
                     | Type::Duration
+                    | Type::Rate
                     | Type::Cron
                     | Type::Size => {
                         if let Some(value) = settings.remove(field.id) {
                             data.set(field.id, value);
                         }
                     }
-                    Type::Array => {
+                    Type::Array | Type::Select { multi: true, .. } => {
                         data.array_set(
                             field.id,
                             settings
@@ -704,8 +726,9 @@ impl FormData {
                 }
             }
             data.is_update = true;
+            data.apply_defaults(true);
         } else {
-            data.apply_defaults();
+            data.apply_defaults(false);
         }
         data
     }
@@ -750,6 +773,11 @@ impl InputCheck {
                     Validator::IsPort => {
                         if value.parse::<u16>().is_err() {
                             return Err("This field must be a valid port number".into());
+                        }
+                    }
+                    Validator::IsSocketAddr => {
+                        if value.parse::<SocketAddr>().is_err() {
+                            return Err("This field must be a valid socket address".into());
                         }
                     }
                     Validator::IsUrl => {
@@ -809,6 +837,20 @@ impl InputCheck {
                             }
                         }
                     },
+                    Validator::IsIpOrMask => {
+                        if let Some((ip, mask)) = value.rsplit_once('/') {
+                            if mask.parse::<u8>().is_err() {
+                                return Err("Invalid IP address mask".into());
+                            }
+                            ip
+                        } else {
+                            value.as_str()
+                        };
+
+                        if value.parse::<std::net::IpAddr>().is_err() {
+                            return Err("This field must be a valid IP address or network".into());
+                        }
+                    }
                     Validator::IsValidExpression { .. }
                     | Validator::MinItems(_)
                     | Validator::MaxItems(_)

@@ -2,9 +2,7 @@ use std::{hash::Hasher, sync::Arc};
 
 use ahash::AHashMap;
 
-use crate::pages::config::Settings;
-
-use super::form::{FormData, FormValue};
+use super::form::FormData;
 
 #[derive(Default)]
 pub struct Schemas {
@@ -24,9 +22,13 @@ pub enum Type<S, F> {
     Text,
     #[default]
     Expression,
-    Select(Source<S, F>),
+    Select {
+        multi: bool,
+        source: Source<S, F>,
+    },
     Boolean,
     Duration,
+    Rate,
     Size,
     Cron,
 }
@@ -174,8 +176,10 @@ pub enum Validator {
     IsHost,
     IsDomain,
     IsPort,
+    IsIpOrMask,
     IsUrl,
     IsRegex,
+    IsSocketAddr,
     MinLength(usize),
     MaxLength(usize),
     MinValue(NumberType),
@@ -263,70 +267,41 @@ impl Schema {
         self.fields
             .values()
             .filter_map(|field_| match &field_.typ_ {
-                Type::Select(Source::Dynamic { schema, field, .. }) => {
-                    Some((schema.clone(), field.clone()))
-                }
+                Type::Select {
+                    source: Source::Dynamic { schema, field, .. },
+                    ..
+                } => Some((schema.clone(), field.clone())),
                 _ => None,
             })
     }
 }
 
-pub trait SettingsValue {
-    fn get(&self, key: &str) -> Option<&str>;
-}
-
-impl SettingsValue for Settings {
-    fn get(&self, key: &str) -> Option<&str> {
-        self.get(key).map(|s| s.as_str())
-    }
-}
-
-impl SettingsValue for FormData {
-    fn get(&self, key: &str) -> Option<&str> {
-        self.values.get(key).and_then(|v| match v {
-            FormValue::Value(s) => Some(s.as_str()),
-            _ => None,
-        })
-    }
-}
-
 impl Field {
-    pub fn value(&self, settings: &impl SettingsValue) -> String {
+    pub fn value(&self, settings: &FormData) -> String {
         settings
             .get(self.id)
             .map(|s| s.to_string())
             .unwrap_or_default()
     }
 
-    pub fn label(&self, settings: &impl SettingsValue) -> String {
-        let value = self.value(settings);
-        match &self.typ_ {
-            Type::Select(source) => source
-                .display(&value, settings)
-                .map(|s| s.to_string())
-                .unwrap_or(value),
-            _ => value,
-        }
-    }
-
-    pub fn display(&self, settings: &impl SettingsValue) -> bool {
+    pub fn display(&self, settings: &FormData) -> bool {
         self.display.is_empty() || self.display.iter().any(|eval| eval.eval(settings))
     }
 
-    pub fn placeholder(&self, settings: &impl SettingsValue) -> Option<&str> {
+    pub fn placeholder(&self, settings: &FormData) -> Option<&str> {
         self.placeholder.eval(settings).copied()
     }
 
-    pub fn default(&self, settings: &impl SettingsValue) -> Option<&str> {
+    pub fn default(&self, settings: &FormData) -> Option<&str> {
         self.default.eval(settings).copied()
     }
 
-    pub fn input_check(&self, settings: &impl SettingsValue) -> Option<&InputCheck> {
+    pub fn input_check(&self, settings: &FormData) -> Option<&InputCheck> {
         self.checks.eval(settings)
     }
 
-    pub fn is_required(&self, settings: &impl SettingsValue) -> bool {
-        matches!(self.typ_, Type::Boolean | Type::Select(_))
+    pub fn is_required(&self, settings: &FormData) -> bool {
+        matches!(self.typ_, Type::Boolean | Type::Select { .. })
             || self
                 .input_check(settings)
                 .map(|c| c.validators.iter().any(|v| *v == Validator::Required))
@@ -334,12 +309,15 @@ impl Field {
     }
 
     pub fn is_multivalue(&self) -> bool {
-        matches!(self.typ_, Type::Array | Type::Expression)
+        matches!(
+            self.typ_,
+            Type::Array | Type::Expression | Type::Select { multi: true, .. }
+        )
     }
 }
 
 impl<T> Value<T> {
-    pub fn eval(&self, settings: &impl SettingsValue) -> Option<&T> {
+    pub fn eval(&self, settings: &FormData) -> Option<&T> {
         for if_then in &self.if_thens {
             if if_then.eval.eval(settings) {
                 return Some(&if_then.value);
@@ -351,7 +329,7 @@ impl<T> Value<T> {
 }
 
 impl Eval {
-    pub fn eval(&self, settings: &impl SettingsValue) -> bool {
+    pub fn eval(&self, settings: &FormData) -> bool {
         let value = settings.get(self.field.id);
         match self.condition {
             Condition::MatchAny => self.values.iter().any(|v| value == Some(v)),
@@ -360,19 +338,8 @@ impl Eval {
     }
 }
 
-impl Source<Arc<Schema>, Arc<Field>> {
-    pub fn display<'x>(&self, id: &str, settings: &'x impl SettingsValue) -> Option<&'x str> {
-        match self {
-            Source::Static(items) => items
-                .iter()
-                .find_map(|(k, v)| if *k == id { Some(*v) } else { None }),
-            Source::Dynamic { field, .. } => settings.get(field.id),
-        }
-    }
-}
-
 impl Section {
-    pub fn display(&self, settings: &impl SettingsValue) -> bool {
+    pub fn display(&self, settings: &FormData) -> bool {
         self.display.is_empty() || self.display.iter().any(|eval| eval.eval(settings))
     }
 }
@@ -555,7 +522,10 @@ impl Builder<Schemas, Schema> {
 impl<T, I> Type<T, I> {
     pub fn label<'x>(&'x self, id: &'x str) -> &'x str {
         match self {
-            Type::Select(Source::Static(items)) => items
+            Type::Select {
+                source: Source::Static(items),
+                ..
+            } => items
                 .iter()
                 .find_map(|(k, v)| if *k == id { Some(*v) } else { None })
                 .unwrap_or(id),
@@ -611,24 +581,31 @@ impl Builder<(Schemas, Schema), Field> {
 
     pub fn typ(mut self, typ_: Type<&'static str, &'static str>) -> Self {
         self.item.typ_ = match typ_ {
-            Type::Select(Source::Dynamic {
-                schema,
-                field,
-                filter,
-            }) => {
+            Type::Select {
+                source:
+                    Source::Dynamic {
+                        schema,
+                        field,
+                        filter,
+                    },
+                multi,
+            } => {
                 let schema = self.schema(schema);
 
-                Type::Select(Source::Dynamic {
-                    field: schema
-                        .fields
-                        .get(field)
-                        .unwrap_or_else(|| {
-                            panic!("Field {field:?} not found in schema {}.", schema.id)
-                        })
-                        .clone(),
-                    schema,
-                    filter,
-                })
+                Type::Select {
+                    source: Source::Dynamic {
+                        field: schema
+                            .fields
+                            .get(field)
+                            .unwrap_or_else(|| {
+                                panic!("Field {field:?} not found in schema {}.", schema.id)
+                            })
+                            .clone(),
+                        schema,
+                        filter,
+                    },
+                    multi,
+                }
             }
             typ_ => typ_.into(),
         };
@@ -643,7 +620,10 @@ impl Builder<(Schemas, Schema), Field> {
     ) -> Self {
         let field = self.field(field);
         match &mut self.item.typ_ {
-            Type::Select(Source::Dynamic { filter, .. }) => {
+            Type::Select {
+                source: Source::Dynamic { filter, .. },
+                ..
+            } => {
                 filter.push_if_matches_eq(field, conditions, filters);
             }
             _ => panic!("Field type is not a dynamic source."),
@@ -706,11 +686,14 @@ impl Builder<(Schemas, Schema), Field> {
         values: impl IntoIterator<Item = &'static str>,
         condition: Condition,
     ) -> Self {
-        self.item.display.push(Eval {
-            field: self.field(field),
-            values: values.into_iter().collect(),
-            condition,
-        });
+        let values = values.into_iter().collect::<Vec<_>>();
+        if !values.is_empty() {
+            self.item.display.push(Eval {
+                field: self.field(field),
+                values,
+                condition,
+            });
+        }
         self
     }
 
@@ -920,8 +903,15 @@ impl From<Type<&'static str, &'static str>> for Type<Arc<Schema>, Arc<Field>> {
             Type::Text => Type::Text,
             Type::Size => Type::Size,
             Type::Cron => Type::Cron,
-            Type::Select(Source::Static(items)) => Type::Select(Source::Static(items)),
-            Type::Select(_) => unreachable!(),
+            Type::Rate => Type::Rate,
+            Type::Select {
+                source: Source::Static(items),
+                multi,
+            } => Type::Select {
+                source: Source::Static(items),
+                multi,
+            },
+            Type::Select { .. } => unreachable!(),
         }
     }
 }

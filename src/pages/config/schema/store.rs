@@ -47,17 +47,20 @@ impl Builder<Schemas, ()> {
             .label("Type")
             .help("Storage backend type")
             .default("rocksdb")
-            .typ(Type::Select(Source::Static(&[
-                ("rocksdb", "RocksDB"),
-                ("foundationdb", "FoundationDB"),
-                ("postgresql", "PostgreSQL"),
-                ("mysql", "mySQL"),
-                ("sqlite", "SQLite"),
-                ("s3", "S3-compatible"),
-                ("redis", "Redis/Memcached"),
-                ("elasticsearch", "ElasticSearch"),
-                ("fs", "Filesystem"),
-            ])))
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("rocksdb", "RocksDB"),
+                    ("foundationdb", "FoundationDB"),
+                    ("postgresql", "PostgreSQL"),
+                    ("mysql", "mySQL"),
+                    ("sqlite", "SQLite"),
+                    ("s3", "S3-compatible"),
+                    ("redis", "Redis/Memcached"),
+                    ("elasticsearch", "ElasticSearch"),
+                    ("fs", "Filesystem"),
+                ]),
+                multi: false,
+            })
             .build()
             // Compression
             .new_field("compression")
@@ -65,10 +68,10 @@ impl Builder<Schemas, ()> {
             .label("Compression")
             .help("Algorithm to use to compress large binary objects")
             .default("lz4")
-            .typ(Type::Select(Source::Static(&[
-                ("none", "None"),
-                ("lz4", "LZ4"),
-            ])))
+            .typ(Type::Select {
+                source: Source::Static(&[("none", "None"), ("lz4", "LZ4")]),
+                multi: false,
+            })
             .display_if_ne("type", ["redis", "memory", "elasticsearch", "s3"])
             .build()
             // Path
@@ -118,10 +121,13 @@ impl Builder<Schemas, ()> {
             .help("Type of Redis server")
             .display_if_eq("type", ["redis"])
             .default("single")
-            .typ(Type::Select(Source::Static(&[
-                ("single", "Redis single node"),
-                ("cluster", "Redis Cluster"),
-            ])))
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("single", "Redis single node"),
+                    ("cluster", "Redis Cluster"),
+                ]),
+                multi: false,
+            })
             .build()
             // Username
             .new_field("user")

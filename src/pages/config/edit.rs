@@ -8,7 +8,15 @@ use serde::{Deserialize, Serialize};
 use crate::{
     components::{
         form::{
-            button::Button, expression::InputExpression, input::{InputDuration, InputPassword, InputSize, InputSwitch, InputText}, select::{Select, SelectCron}, stacked_input::StackedInput, Form, FormButtonBar, FormElement, FormItem, FormSection
+            button::Button,
+            expression::InputExpression,
+            input::{
+                InputDuration, InputPassword, InputRate, InputSize, InputSwitch, InputText,
+                TextArea,
+            },
+            select::{CheckboxGroup, Select, SelectCron},
+            stacked_input::StackedInput,
+            Form, FormButtonBar, FormElement, FormItem, FormSection,
         },
         messages::alert::{use_alerts, Alert},
         skeleton::Skeleton,
@@ -43,6 +51,8 @@ enum FetchResult {
     NotFound,
 }
 
+const DEFAULT_REDIRECT_URL: &str = "/settings/store";
+
 #[component]
 pub fn SettingsEdit() -> impl IntoView {
     let auth = use_authorization();
@@ -65,7 +75,7 @@ pub fn SettingsEdit() -> impl IntoView {
     let fetch_settings = create_resource(
         move || params().get("id").cloned().unwrap_or_default(),
         move |name| {
-            let auth = auth.get();
+            let auth = auth.get_untracked();
             let schema = current_schema.get();
             let is_create = name.is_empty();
 
@@ -90,7 +100,8 @@ pub fn SettingsEdit() -> impl IntoView {
                                 (
                                     item.remove("_id")?,
                                     item.remove(field.id).unwrap_or_default(),
-                                ).into()
+                                )
+                                    .into()
                             })
                             .collect::<Vec<_>>(),
                     );
@@ -144,36 +155,41 @@ pub fn SettingsEdit() -> impl IntoView {
                             Ok(FetchResult::Create { external_sources })
                         }
                     }
-                    SchemaType::List => HttpRequest::get("/api/settings/keys")
-                        .with_authorization(&auth)
-                        .with_parameter(
-                            "keys",
-                            schema
-                                .fields
-                                .values()
-                                .map(|field| field.id)
-                                .collect::<Vec<_>>()
-                                .join(","),
-                        )
-                        .send::<AHashMap<String, Option<String>>>()
-                        .await
-                        .map(|mut list| {
-                            let mut settings = Settings::new();
-                            for (name, value) in list.drain() {
-                                if let Some(value) = value {
+                    SchemaType::List => {
+                        let mut keys = Vec::new();
+                        let mut prefixes = Vec::new();
+
+                        for field in schema.fields.values() {
+                            if field.is_multivalue() {
+                                prefixes.push(field.id);
+                                keys.push(field.id);
+                            } else {
+                                keys.push(field.id);
+                            }
+                        }
+
+                        HttpRequest::get("/api/settings/keys")
+                            .with_authorization(&auth)
+                            .with_parameter("keys", keys.join(","))
+                            .with_parameter("prefixes", prefixes.join(","))
+                            .send::<Settings>()
+                            .await
+                            .map(|mut list| {
+                                let mut settings = Settings::new();
+                                for (name, value) in list.drain() {
                                     settings.insert(name, value);
                                 }
-                            }
 
-                            if !list.is_empty() {
-                                FetchResult::Update {
-                                    settings,
-                                    external_sources,
+                                if !settings.is_empty() {
+                                    FetchResult::Update {
+                                        settings,
+                                        external_sources,
+                                    }
+                                } else {
+                                    FetchResult::Create { external_sources }
                                 }
-                            } else {
-                                FetchResult::Create { external_sources }
-                            }
-                        }),
+                            })
+                    }
                 }
             }
         },
@@ -186,7 +202,7 @@ pub fn SettingsEdit() -> impl IntoView {
         let auth = auth.get();
         let schema = current_schema.get();
 
-        log::debug!("Saving changes: {:#?}", changes);
+        log::debug!("Saving changes: {:?}", changes);
 
         async move {
             set_pending.set(true);
@@ -200,7 +216,7 @@ pub fn SettingsEdit() -> impl IntoView {
             {
                 Ok(_) => {
                     set_pending.set(false);
-                    use_navigate()(&format!("/settings/{}", schema.id), Default::default());
+                    use_navigate()(&schema.list_path(), Default::default());
                 }
                 Err(err) => {
                     set_pending.set(false);
@@ -287,7 +303,7 @@ pub fn SettingsEdit() -> impl IntoView {
                                                 !field_.is_required(&data.get())
                                             });
                                             let component = match field.typ_ {
-                                                Type::Input | Type::Text => {
+                                                Type::Input => {
                                                     view! {
                                                         <InputText
                                                             element=FormElement::new(field.id, data)
@@ -324,9 +340,18 @@ pub fn SettingsEdit() -> impl IntoView {
                                                     }
                                                         .into_view()
                                                 }
-                                                Type::Select(_) => {
+                                                Type::Select { multi: false, .. } => {
                                                     view! {
                                                         <Select
+                                                            element=FormElement::new(field.id, data)
+                                                            disabled=is_disabled
+                                                        />
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Select { multi: true, .. } => {
+                                                    view! {
+                                                        <CheckboxGroup
                                                             element=FormElement::new(field.id, data)
                                                             disabled=is_disabled
                                                         />
@@ -351,6 +376,12 @@ pub fn SettingsEdit() -> impl IntoView {
                                                     }
                                                         .into_view()
                                                 }
+                                                Type::Rate => {
+                                                    view! {
+                                                        <InputRate element=FormElement::new(field.id, data)/>
+                                                    }
+                                                        .into_view()
+                                                }
                                                 Type::Expression => {
                                                     view! {
                                                         <InputExpression element=FormElement::new(field.id, data)/>
@@ -363,7 +394,12 @@ pub fn SettingsEdit() -> impl IntoView {
                                                     }
                                                         .into_view()
                                                 }
-                                                Type::Text => todo!(),
+                                                Type::Text => {
+                                                    view! {
+                                                        <TextArea element=FormElement::new(field.id, data)/>
+                                                    }
+                                                        .into_view()
+                                                }
                                             };
                                             view! {
                                                 <FormItem
@@ -399,10 +435,7 @@ pub fn SettingsEdit() -> impl IntoView {
                     text="Cancel"
                     color=Color::Gray
                     on_click=move |_| {
-                        use_navigate()(
-                            &format!("/settings/{}", current_schema.get().id),
-                            Default::default(),
-                        );
+                        use_navigate()(&current_schema.get().list_path(), Default::default());
                     }
                 />
 
@@ -422,5 +455,15 @@ pub fn SettingsEdit() -> impl IntoView {
             </FormButtonBar>
 
         </Form>
+    }
+}
+
+impl Schema {
+    fn list_path(&self) -> String {
+        if !matches!(self.typ, SchemaType::List) {
+            format!("/settings/{}", self.id)
+        } else {
+            DEFAULT_REDIRECT_URL.to_string()
+        }
     }
 }

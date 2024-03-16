@@ -75,6 +75,34 @@ pub fn IconCancel(
 }
 
 #[component]
+pub fn IconExclamationCircle(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" x2="12" y1="8" y2="12"></line>
+            <line x1="12" x2="12.01" y1="16" y2="16"></line>
+        </SvgWrapper>
+    }
+}
+
+#[component]
+pub fn IconExclamationTriangle(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+            <path d="M12 9v4"></path>
+            <path d="M12 17h.01"></path>
+        </SvgWrapper>
+    }
+}
+
+#[component]
 pub fn IconRefresh(
     #[prop(optional)] size: Option<usize>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
@@ -333,6 +361,19 @@ pub fn IconCodeBracket(
     view! {
         <SvgWrapper size attrs>
             <path d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"></path>
+        </SvgWrapper>
+    }
+}
+
+#[component]
+pub fn IconServerStack(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <path d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z"></path>
+
         </SvgWrapper>
     }
 }

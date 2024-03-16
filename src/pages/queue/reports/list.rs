@@ -67,7 +67,7 @@ pub fn ReportList() -> impl IntoView {
     let reports = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
-            let auth = auth.get();
+            let auth = auth.get_untracked();
 
             async move {
                 HttpRequest::get("/api/queue/reports")

@@ -262,17 +262,23 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                 .into_view()
                         } else {
                             let route = item.route.clone().unwrap();
-                            let class = format!(
-                                "w-full flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-slate-400 dark:hover:text-slate-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600{}",
-                                if route == use_location().pathname.get() {
-                                    " bg-gray-100"
-                                } else {
-                                    ""
-                                },
-                            );
+                            let route_ = route.clone();
                             view! {
                                 <li>
-                                    <a class=class href=route>
+                                    <a
+                                        class=move || {
+                                            format!(
+                                                "w-full flex items-center gap-x-3.5 py-2 px-2.5 text-sm text-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-slate-400 dark:hover:text-slate-300 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600{}",
+                                                if route_ == current_route.get() {
+                                                    " bg-gray-100 active"
+                                                } else {
+                                                    ""
+                                                },
+                                            )
+                                        }
+
+                                        href=route
+                                    >
                                         {item.icon}
                                         {item.name}
                                     </a>

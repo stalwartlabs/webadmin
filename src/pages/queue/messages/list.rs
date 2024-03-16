@@ -69,7 +69,7 @@ pub fn QueueList() -> impl IntoView {
     let messages = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
-            let auth = auth.get();
+            let auth = auth.get_untracked();
 
             async move {
                 HttpRequest::get("/api/queue/messages")

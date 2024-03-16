@@ -34,6 +34,15 @@ pub fn StackedInput(
             })
             .collect::<Vec<_>>()
     });
+    let error = create_memo(move |_| {
+        element.data.get().error(element.id).and_then(|e| {
+            if e.id == FormErrorType::None {
+                Some(e.error.clone())
+            } else {
+                None
+            }
+        })
+    });
 
     view! {
         <div class="space-y-3">
@@ -120,5 +129,13 @@ pub fn StackedInput(
                 {add_button_text}
             </button>
         </p>
+
+        {move || {
+            error
+                .get()
+                .map(|error| {
+                    view! { <p class="text-xs text-red-600 mt-2">{error}</p> }
+                })
+        }}
     }
 }

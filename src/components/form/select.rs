@@ -3,9 +3,13 @@ use std::{
     str::FromStr,
 };
 
+use ahash::AHashSet;
 use leptos::*;
 
-use crate::core::schema::{Source, Type};
+use crate::core::{
+    form::FormData,
+    schema::{Source, Type},
+};
 
 use super::FormElement;
 
@@ -14,45 +18,7 @@ pub fn Select(
     element: FormElement,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
 ) -> impl IntoView {
-    let options = create_memo(move |_| {
-        let data = element.data.get_untracked();
-
-        match &data.schema.fields.get(element.id).unwrap().typ_ {
-            Type::Select(Source::Static(options)) => options
-                .iter()
-                .map(|(value, label)| (value.to_string(), label.to_string()))
-                .collect::<Vec<_>>(),
-            Type::Select(Source::Dynamic {
-                schema,
-                field,
-                filter,
-            }) => {
-                let filter = filter.eval(&data);
-
-                data.external_sources
-                    .get(&format!("{}_{}", schema.id, field.id))
-                    .map(|source| {
-                        source
-                            .iter()
-                            .filter_map(|(id, value)| {
-                                if filter.map_or(true, |values| values.contains(&value.as_str())) {
-                                    (
-                                        id.to_string(),
-                                        format!("{} ({})", field.typ_.label(value), id),
-                                    )
-                                        .into()
-                                } else {
-                                    None
-                                }
-                            })
-                            .chain([(String::new(), "-- None --".to_string())])
-                            .collect::<Vec<_>>()
-                    })
-                    .unwrap_or_default()
-            }
-            _ => panic!("Invalid schema type for select"),
-        }
-    });
+    let options = create_memo(move |_| element.data.get_untracked().select_sources(element.id));
     let value = create_memo(move |_| {
         element
             .data
@@ -103,6 +69,93 @@ pub fn Select(
             />
 
         </select>
+
+        {move || {
+            error
+                .get()
+                .map(|error| {
+                    view! { <p class="text-xs text-red-600 mt-2">{error}</p> }
+                })
+        }}
+    }
+}
+
+#[component]
+pub fn CheckboxGroup(
+    element: FormElement,
+    #[prop(optional, into)] disabled: MaybeSignal<bool>,
+) -> impl IntoView {
+    let options = create_memo(move |_| element.data.get_untracked().select_sources(element.id));
+    let values = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .array_value(element.id)
+            .map(|s| s.to_string())
+            .collect::<AHashSet<_>>()
+    });
+    let error = create_memo(move |_| {
+        element
+            .data
+            .get()
+            .error_string(element.id)
+            .map(|s| s.to_string())
+    });
+
+    view! {
+        <div class="space-y-2">
+
+            <For
+                each=move || {
+                    options
+                        .get()
+                        .chunks(2)
+                        .map(|v| [v.first().cloned(), v.get(1).cloned()])
+                        .enumerate()
+                        .collect::<Vec<_>>()
+                }
+
+                key=move |(idx, _)| *idx
+                children=move |(_, options)| {
+                    let options = options
+                        .into_iter()
+                        .flatten()
+                        .map(|(id, label)| {
+                            let id_ = id.clone();
+                            view! {
+                                <label class="max-w-xs flex p-3 w-full bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400">
+                                    <input
+                                        type="checkbox"
+                                        class="shrink-0 mt-0.5 border-gray-200 rounded text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
+                                        prop:checked=move || values.get().contains(&id_)
+                                        disabled=move || disabled.get()
+                                        on:input=move |_| {
+                                            let mut values = values.get();
+                                            if !values.remove(&id) {
+                                                values.insert(id.clone());
+                                            }
+                                            let mut values = values.into_iter().collect::<Vec<_>>();
+                                            values.sort();
+                                            element
+                                                .data
+                                                .update(|data| {
+                                                    data.update(element.id, values);
+                                                })
+                                        }
+                                    />
+
+                                    <span class="text-sm text-gray-500 ms-3 dark:text-gray-400">
+                                        {label}
+                                    </span>
+                                </label>
+                            }
+                        })
+                        .collect_view();
+                    view! { <div class="grid sm:grid-cols-2 gap-2">{options}</div> }
+                }
+            />
+
+        </div>
 
         {move || {
             error
@@ -297,6 +350,57 @@ pub fn SelectCron(
                     view! { <p class="text-xs text-red-600 mt-2">{error}</p> }
                 })
         }}
+    }
+}
+
+impl FormData {
+    fn select_sources(&self, id: &str) -> Vec<(String, String)> {
+        match &self.schema.fields.get(id).unwrap().typ_ {
+            Type::Select {
+                source: Source::Static(options),
+                ..
+            } => options
+                .iter()
+                .map(|(value, label)| (value.to_string(), label.to_string()))
+                .collect::<Vec<_>>(),
+            Type::Select {
+                source:
+                    Source::Dynamic {
+                        schema,
+                        field,
+                        filter,
+                    },
+                ..
+            } => {
+                let filter = filter.eval(self);
+
+                self.external_sources
+                    .get(&format!("{}_{}", schema.id, field.id))
+                    .map(|source| {
+                        source
+                            .iter()
+                            .filter_map(|(id, value)| {
+                                if filter.map_or(true, |values| values.contains(&value.as_str())) {
+                                    (
+                                        id.to_string(),
+                                        if !value.is_empty() {
+                                            format!("{} ({})", field.typ_.label(value), id)
+                                        } else {
+                                            id.to_string()
+                                        },
+                                    )
+                                        .into()
+                                } else {
+                                    None
+                                }
+                            })
+                            .chain([(String::new(), "-- None --".to_string())])
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default()
+            }
+            _ => panic!("Invalid schema type for select"),
+        }
     }
 }
 

@@ -44,7 +44,7 @@ pub fn QueueManage() -> impl IntoView {
     let fetch_message = create_resource(
         move || params().get("id").cloned().unwrap_or_default(),
         move |id| {
-            let auth = auth.get();
+            let auth = auth.get_untracked();
             let id = id.clone();
 
             async move {

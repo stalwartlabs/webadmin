@@ -17,25 +17,31 @@ impl Builder<Schemas, ()> {
             .label("Type")
             .help("Type of directory")
             .default("internal")
-            .typ(Type::Select(Source::Static(&[
-                ("internal", "Internal"),
-                ("ldap", "LDAP Directory"),
-                ("sql", "SQL Database"),
-                ("lmtp", "LMTP Server"),
-                ("smtp", "SMTP Server"),
-                ("imap", "IMAP4 Server"),
-            ])))
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("internal", "Internal"),
+                    ("ldap", "LDAP Directory"),
+                    ("sql", "SQL Database"),
+                    ("lmtp", "LMTP Server"),
+                    ("smtp", "SMTP Server"),
+                    ("imap", "IMAP4 Server"),
+                ]),
+                multi: false,
+            })
             .build()
             // Internal store
             .new_field("store")
             .label("Storage backend")
             .help("Storage backend where accounts, groups and lists are stored")
             .display_if_eq("type", ["internal", "sql"])
-            .typ(Type::Select(Source::Dynamic {
-                schema: "store",
-                field: "type",
-                filter: Default::default(),
-            }))
+            .typ(Type::Select {
+                source: Source::Dynamic {
+                    schema: "store",
+                    field: "type",
+                    filter: Default::default(),
+                },
+                multi: false,
+            })
             .source_filter_if_eq(
                 "type",
                 ["internal"],

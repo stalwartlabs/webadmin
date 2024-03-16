@@ -75,7 +75,8 @@ pub fn Login() -> impl IntoView {
                             );
                         }
 
-                        use_navigate()("/manage/directory/accounts", Default::default());
+                        //use_navigate()("/manage/directory/accounts", Default::default());
+                        use_navigate()("/settings/store", Default::default());
                     }
                     Err(err) => {
                         alert.set(err);

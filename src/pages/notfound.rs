@@ -3,6 +3,7 @@ use leptos_meta::*;
 
 #[component]
 pub fn NotFound() -> impl IntoView {
+    let todo = "implement not found page";
     view! {
         <Html lang="en" class="h-full"/>
         <Body class="dark:bg-slate-900 bg-gray-100 flex h-full items-center py-16"/>

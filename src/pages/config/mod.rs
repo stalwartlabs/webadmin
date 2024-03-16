@@ -4,7 +4,7 @@ pub mod schema;
 
 use crate::{
     components::{
-        icon::{IconCircleStack, IconShieldCheck, IconUserGroup},
+        icon::{IconCircleStack, IconServerStack, IconShieldCheck, IconUserGroup},
         layout::{LayoutBuilder, MenuItem},
     },
     core::{
@@ -146,11 +146,12 @@ impl FormData {
     }
 }
 
-pub trait ArrayValues {
+pub trait SettingsValues {
     fn array_values(&self, prefix: &str) -> Vec<(&str, &str)>;
+    fn format(&self, field: &Field) -> String;
 }
 
-impl ArrayValues for Settings {
+impl SettingsValues for Settings {
     fn array_values(&self, key: &str) -> Vec<(&str, &str)> {
         let full_prefix = key;
         let prefix = format!("{key}.");
@@ -170,19 +171,81 @@ impl ArrayValues for Settings {
         results.sort_by(|(l_key, _), (r_key, _)| l_key.cmp(r_key));
         results
     }
+
+    fn format(&self, field: &Field) -> String {
+        match &field.typ_ {
+            Type::Select {
+                source: Source::Static(items),
+                multi: false,
+            } => {
+                let value = self
+                    .get(field.id)
+                    .map(|s| s.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                items
+                    .iter()
+                    .find_map(|(k, v)| if k == &value { Some(*v) } else { None })
+                    .map(|s| s.to_string())
+                    .unwrap_or(value)
+            }
+            Type::Array => self
+                .array_values(field.id)
+                .first()
+                .map(|(_, v)| v.to_string())
+                .unwrap_or_default(),
+
+            _ => self
+                .get(field.id)
+                .map(|s| s.as_str())
+                .unwrap_or_default()
+                .to_string(),
+        }
+    }
 }
 
 impl LayoutBuilder {
     pub fn settings() -> Vec<MenuItem> {
         LayoutBuilder::new("/settings")
+            // Server
+            .create("Server")
+            .icon(view! { <IconServerStack/> })
+            // Network
+            .create("Network")
+            .route("/network/edit")
+            .insert()
+            // Listener
+            .create("Listeners")
+            .route("/listener")
+            .insert()
+            // TLS
+            .create("TLS")
+            .create("Settings")
+            .route("/tls/edit")
+            .insert()
+            .create("ACME Providers")
+            .route("/acme")
+            .insert()
+            .create("Certificates")
+            .route("/certificate")
+            .insert()
+            .insert()
+            // System
+            .create("System")
+            .route("/system/edit")
+            .insert()
+            .insert()
+            // Stores
             .create("Stores")
             .icon(view! { <IconCircleStack/> })
             .route("/store")
             .insert()
+            // Directories
             .create("Directories")
             .icon(view! { <IconUserGroup/> })
             .route("/directory")
             .insert()
+            // SPAM Filter
             .create("SPAM Filter")
             .icon(view! { <IconShieldCheck/> })
             .create("Scores")

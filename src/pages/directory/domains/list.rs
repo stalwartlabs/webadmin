@@ -68,7 +68,7 @@ pub fn DomainList() -> impl IntoView {
     let domains = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
-            let auth = auth.get();
+            let auth = auth.get_untracked();
 
             async move {
                 let domain_names = HttpRequest::get("/api/domain")

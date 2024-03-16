@@ -80,7 +80,7 @@ pub fn IncomingReportList() -> impl IntoView {
     let reports = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
-            let auth = auth.get();
+            let auth = auth.get_untracked();
             let report_type = report_type.get();
 
             async move {

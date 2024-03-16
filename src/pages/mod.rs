@@ -2,11 +2,11 @@ use chrono::{DateTime, Local, Utc};
 use serde::{Deserialize, Serialize};
 
 pub mod config;
-pub mod directory;
+//pub mod directory;
 pub mod login;
 pub mod notfound;
-pub mod queue;
-pub mod reports;
+//pub mod queue;
+//pub mod reports;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct List<T> {

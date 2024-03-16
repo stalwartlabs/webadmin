@@ -26,7 +26,7 @@ use crate::{
         url::UrlBuilder,
     },
     pages::{
-        config::{SchemaType, Schemas},
+        config::{SchemaType, Schemas, SettingsValues},
         maybe_plural, List,
     },
 };
@@ -78,7 +78,7 @@ pub fn SettingsList() -> impl IntoView {
     let settings = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
-            let auth = auth.get();
+            let auth = auth.get_untracked();
             let schema = current_schema.get();
 
             async move {
@@ -338,7 +338,7 @@ fn SettingsItem(settings: Settings, schema: Arc<Schema>) -> impl IntoView {
         .fields
         .iter()
         .map(|field| {
-            let value = field.label(&settings);
+            let value = settings.format(field);
             view! { <ListTextItem>{value}</ListTextItem> }
         })
         .collect_view();

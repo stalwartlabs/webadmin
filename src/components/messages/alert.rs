@@ -2,7 +2,12 @@ use std::time::Duration;
 
 use leptos::*;
 
-use crate::{components::icon::IconXMark, core::http};
+use crate::{
+    components::icon::{
+        IconCheckCircle, IconExclamationCircle, IconExclamationTriangle, IconXMark,
+    },
+    core::http,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum AlertType {
@@ -81,65 +86,30 @@ pub fn Alerts() -> impl IntoView {
                             match alert.get().typ {
                                 AlertType::Success | AlertType::None => {
                                     view! {
-                                        <svg
-                                            class="flex-shrink-0 size-4 text-blue-600 mt-1"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="24"
-                                            height="24"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="teal"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                        >
-                                            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
-                                            <path d="m9 12 2 2 4-4"></path>
-                                        </svg>
+                                        <IconCheckCircle
+                                            attr:class="flex-shrink-0 size-4 text-blue-600 mt-1"
+                                            attr:stroke="teal"
+                                        />
                                     }
-                                        .into_any()
+                                        .into_view()
                                 }
                                 AlertType::Error => {
                                     view! {
-                                        <svg
-                                            class="flex-shrink-0 size-4 mt-0.5"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="24"
-                                            height="24"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="red"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                        >
-                                            <circle cx="12" cy="12" r="10"></circle>
-                                            <path d="m15 9-6 6"></path>
-                                            <path d="m9 9 6 6"></path>
-                                        </svg>
+                                        <IconExclamationCircle
+                                            attr:class="flex-shrink-0 size-4 mt-0.5"
+                                            attr:stroke="red"
+                                        />
                                     }
-                                        .into_any()
+                                        .into_view()
                                 }
                                 AlertType::Warning => {
                                     view! {
-                                        <svg
-                                            class="flex-shrink-0 size-4 mt-0.5"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="24"
-                                            height="24"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="#854d0e"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                        >
-                                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
-                                            <path d="M12 9v4"></path>
-                                            <path d="M12 17h.01"></path>
-                                        </svg>
+                                        <IconExclamationTriangle
+                                            attr:class="flex-shrink-0 size-4 mt-0.5"
+                                            attr:stroke="#854d0e"
+                                        />
                                     }
-                                        .into_any()
+                                        .into_view()
                                 }
                             }
                         }}

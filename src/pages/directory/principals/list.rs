@@ -82,7 +82,7 @@ pub fn PrincipalList() -> impl IntoView {
     let principals = create_resource(
         move || (page(), filter()),
         move |(page, filter)| {
-            let auth = auth.get();
+            let auth = auth.get_untracked();
             let selected_type = selected_type.get();
 
             async move {
