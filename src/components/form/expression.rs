@@ -1,8 +1,11 @@
 use leptos::*;
 
 use crate::{
-    components::icon::{IconArrowRightCircle, IconCodeBracket, IconPlus, IconXMark},
-    core::form::{ExpressionError, FormErrorType},
+    components::icon::{IconArrowRightCircle, IconPlus, IconVariable, IconXMark},
+    core::{
+        form::{ExpressionError, FormErrorType},
+        schema::Validator,
+    },
 };
 
 use super::FormElement;
@@ -54,6 +57,19 @@ pub fn InputExpression(
                 _ => None,
             })
     });
+    let disable_add = element
+        .data
+        .get_untracked()
+        .schema
+        .fields
+        .get(element.id)
+        .unwrap()
+        .checks
+        .default
+        .as_ref()
+        .map_or(false, |checks| {
+            checks.validators.contains(&Validator::MaxItems(1))
+        });
 
     view! {
         <div class="space-y-3">
@@ -174,7 +190,7 @@ pub fn InputExpression(
                     />
 
                     <div class="absolute inset-y-0 end-0 flex items-center pointer-events-none z-20 pe-4">
-                        <IconCodeBracket attr:class="flex-shrink-0 size-4 text-gray-400"/>
+                        <IconVariable attr:class="flex-shrink-0 size-4 text-gray-400"/>
                     </div>
                 </div>
 
@@ -189,7 +205,7 @@ pub fn InputExpression(
             </div>
         </div>
 
-        <p class="mt-3 text-end">
+        <p class="mt-3 text-end" class:hidden=disable_add>
             <button
                 type="button"
                 class="py-1.5 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full border border-dashed border-gray-200 bg-white text-gray-800 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"

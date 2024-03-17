@@ -275,6 +275,8 @@ pub fn build_schemas() -> Arc<Schemas> {
         .build_tls()
         .build_server()
         .build_listener()
+        .build_tracing()
+        .build_smtp()
         .build_spam_lists()
         .build()
         .into()

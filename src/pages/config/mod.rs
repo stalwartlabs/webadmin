@@ -4,7 +4,9 @@ pub mod schema;
 
 use crate::{
     components::{
-        icon::{IconCircleStack, IconServerStack, IconShieldCheck, IconUserGroup},
+        icon::{
+            IconCircleStack, IconPaperAirplane, IconServerStack, IconShieldCheck, IconUserGroup,
+        },
         layout::{LayoutBuilder, MenuItem},
     },
     core::{
@@ -234,6 +236,10 @@ impl LayoutBuilder {
             .create("System")
             .route("/system/edit")
             .insert()
+            // Logging
+            .create("Logging & Tracing")
+            .route("/tracing")
+            .insert()
             .insert()
             // Stores
             .create("Stores")
@@ -244,6 +250,45 @@ impl LayoutBuilder {
             .create("Directories")
             .icon(view! { <IconUserGroup/> })
             .route("/directory")
+            .insert()
+            // SMTP
+            .create("SMTP")
+            .icon(view! { <IconPaperAirplane/> })
+            .create("Inbound")
+            .create("Connect stage")
+            .route("/smtp-in-connect/edit")
+            .insert()
+            .create("EHLO stage")
+            .route("/smtp-in-ehlo/edit")
+            .insert()
+            .create("AUTH stage")
+            .route("/smtp-in-auth/edit")
+            .insert()
+            .create("MAIL stage")
+            .route("/smtp-in-mail/edit")
+            .insert()
+            .create("RCPT stage")
+            .route("/smtp-in-rcpt/edit")
+            .insert()
+            .create("DATA stage")
+            .route("/smtp-in-data/edit")
+            .insert()
+            .create("Extensions")
+            .route("/smtp-in-extensions/edit")
+            .insert()
+            .create("Session Limits")
+            .route("/smtp-in-limits/edit")
+            .insert()
+            .create("Throttles")
+            .route("/smtp-in-throttle")
+            .insert()
+            .create("Milters")
+            .route("/milter")
+            .insert()
+            .create("Pipes")
+            .route("/pipe")
+            .insert()
+            .insert()
             .insert()
             // SPAM Filter
             .create("SPAM Filter")

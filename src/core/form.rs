@@ -352,9 +352,16 @@ impl FormData {
                     .any(|if_then| if_then.eval.field.id == id)
                     || (field.display.iter().any(|eval| eval.field.id == id) && field.display(self))
                 {
-                    if let Some(value) = field.default.eval(self) {
-                        let c = log::debug!("adding default {:?} = {value:?}", field.id);
-                        self.set(field.id.to_string(), *value);
+                    if let Some(default) = field.default.eval(self) {
+                        let c = log::debug!("adding default {:?} = {default:?}", field.id);
+                        let value = match &field.typ_ {
+                            Type::Expression => FormValue::Expression(Expression {
+                                else_: default.to_string(),
+                                ..Default::default()
+                            }),
+                            _ => FormValue::Value(default.to_string()),
+                        };
+                        self.set(field.id.to_string(), value);
                     }
 
                     if ids.iter().all(|id| id != field.id) {
@@ -382,7 +389,14 @@ impl FormData {
                             .map_or(false, |d| d.validators.contains(&Validator::Required))))
             {
                 if let Some(default) = field.default.default.as_ref() {
-                    self.set(field.id.to_string(), default.to_string());
+                    let value = match &field.typ_ {
+                        Type::Expression => FormValue::Expression(Expression {
+                            else_: default.to_string(),
+                            ..Default::default()
+                        }),
+                        _ => FormValue::Value(default.to_string()),
+                    };
+                    self.set(field.id.to_string(), value);
                     added_fields.push(field.id);
                 }
             }
