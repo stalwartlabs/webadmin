@@ -354,12 +354,14 @@ impl FormData {
                 {
                     if let Some(default) = field.default.eval(self) {
                         let c = log::debug!("adding default {:?} = {default:?}", field.id);
-                        let value = match &field.typ_ {
-                            Type::Expression => FormValue::Expression(Expression {
-                                else_: default.to_string(),
-                                ..Default::default()
-                            }),
-                            _ => FormValue::Value(default.to_string()),
+                        let value = match (&field.typ_, default) {
+                            (Type::Expression, FormValue::Value(default)) => {
+                                FormValue::Expression(Expression {
+                                    else_: default.to_string(),
+                                    ..Default::default()
+                                })
+                            }
+                            _ => default.clone(),
                         };
                         self.set(field.id.to_string(), value);
                     }
@@ -389,12 +391,14 @@ impl FormData {
                             .map_or(false, |d| d.validators.contains(&Validator::Required))))
             {
                 if let Some(default) = field.default.default.as_ref() {
-                    let value = match &field.typ_ {
-                        Type::Expression => FormValue::Expression(Expression {
-                            else_: default.to_string(),
-                            ..Default::default()
-                        }),
-                        _ => FormValue::Value(default.to_string()),
+                    let value = match (&field.typ_, default) {
+                        (Type::Expression, FormValue::Value(default)) => {
+                            FormValue::Expression(Expression {
+                                else_: default.to_string(),
+                                ..Default::default()
+                            })
+                        }
+                        _ => default.clone(),
                     };
                     self.set(field.id.to_string(), value);
                     added_fields.push(field.id);
@@ -903,6 +907,12 @@ impl From<Vec<String>> for FormValue {
     }
 }
 
+impl From<&[&str]> for FormValue {
+    fn from(value: &[&str]) -> Self {
+        FormValue::Array(value.iter().map(|v| v.to_string()).collect())
+    }
+}
+
 impl Expression {
     pub fn is_empty(&self) -> bool {
         self.if_thens.is_empty() && self.else_.is_empty()
@@ -915,5 +925,11 @@ impl ExpressionIfThen {
         self.if_.hash(&mut hasher);
         self.then_.hash(&mut hasher);
         hasher.finish()
+    }
+}
+
+impl Default for FormValue {
+    fn default() -> Self {
+        FormValue::Value("".to_string())
     }
 }

@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod common;
 pub mod directory;
 pub mod listener;

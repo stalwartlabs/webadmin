@@ -2,7 +2,7 @@ use std::{hash::Hasher, sync::Arc};
 
 use ahash::AHashMap;
 
-use super::form::FormData;
+use super::form::{FormData, FormValue};
 
 #[derive(Default)]
 pub struct Schemas {
@@ -41,7 +41,7 @@ pub struct Field {
     pub help: Option<&'static str>,
     pub checks: Value<InputCheck>,
     pub typ_: Type<Arc<Schema>, Arc<Field>>,
-    pub default: Value<&'static str>,
+    pub default: Value<FormValue>,
     pub placeholder: Value<&'static str>,
     pub display: Vec<Eval>,
     pub readonly: bool,
@@ -292,8 +292,8 @@ impl Field {
         self.placeholder.eval(settings).copied()
     }
 
-    pub fn default(&self, settings: &FormData) -> Option<&str> {
-        self.default.eval(settings).copied()
+    pub fn default(&self, settings: &FormData) -> Option<&FormValue> {
+        self.default.eval(settings)
     }
 
     pub fn input_check(&self, settings: &FormData) -> Option<&InputCheck> {
@@ -662,9 +662,8 @@ impl Builder<(Schemas, Schema), Field> {
         self
     }
 
-    pub fn default(mut self, default: &'static str) -> Self {
-        self.item.default.push_else(default);
-        self.item.placeholder.push_else(default);
+    pub fn default(mut self, default: impl Into<FormValue>) -> Self {
+        self.item.default.push_else(default.into());
         self
     }
 
@@ -672,11 +671,11 @@ impl Builder<(Schemas, Schema), Field> {
         mut self,
         field: &'static str,
         conditions: impl IntoIterator<Item = &'static str>,
-        value: &'static str,
+        value: impl Into<FormValue>,
     ) -> Self {
         self.item
             .default
-            .push_if_matches_eq(self.field(field), conditions, value);
+            .push_if_matches_eq(self.field(field), conditions, value.into());
         self
     }
 
