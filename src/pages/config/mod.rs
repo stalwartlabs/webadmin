@@ -2,10 +2,14 @@ pub mod edit;
 pub mod list;
 pub mod schema;
 
+use std::str::FromStr;
+
 use crate::{
     components::{
+        form::input::{Duration, Rate},
         icon::{
-            IconCircleStack, IconPaperAirplane, IconServerStack, IconShieldCheck, IconUserGroup,
+            IconCircleStack, IconCodeBracket, IconInbox, IconInboxArrowDown, IconInboxStack,
+            IconKey, IconServerStack, IconShieldCheck,
         },
         layout::{LayoutBuilder, MenuItem},
     },
@@ -15,6 +19,7 @@ use crate::{
     },
 };
 use ahash::AHashMap;
+use humansize::{format_size, DECIMAL};
 use leptos::view;
 use serde::{Deserialize, Serialize};
 
@@ -196,7 +201,28 @@ impl SettingsValues for Settings {
                 .first()
                 .map(|(_, v)| v.to_string())
                 .unwrap_or_default(),
-
+            Type::Boolean => {
+                if self.get(field.id).map_or(false, |s| s == "true") {
+                    "Yes".to_string()
+                } else {
+                    "No".to_string()
+                }
+            }
+            Type::Duration => self
+                .get(field.id)
+                .and_then(|s| Duration::from_str(s).ok())
+                .and_then(|d| d.format())
+                .unwrap_or_default(),
+            Type::Rate => self
+                .get(field.id)
+                .and_then(|s| Rate::from_str(s).ok())
+                .and_then(|d| d.format())
+                .unwrap_or_default(),
+            Type::Size => self
+                .get(field.id)
+                .and_then(|s| s.parse::<u64>().ok())
+                .map(|s| format_size(s, DECIMAL))
+                .unwrap_or_default(),
             _ => self
                 .get(field.id)
                 .map(|s| s.as_str())
@@ -240,20 +266,41 @@ impl LayoutBuilder {
             .create("Logging & Tracing")
             .route("/tracing")
             .insert()
+            // Cache
+            .create("Cache")
+            .route("/cache/edit")
             .insert()
-            // Stores
-            .create("Stores")
+            // Blocked IPs
+            .create("Blocked IPs")
+            .route("/blocked-ip")
+            .insert()
+            .insert()
+            // Storage
+            .create("Storage")
             .icon(view! { <IconCircleStack/> })
+            .create("Settings")
+            .route("/storage/edit")
+            .insert()
+            .create("Stores")
             .route("/store")
             .insert()
-            // Directories
+            .insert()
+            // Authentication
+            .create("Authentication")
+            .icon(view! { <IconKey/> })
+            .create("Settings")
+            .route("/authentication/edit")
+            .insert()
             .create("Directories")
-            .icon(view! { <IconUserGroup/> })
             .route("/directory")
+            .insert()
+            .create("OAuth")
+            .route("/oauth/edit")
+            .insert()
             .insert()
             // SMTP
             .create("SMTP")
-            .icon(view! { <IconPaperAirplane/> })
+            .icon(view! { <IconInboxArrowDown/> })
             .create("Inbound")
             .create("Connect stage")
             .route("/smtp-in-connect/edit")
@@ -336,14 +383,86 @@ impl LayoutBuilder {
             .route("/report/edit")
             .insert()
             .insert()
+            // JMAP
+            .create("JMAP")
+            .icon(view! { <IconInboxStack/> })
+            .create("Session")
+            .route("/jmap-session/edit")
+            .insert()
+            .create("Push Notifications")
+            .route("/jmap-push/edit")
+            .insert()
+            .create("Web Sockets")
+            .route("/jmap-web-sockets/edit")
+            .insert()
+            .create("Protocol Limits")
+            .route("/jmap-limits/edit")
+            .insert()
+            .create("Rate Limits")
+            .route("/jmap-rate-limit/edit")
+            .insert()
+            .insert()
+            // IMAP
+            .create("IMAP")
+            .icon(view! { <IconInbox/> })
+            .create("Authentication")
+            .route("/imap-auth/edit")
+            .insert()
+            .create("Settings")
+            .route("/imap-settings/edit")
+            .insert()
+            .create("Protocol Limits")
+            .route("/imap-limits/edit")
+            .insert()
+            .create("Rate Limits")
+            .route("/imap-rate-limit/edit")
+            .insert()
+            .insert()
             // SPAM Filter
             .create("SPAM Filter")
             .icon(view! { <IconShieldCheck/> })
+            .create("Settings")
+            .route("/spam-settings/edit")
+            .insert()
             .create("Scores")
             .route("/spam-scores")
             .insert()
             .create("Free domains")
             .route("/spam-free")
+            .insert()
+            .create("Disposable domains")
+            .route("/spam-disposable")
+            .insert()
+            .create("URL Redirectors")
+            .route("/spam-redirect")
+            .insert()
+            .create("Trusted domains")
+            .route("/spam-allow")
+            .insert()
+            .create("DMARC domains")
+            .route("/spam-dmarc")
+            .insert()
+            .create("SPF/DKIM domains")
+            .route("/spam-spdk")
+            .insert()
+            .create("Spam traps")
+            .route("/spam-trap")
+            .insert()
+            .create("MIME Types")
+            .route("/spam-mime")
+            .insert()
+            .insert()
+            // Sieve Scripting
+            .create("Sieve Scripting")
+            .icon(view! { <IconCodeBracket/> })
+            .create("Settings")
+            .route("/sieve-settings/edit")
+            .insert()
+            .create("Limits")
+            .route("/sieve-limits/edit")
+            .insert()
+            .create("Scripts")
+            .route("/script")
             .insert()
             .insert()
             .menu_items

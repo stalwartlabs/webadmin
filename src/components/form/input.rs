@@ -670,7 +670,7 @@ pub fn TextArea(
 }
 
 #[derive(Default, PartialEq, Eq, Clone)]
-struct Duration {
+pub struct Duration {
     pub value: String,
     pub unit: String,
 }
@@ -714,7 +714,7 @@ impl std::fmt::Display for Duration {
 }
 
 #[derive(Default, PartialEq, Eq, Clone)]
-struct Rate {
+pub struct Rate {
     pub amount: String,
     pub period: Duration,
 }
@@ -760,6 +760,26 @@ impl Duration {
         self.value = value.to_string();
         self
     }
+
+    pub fn format(&self) -> Option<String> {
+        if !self.value.is_empty() && !self.unit.is_empty() {
+            Some(format!(
+                "{} {}{}",
+                self.value,
+                match self.unit.as_str() {
+                    "ms" => "millisecond",
+                    "s" => "second",
+                    "m" => "minute",
+                    "h" => "hour",
+                    "d" => "day",
+                    _ => "",
+                },
+                if self.value == "1" { "" } else { "s" }
+            ))
+        } else {
+            None
+        }
+    }
 }
 
 impl Rate {
@@ -771,5 +791,27 @@ impl Rate {
     pub fn duration_value(mut self, value: u64) -> Self {
         self.period.value = value.to_string();
         self
+    }
+
+    pub fn format(&self) -> Option<String> {
+        if !self.amount.is_empty() && !self.period.value.is_empty() && !self.period.unit.is_empty()
+        {
+            Some(format!(
+                "{} every {} {}{}",
+                self.amount,
+                self.period.value,
+                match self.period.unit.as_str() {
+                    "ms" => "millisecond",
+                    "s" => "second",
+                    "m" => "minute",
+                    "h" => "hour",
+                    "d" => "day",
+                    _ => "",
+                },
+                if self.period.value == "1" { "" } else { "s" }
+            ))
+        } else {
+            None
+        }
     }
 }

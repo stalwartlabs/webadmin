@@ -1,27 +1,6 @@
 use crate::core::schema::*;
 
 use super::smtp::*;
-/*
-
-- DKIM
-  - Signatures
-  - Verify
-  - Sign
-  - Report
-- SPF
-  - Verify (EHLO, MAIL FROM)
-  - Report
-- ARC
-  - Verify
-  - Seal
-- DMARC
-   - Verify
-   - Report
-- Reporting
-   - Analysis
-   - DSN
-   - TLS
-*/
 
 impl Builder<Schemas, ()> {
     pub fn build_mail_auth(self) -> Self {

@@ -631,6 +631,19 @@ impl Builder<(Schemas, Schema), Field> {
         self
     }
 
+    pub fn source_filter(mut self, filters: &'static [&'static str]) -> Self {
+        match &mut self.item.typ_ {
+            Type::Select {
+                source: Source::Dynamic { filter, .. },
+                ..
+            } => {
+                filter.push_else(filters);
+            }
+            _ => panic!("Field type is not a dynamic source."),
+        }
+        self
+    }
+
     pub fn input_check_if_eq(
         mut self,
         field: &'static str,

@@ -22,13 +22,12 @@ impl Builder<Schemas, ()> {
             )
             .default("8192")
             .build()
-            // Fail2ban
-            .new_field("server.security.fail2ban")
-            .label("Fail2ban rate")
-            .help("The maximum number of failed login attempts before the IP is banned")
-            .typ(Type::Rate)
-            .default("100/1d")
-            .input_check([], [Validator::Required])
+            // HTTP headers
+            .new_field("server.http.headers")
+            .label("Add headers")
+            .help("Additional headers to include in HTTP responses")
+            .typ(Type::Array)
+            .input_check([Transformer::Trim], [])
             .build()
             // Network fields
             .add_network_fields(false)
@@ -36,10 +35,6 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Network settings")
             .fields(["server.hostname", "server.max-connections"])
-            .build()
-            .new_form_section()
-            .title("Security")
-            .fields(["server.security.fail2ban"])
             .build()
             .new_form_section()
             .title("Proxy protocol")
@@ -58,6 +53,10 @@ impl Builder<Schemas, ()> {
                 "server.socket.reuse-addr",
                 "server.socket.reuse-port",
             ])
+            .build()
+            .new_form_section()
+            .title("HTTP headers")
+            .fields(["server.http.headers"])
             .build()
             .build()
             // Common settings
@@ -96,6 +95,91 @@ impl Builder<Schemas, ()> {
             .title("Thread pool")
             .fields(["global.thread-pool"])
             .build()
+            .build()
+            // Caching
+            .new_schema("cache")
+            .new_field("cache.capacity")
+            .label("Initial capacity")
+            .help("The initial capacity of the cache")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::MinValue(1.into())],
+            )
+            .default("512")
+            .build()
+            .new_field("cache.shard")
+            .label("Shard size")
+            .help("The number of shards in the cache")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::MinValue(2.into())],
+            )
+            .default("32")
+            .build()
+            .new_field("cache.account.size")
+            .label("Account")
+            .help("The size of the account cache")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::MinValue(1.into())],
+            )
+            .default("2048")
+            .build()
+            .new_field("cache.mailbox.size")
+            .label("Mailbox")
+            .help("The size of the mailbox cache")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::MinValue(1.into())],
+            )
+            .default("2048")
+            .build()
+            .new_field("cache.thread.size")
+            .label("Thread Ids")
+            .help("The size of the thread id cache")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::MinValue(1.into())],
+            )
+            .default("2048")
+            .build()
+            .new_form_section()
+            .title("Cache settings")
+            .fields(["cache.capacity", "cache.shard"])
+            .build()
+            .new_form_section()
+            .title("Message cache size")
+            .fields([
+                "cache.account.size",
+                "cache.mailbox.size",
+                "cache.thread.size",
+            ])
+            .build()
+            .build()
+            // Blocked IP addresses
+            .new_schema("blocked-ip")
+            .names("address", "addresses")
+            .prefix("server.blocked-ip")
+            .new_id_field()
+            .label("IP Address(es)")
+            .help("The IP address or mask to block")
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsIpOrMask],
+            )
+            .build()
+            .new_form_section()
+            .field("_id")
+            .build()
+            .list_title("Blocked IP addresses")
+            .list_subtitle("Manage blocked IP addresses")
+            .list_fields(["_id"])
+            .list_actions([Action::Create, Action::Delete, Action::Search])
             .build()
     }
 }

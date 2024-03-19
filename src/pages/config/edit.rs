@@ -51,7 +51,7 @@ enum FetchResult {
     NotFound,
 }
 
-const DEFAULT_REDIRECT_URL: &str = "/settings/store";
+const DEFAULT_REDIRECT_URL: &str = "/settings/network/edit";
 
 #[component]
 pub fn SettingsEdit() -> impl IntoView {
@@ -83,28 +83,34 @@ pub fn SettingsEdit() -> impl IntoView {
                 // Fetch external sources
                 let mut external_sources = ExternalSources::new();
                 for (schema, field) in schema.external_sources() {
-                    let items = HttpRequest::get("/api/settings/group")
-                        .with_authorization(&auth)
-                        .with_parameter("prefix", schema.unwrap_prefix())
-                        .with_parameter("suffix", schema.try_unwrap_suffix().unwrap_or_default())
-                        .with_parameter("field", field.id)
-                        .send::<List<Settings>>()
-                        .await?
-                        .items;
+                    let source_key = format!("{}_{}", schema.id, field.id);
+                    if !external_sources.contains_key(&source_key) {
+                        let items = HttpRequest::get("/api/settings/group")
+                            .with_authorization(&auth)
+                            .with_parameter("prefix", schema.unwrap_prefix())
+                            .with_parameter(
+                                "suffix",
+                                schema.try_unwrap_suffix().unwrap_or_default(),
+                            )
+                            .with_parameter("field", field.id)
+                            .send::<List<Settings>>()
+                            .await?
+                            .items;
 
-                    external_sources.insert(
-                        format!("{}_{}", schema.id, field.id),
-                        items
-                            .into_iter()
-                            .filter_map(|mut item| {
-                                (
-                                    item.remove("_id")?,
-                                    item.remove(field.id).unwrap_or_default(),
-                                )
-                                    .into()
-                            })
-                            .collect::<Vec<_>>(),
-                    );
+                        external_sources.insert(
+                            source_key,
+                            items
+                                .into_iter()
+                                .filter_map(|mut item| {
+                                    (
+                                        item.remove("_id")?,
+                                        item.remove(field.id).unwrap_or_default(),
+                                    )
+                                        .into()
+                                })
+                                .collect::<Vec<_>>(),
+                        );
+                    }
                 }
 
                 // Fetch settings

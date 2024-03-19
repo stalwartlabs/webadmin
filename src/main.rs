@@ -21,7 +21,7 @@ use crate::{
         config::{edit::SettingsEdit, list::SettingsList},
         login::Login,
         notfound::NotFound,
-        /*directory::{
+        directory::{
             domains::{edit::DomainCreate, list::DomainList},
             principals::{edit::PrincipalEdit, list::PrincipalList},
         },
@@ -29,7 +29,7 @@ use crate::{
             messages::{list::QueueList, manage::QueueManage},
             reports::{display::ReportDisplay, list::ReportList},
         },
-        reports::{display::IncomingReportDisplay, list::IncomingReportList},*/
+        reports::{display::IncomingReportDisplay, list::IncomingReportList},
     },
 };
 
@@ -111,42 +111,6 @@ pub fn App() -> impl IntoView {
     view! {
         <Router>
             <Routes>
-
-                <ProtectedRoute
-                    path="/settings"
-                    view=move || {
-                        view! { <Layout menu_items=LayoutBuilder::settings()/> }
-                    }
-
-                    redirect_path="/login"
-                    condition=move || is_logged_in.get()
-                >
-                    <ProtectedRoute
-                        path="/:object"
-                        view=SettingsList
-                        redirect_path="/login"
-                        condition=move || is_logged_in.get()
-                    />
-                    <ProtectedRoute
-                        path="/:object/:id?/edit"
-                        view=SettingsEdit
-                        redirect_path="/login"
-                        condition=move || is_logged_in.get()
-                    />
-
-                </ProtectedRoute>
-
-                <Route path="/" view=Login/>
-                <Route path="/login" view=Login/>
-                <Route path="/*any" view=NotFound/>
-            </Routes>
-        </Router>
-        <div id="portal_root"></div>
-    }
-}
-
-/*
-
                 <ProtectedRoute
                     path="/manage"
                     view=move || {
@@ -219,8 +183,38 @@ pub fn App() -> impl IntoView {
                         condition=move || is_logged_in.get()
                     />
                 </ProtectedRoute>
+                <ProtectedRoute
+                    path="/settings"
+                    view=move || {
+                        view! { <Layout menu_items=LayoutBuilder::settings()/> }
+                    }
 
-*/
+                    redirect_path="/login"
+                    condition=move || is_logged_in.get()
+                >
+                    <ProtectedRoute
+                        path="/:object"
+                        view=SettingsList
+                        redirect_path="/login"
+                        condition=move || is_logged_in.get()
+                    />
+                    <ProtectedRoute
+                        path="/:object/:id?/edit"
+                        view=SettingsEdit
+                        redirect_path="/login"
+                        condition=move || is_logged_in.get()
+                    />
+
+                </ProtectedRoute>
+
+                <Route path="/" view=Login/>
+                <Route path="/login" view=Login/>
+                <Route path="/*any" view=NotFound/>
+            </Routes>
+        </Router>
+        <div id="portal_root"></div>
+    }
+}
 
 impl LayoutBuilder {
     pub fn manage() -> Vec<MenuItem> {
@@ -272,6 +266,8 @@ pub fn build_schemas() -> Arc<Schemas> {
         //.build_domains()
         .build_store()
         .build_directory()
+        .build_authentication()
+        .build_storage()
         .build_tls()
         .build_server()
         .build_listener()
@@ -279,6 +275,9 @@ pub fn build_schemas() -> Arc<Schemas> {
         .build_smtp_inbound()
         .build_smtp_outbound()
         .build_mail_auth()
+        .build_jmap()
+        .build_imap()
+        .build_sieve()
         .build_spam_lists()
         .build()
         .into()

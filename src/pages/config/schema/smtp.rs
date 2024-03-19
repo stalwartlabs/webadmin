@@ -470,38 +470,38 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check([], [Validator::Required, Validator::IsUrl])
             .build()
-            .new_field("resolver.cache.txt")
+            .new_field("cache.resolver.txt")
             .label("TXT Records")
             .help(concat!("Number of TXT records to cache"))
             .default("2048")
             .typ(Type::Input)
             .input_check([], [Validator::Required, Validator::MaxValue(1.into())])
-            .new_field("resolver.cache.mx")
+            .new_field("cache.resolver.mx")
             .label("MX Records")
             .help(concat!("Number of MX records to cache"))
             .default("1024")
             .typ(Type::Input)
-            .new_field("resolver.cache.ipv4")
+            .new_field("cache.resolver.ipv4")
             .label("IPv4 Records")
             .help(concat!("Number of IPv4 records to cache"))
             .default("1024")
             .typ(Type::Input)
-            .new_field("resolver.cache.ipv6")
+            .new_field("cache.resolver.ipv6")
             .label("IPv6 Records")
             .help(concat!("Number of IPv6 records to cache"))
             .default("1024")
             .typ(Type::Input)
-            .new_field("resolver.cache.ptr")
+            .new_field("cache.resolver.ptr")
             .label("PTR Records")
             .help(concat!("Number of PTR records to cache"))
             .default("1024")
             .typ(Type::Input)
-            .new_field("resolver.cache.tlsa")
+            .new_field("cache.resolver.tlsa")
             .label("TLSA Records")
             .help(concat!("Number of TLSA records to cache"))
             .default("1024")
             .typ(Type::Input)
-            .new_field("resolver.cache.mta-sts")
+            .new_field("cache.resolver.mta-sts")
             .label("MTA-STS Records")
             .help(concat!("Number of MTA-STS records to cache"))
             .default("1024")
@@ -523,13 +523,13 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("DNS Record Cache")
             .fields([
-                "resolver.cache.txt",
-                "resolver.cache.mx",
-                "resolver.cache.ipv4",
-                "resolver.cache.ipv6",
-                "resolver.cache.ptr",
-                "resolver.cache.tlsa",
-                "resolver.cache.mta-sts",
+                "cache.resolver.txt",
+                "cache.resolver.mx",
+                "cache.resolver.ipv4",
+                "cache.resolver.ipv6",
+                "cache.resolver.ptr",
+                "cache.resolver.tlsa",
+                "cache.resolver.mta-sts",
             ])
             .build()
             .build()

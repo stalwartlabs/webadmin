@@ -1,17 +1,255 @@
 use super::*;
 
-/*const LIST_TYPE: &[(&str, &str)] = &[
-    ("0", "Text"),
-    ("1", "Glob pattern"),
-    ("2", "Regular expression"),
-    ("3", "IP Address"),
-    ("4", "IP Mask"),
-];*/
+/*
+
+[spam.header]
+add-spam = true
+add-spam-result = true
+is-spam = "X-Spam-Status: Yes"
+
+[spam.autolearn]
+enable = true
+balance = 0.9
+
+[spam.autolearn.ham]
+replies = true
+threshold = -0.5
+
+[spam.autolearn.spam]
+threshold = 6.0
+
+[spam.threshold]
+spam = 5.0
+discard = 0
+reject = 0
+
+[spam.data]
+directory = ""
+lookup = ""
+
+[cache.bayes]
+capacity = 8192
+
+[cache.bayes.ttl]
+positive = "1h"
+negative = "1h"
+
+
+*/
 
 impl Builder<Schemas, ()> {
     pub fn build_spam_lists(self) -> Self {
-        // SPAM free domains
-        self.new_schema("spam-free")
+        // Anti-SPAM settings
+        self.new_schema("spam-settings")
+            .new_field("spam.header.add-spam")
+            .label("Add SPAM header")
+            .help("Whether to add the X-Spam-Status header to messages that are detected as SPAM")
+            .default("true")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("spam.header.add-spam-result")
+            .label("Add SPAM result header")
+            .help("Whether to add the X-Spam-Result header to messages that are detected as SPAM")
+            .default("true")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("spam.header.is-spam")
+            .label("SPAM header")
+            .help("Move messages to the Junk folder if this header is present")
+            .default("X-Spam-Status: Yes")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .build()
+            .new_field("spam.autolearn.enable")
+            .label("Enable autolearning")
+            .help("Whether the bayes classifier should be trained automatically")
+            .default("true")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("spam.autolearn.balance")
+            .label("Balance")
+            .help("Keep difference for spam/ham learns for at least this value")
+            .default("0.9")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::MinValue((-100.0).into()),
+                    Validator::MaxValue(100.0.into()),
+                ],
+            )
+            .build()
+            .new_field("spam.autolearn.ham.replies")
+            .label("Replies as Ham")
+            .help("Whether message replies from authenticated users should be learned as ham")
+            .default("true")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("spam.autolearn.ham.threshold")
+            .label("Ham threshold")
+            .help("When to learn ham (score >= threshold)")
+            .default("-0.5")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::MinValue((-100.0).into()),
+                    Validator::MaxValue(100.0.into()),
+                ],
+            )
+            .build()
+            .new_field("spam.autolearn.spam.threshold")
+            .label("Spam threshold")
+            .help("When to learn spam (score >= threshold)")
+            .default("6.0")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::MinValue((-100.0).into()),
+                    Validator::MaxValue(100.0.into()),
+                ],
+            )
+            .build()
+            .new_field("spam.threshold.spam")
+            .label("Spam threshold")
+            .help("Mark as SPAM messages with a score above this threshold")
+            .default("5.0")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::MinValue((-100.0).into()),
+                    Validator::MaxValue(100.0.into()),
+                ],
+            )
+            .build()
+            .new_field("spam.threshold.discard")
+            .label("Discard threshold")
+            .help("Discard messages with a score above this threshold")
+            .default("0")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::MinValue((-100.0).into()),
+                    Validator::MaxValue(100.0.into()),
+                ],
+            )
+            .build()
+            .new_field("spam.threshold.reject")
+            .label("Reject threshold")
+            .help("Reject messages with a score above this threshold")
+            .default("0")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::MinValue((-100.0).into()),
+                    Validator::MaxValue(100.0.into()),
+                ],
+            )
+            .build()
+            .new_field("spam.data.directory")
+            .label("Directory")
+            .help("Directory to use for local domain lookups (leave empty for default)")
+            .typ(Type::Select {
+                source: Source::Dynamic {
+                    schema: "directory",
+                    field: "type",
+                    filter: Default::default(),
+                },
+                multi: false,
+            })
+            .build()
+            .new_field("spam.data.lookup")
+            .label("Lookup")
+            .help("Lookup store to use for Bayes tokens and ids (leave empty for default)")
+            .typ(Type::Select {
+                source: Source::Dynamic {
+                    schema: "store",
+                    field: "type",
+                    filter: Default::default(),
+                },
+                multi: false,
+            })
+            .source_filter(&[
+                "foundationdb",
+                "mysql",
+                "postgresql",
+                "sqlite",
+                "rocksdb",
+                "redis",
+            ])
+            .build()
+            .new_field("cache.bayes.capacity")
+            .label("Capacity")
+            .help("Starting capacity for the Bayes cache")
+            .default("8192")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .build()
+            .new_field("cache.bayes.ttl.positive")
+            .label("Positive TTL")
+            .help("Time to live for Bayes tokens that were found in the database")
+            .default("1h")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("cache.bayes.ttl.negative")
+            .label("Negative TTL")
+            .help("Time to live for Bayes tokens that do not exist in the database")
+            .default("1h")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_form_section()
+            .title("Header")
+            .fields([
+                "spam.header.add-spam",
+                "spam.header.add-spam-result",
+                "spam.header.is-spam",
+            ])
+            .build()
+            .new_form_section()
+            .title("Thresholds")
+            .fields([
+                "spam.threshold.spam",
+                "spam.threshold.discard",
+                "spam.threshold.reject",
+            ])
+            .build()
+            .new_form_section()
+            .title("Data")
+            .fields(["spam.data.directory", "spam.data.lookup"])
+            .build()
+            .new_form_section()
+            .title("Bayes Autolearn")
+            .fields([
+                "spam.autolearn.enable",
+                "spam.autolearn.balance",
+                "spam.autolearn.spam.threshold",
+                "spam.autolearn.ham.threshold",
+                "spam.autolearn.ham.replies",
+            ])
+            .build()
+            .new_form_section()
+            .title("Bayes Token Cache")
+            .fields([
+                "cache.bayes.capacity",
+                "cache.bayes.ttl.positive",
+                "cache.bayes.ttl.negative",
+            ])
+            .build()
+            .build()
+            // SPAM free domains
+            .new_schema("spam-free")
             .names("domain", "domains")
             .prefix("lookup.spam-free")
             .new_id_field()
@@ -27,6 +265,126 @@ impl Builder<Schemas, ()> {
             .build()
             .list_title("Free domain names")
             .list_subtitle("Manage domain names from free e-mail providers")
+            .list_fields(["_id"])
+            .list_actions([Action::Create, Action::Delete, Action::Search])
+            .build()
+            // Disposable domains
+            .new_schema("spam-disposable")
+            .names("domain", "domains")
+            .prefix("lookup.spam-disposable")
+            .new_id_field()
+            .label("Domain Name")
+            .help("The domain name to be added to the disposable domains list")
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsRegex],
+            )
+            .build()
+            .new_form_section()
+            .field("_id")
+            .build()
+            .list_title("Disposable domain names")
+            .list_subtitle("Manage domain names from disposable e-mail providers")
+            .list_fields(["_id"])
+            .list_actions([Action::Create, Action::Delete, Action::Search])
+            .build()
+            // URL Redirectors
+            .new_schema("spam-redirect")
+            .names("domain", "domains")
+            .prefix("lookup.spam-redirect")
+            .new_id_field()
+            .label("Domain Name")
+            .help("The domain name to be added to the URL redirectors list")
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsRegex],
+            )
+            .build()
+            .new_form_section()
+            .field("_id")
+            .build()
+            .list_title("URL redirector domains")
+            .list_subtitle("Manage domain names from URL redirection services")
+            .list_fields(["_id"])
+            .list_actions([Action::Create, Action::Delete, Action::Search])
+            .build()
+            // Domain allow list
+            .new_schema("spam-allow")
+            .names("domain", "domains")
+            .prefix("lookup.spam-allow")
+            .new_id_field()
+            .label("Domain Name")
+            .help("The domain name to be added to the allow domains list")
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsRegex],
+            )
+            .build()
+            .new_form_section()
+            .field("_id")
+            .build()
+            .list_title("Trusted domain names")
+            .list_subtitle("Manage trusted domain names")
+            .list_fields(["_id"])
+            .list_actions([Action::Create, Action::Delete, Action::Search])
+            .build()
+            // DMARC allow list
+            .new_schema("spam-dmarc")
+            .names("domain", "domains")
+            .prefix("lookup.spam-dmarc")
+            .new_id_field()
+            .label("Domain Name")
+            .help("The domain name to be added to the DMARC domains allow list")
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsRegex],
+            )
+            .build()
+            .new_form_section()
+            .field("_id")
+            .build()
+            .list_title("DMARC domain names")
+            .list_subtitle("Manage domain names that are known to have valid DMARC records")
+            .list_fields(["_id"])
+            .list_actions([Action::Create, Action::Delete, Action::Search])
+            .build()
+            // SPF/DKIM allow list
+            .new_schema("spam-spdk")
+            .names("domain", "domains")
+            .prefix("lookup.spam-spdk")
+            .new_id_field()
+            .label("Domain Name")
+            .help("The domain name to be added to the SPF and DKIM domains allow list")
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsRegex],
+            )
+            .build()
+            .new_form_section()
+            .field("_id")
+            .build()
+            .list_title("SPF and DKIM domain names")
+            .list_subtitle("Manage domain names that are known to have valid SPF or DKIM records")
+            .list_fields(["_id"])
+            .list_actions([Action::Create, Action::Delete, Action::Search])
+            .build()
+            // SPAM trap addresses
+            .new_schema("spam-trap")
+            .names("address", "addresses")
+            .prefix("lookup.spam-trap")
+            .new_id_field()
+            .label("E-mail Address")
+            .help("The e-mail address to be added to the SPAM trap list")
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsRegex],
+            )
+            .build()
+            .new_form_section()
+            .field("_id")
+            .build()
+            .list_title("SPAM trap addresses")
+            .list_subtitle("Manage e-mail addresses designated as SPAM traps")
             .list_fields(["_id"])
             .list_actions([Action::Create, Action::Delete, Action::Search])
             .build()
@@ -59,6 +417,30 @@ impl Builder<Schemas, ()> {
             .build()
             .list_title("SPAM Scores")
             .list_subtitle("Manage scores assigned to spam tags")
+            .list_fields(["_id", "_value"])
+            .build()
+            // MIME-types
+            .new_schema("spam-mime")
+            .names("type", "types")
+            .prefix("lookup.spam-mime")
+            .new_id_field()
+            .label("Extension")
+            .help("The file name extension")
+            .input_check(
+                [Transformer::RemoveSpaces, Transformer::Uppercase],
+                [Validator::Required, Validator::IsId],
+            )
+            .build()
+            .new_value_field()
+            .label("Rule")
+            .help("The mime-type rule for this file name extension")
+            .input_check([Transformer::Trim], [Validator::Required])
+            .build()
+            .new_form_section()
+            .fields(["_id", "_value"])
+            .build()
+            .list_title("MIME Types")
+            .list_subtitle("Manage rules for file name extensions")
             .list_fields(["_id", "_value"])
             .build()
     }
