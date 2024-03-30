@@ -1,7 +1,13 @@
 use crate::core::schema::*;
 
+use super::smtp::{FUNCTIONS_MAP, IN_DATA_VARIABLES};
+
 impl Builder<Schemas, ()> {
     pub fn build_sieve(self) -> Self {
+        let data_expr = ExpressionValidator::default()
+            .variables(IN_DATA_VARIABLES)
+            .functions(FUNCTIONS_MAP);
+
         self.new_schema("sieve-settings")
             .new_field("sieve.untrusted.disable-capabilities")
             .label("Disable Capabilities")
@@ -73,20 +79,16 @@ impl Builder<Schemas, ()> {
                 "Default name to use for the from field in email notifications ",
                 "sent from a Sieve script"
             ))
-            .default("Automated Message")
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
-            .build()
+            .default("'Automated Message'")
+            .typ(Type::Expression)
+            .input_check([], [Validator::IsValidExpression(data_expr)])
             .new_field("sieve.trusted.from-addr")
             .label("From Address")
             .help(concat!(
                 "Default email address to use for the from field in email ",
                 "notifications sent from a Sieve script"
             ))
-            .placeholder("no-reply@%example.com")
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
-            .build()
+            .placeholder("'no-reply@%example.com'")
             .new_field("sieve.trusted.return-path")
             .label("Return Path")
             .help(concat!(
@@ -94,8 +96,12 @@ impl Builder<Schemas, ()> {
                 "a Sieve script"
             ))
             .default("")
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
+            .new_field("sieve.trusted.sign")
+            .label("DKIM Signatures")
+            .help(concat!(
+                "DKIM signatures to add to email notifications sent from ",
+                "a Sieve script"
+            ))
             .build()
             .new_field("sieve.trusted.hostname")
             .label("Hostname")
@@ -107,7 +113,7 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [])
             .build()
             .new_field("sieve.trusted.no-capability-check")
-            .label("No Capability Check")
+            .label("Allow undeclared capabilities")
             .help(concat!(
                 "If enabled, language extensions can be used without being ",
                 "explicitly declared using the require statement"
@@ -125,15 +131,6 @@ impl Builder<Schemas, ()> {
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
-            .new_field("sieve.trusted.sign")
-            .label("DKIM Signatures")
-            .help(concat!(
-                "DKIM signatures to add to email notifications sent from ",
-                "a Sieve script"
-            ))
-            .typ(Type::Array)
-            .input_check([Transformer::Trim], [])
-            .build()
             .new_form_section()
             .title("Untrusted Interpreter")
             .fields([
@@ -148,9 +145,9 @@ impl Builder<Schemas, ()> {
                 "sieve.trusted.from-name",
                 "sieve.trusted.from-addr",
                 "sieve.trusted.return-path",
+                "sieve.trusted.sign",
                 "sieve.trusted.hostname",
                 "sieve.trusted.no-capability-check",
-                "sieve.trusted.sign",
             ])
             .build()
             .new_form_section()
@@ -308,18 +305,17 @@ impl Builder<Schemas, ()> {
             // Scripts
             .new_schema("script")
             .prefix("sieve.trusted.scripts")
-            .suffix("snippet")
+            .suffix("contents")
             .names("script", "scripts")
             .new_id_field()
             .label("Script Id")
             .help("Unique identifier for the script")
             .build()
-            .new_field("snippet")
-            .label("Sub-script")
-            .help("Whether this script is included from another script and should be ignored by the compiler")
-            .typ(Type::Boolean)
-            .readonly()
-            .default("false")
+            .new_field("name")
+            .label("Description")
+            .help("Brief description of the Sieve script")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_field("contents")
             .label("Contents")
@@ -329,11 +325,11 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Sieve Script")
-            .fields(["_id", "contents", "snippet"])
+            .fields(["_id", "name", "contents"])
             .build()
             .list_title("Sieve scripts")
             .list_subtitle("Manage Sieve scripts executed by the trusted interpreter")
-            .list_fields(["_id", "snippet"])
+            .list_fields(["_id", "name"])
             .build()
     }
 }

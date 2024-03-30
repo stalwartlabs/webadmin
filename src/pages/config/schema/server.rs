@@ -1,16 +1,14 @@
 use crate::core::schema::*;
 
+use super::smtp::{FUNCTIONS_MAP, IN_CONNECT_VARIABLES};
+
 impl Builder<Schemas, ()> {
     pub fn build_server(self) -> Self {
+        let connect_expr = ExpressionValidator::default()
+            .variables(IN_CONNECT_VARIABLES)
+            .functions(FUNCTIONS_MAP);
+
         self.new_schema("network")
-            // Hostname
-            .new_field("server.hostname")
-            .label("Hostname")
-            .help("The hostname of the server")
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::Required])
-            .placeholder("mail.example.com")
-            .build()
             // Max connections
             .new_field("server.max-connections")
             .label("Max connections")
@@ -22,6 +20,30 @@ impl Builder<Schemas, ()> {
             )
             .default("8192")
             .build()
+            // HTTP base URL
+            .new_field("server.http.url")
+            .label("Base URL")
+            .help("The base URL for the HTTP server")
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(connect_expr),
+                ],
+            )
+            .default("protocol + '://' + key_get('default', 'hostname') + ':' + local_port")
+            .build()
+            // Use X-Forwarded-For
+            .new_field("server.http.use-x-forwarded")
+            .label("Use X-Forwarded")
+            .help(concat!(
+                "Specifies whether to use the X-Forwarded-For header to ",
+                "determine the client's IP address"
+            ))
+            .typ(Type::Boolean)
+            .default("false")
+            .build()
             // HTTP headers
             .new_field("server.http.headers")
             .label("Add headers")
@@ -29,16 +51,35 @@ impl Builder<Schemas, ()> {
             .typ(Type::Array)
             .input_check([Transformer::Trim], [])
             .build()
+            // Cluster node ID
+            .new_field("cluster.node-id")
+            .label("Node ID")
+            .help(concat!("Unique identifier for this node in the cluster"))
+            .default("1")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::MinValue(0.into())],
+            )
+            .build()
             // Network fields
             .add_network_fields(false)
             // Forms
             .new_form_section()
-            .title("Network settings")
-            .fields(["server.hostname", "server.max-connections"])
+            .title("HTTP Settings")
+            .fields([
+                "server.http.url",
+                "server.http.headers",
+                "server.http.use-x-forwarded",
+            ])
             .build()
             .new_form_section()
-            .title("Proxy protocol")
-            .fields(["server.proxy.trusted-networks"])
+            .title("Network settings")
+            .fields(["server.max-connections", "server.proxy.trusted-networks"])
+            .build()
+            .new_form_section()
+            .title("Cluster")
+            .fields(["cluster.node-id"])
             .build()
             .new_form_section()
             .title("Socket options")
@@ -54,13 +95,53 @@ impl Builder<Schemas, ()> {
                 "server.socket.reuse-port",
             ])
             .build()
-            .new_form_section()
-            .title("HTTP headers")
-            .fields(["server.http.headers"])
-            .build()
             .build()
             // Common settings
             .new_schema("system")
+            // Default hostname
+            .new_field("lookup.default.hostname")
+            .label("Hostname")
+            .help("The default system hostname")
+            .placeholder("mail.example.com")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsHost],
+            )
+            // Default hostname
+            .new_field("lookup.default.domain")
+            .label("Domain")
+            .help("The default domain name")
+            .placeholder("example.com")
+            .build()
+            // Local keys
+            .new_field("config.local-keys")
+            .label("Local settings")
+            .help(concat!(
+                "List of glob expressions for local configuration keys",
+                " that should be stored locally in the configuration file.",
+                "All other keys will be stored in the database."
+            ))
+            .typ(Type::Array)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .default(
+                &[
+                    "store.*",
+                    "!store.*.query.*",
+                    "server.listener.*",
+                    "server.socket.*",
+                    "server.tls.*",
+                    "cluster.node-id",
+                    "storage.data",
+                    "storage.blob",
+                    "storage.lookup",
+                    "storage.fts",
+                    "server.run-as.user",
+                    "server.run-as.group",
+                    "config.local-keys.*",
+                ][..],
+            )
+            .build()
             // Run as user
             .new_field("server.run-as.user")
             .label("User")
@@ -88,12 +169,20 @@ impl Builder<Schemas, ()> {
             .placeholder("8")
             .build()
             .new_form_section()
+            .title("Defaults")
+            .fields(["lookup.default.hostname", "lookup.default.domain"])
+            .build()
+            .new_form_section()
             .title("Run as")
             .fields(["server.run-as.user", "server.run-as.group"])
             .build()
             .new_form_section()
             .title("Thread pool")
             .fields(["global.thread-pool"])
+            .build()
+            .new_form_section()
+            .title("Local configuration keys")
+            .fields(["config.local-keys"])
             .build()
             .build()
             // Caching
@@ -215,14 +304,7 @@ impl Builder<Schemas, Schema> {
         ))
         .default("1024")
         .typ(Type::Input)
-        .input_check(
-            [Transformer::Trim],
-            if is_listener {
-                vec![Validator::MinValue(1.into())]
-            } else {
-                vec![Validator::Required, Validator::MinValue(1.into())]
-            },
-        )
+        .input_check([Transformer::Trim], vec![Validator::MinValue(1.into())])
         .display_if_eq("socket.override", do_override.iter().copied())
         .build()
         // TTL
@@ -303,6 +385,7 @@ impl Builder<Schemas, Schema> {
         .help("Whether the Nagle algorithm should be disabled for the socket")
         .default("true")
         .typ(Type::Boolean)
+        .input_check([], [Validator::Required])
         .display_if_eq("socket.override", do_override.iter().copied())
         .build()
         // Reuse addr
@@ -318,6 +401,7 @@ impl Builder<Schemas, Schema> {
         ))
         .default("true")
         .typ(Type::Boolean)
+        .input_check([], [Validator::Required])
         .display_if_eq("socket.override", do_override.iter().copied())
         .build()
         // Reuse port
@@ -330,6 +414,7 @@ impl Builder<Schemas, Schema> {
         .help("Whether multiple sockets can be bound to the same address and port")
         .default("true")
         .typ(Type::Boolean)
+        .input_check([], [Validator::Required])
         .display_if_eq("socket.override", do_override.iter().copied())
         .build()
     }

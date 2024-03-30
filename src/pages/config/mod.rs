@@ -238,6 +238,10 @@ impl LayoutBuilder {
             // Server
             .create("Server")
             .icon(view! { <IconServerStack/> })
+            // System
+            .create("System")
+            .route("/system/edit")
+            .insert()
             // Network
             .create("Network")
             .route("/network/edit")
@@ -248,19 +252,15 @@ impl LayoutBuilder {
             .insert()
             // TLS
             .create("TLS")
-            .create("Settings")
-            .route("/tls/edit")
-            .insert()
             .create("ACME Providers")
             .route("/acme")
             .insert()
             .create("Certificates")
             .route("/certificate")
             .insert()
+            .create("Defaults")
+            .route("/tls/edit")
             .insert()
-            // System
-            .create("System")
-            .route("/system/edit")
             .insert()
             // Logging
             .create("Logging & Tracing")

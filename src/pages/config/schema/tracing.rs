@@ -3,16 +3,16 @@ use crate::core::schema::*;
 impl Builder<Schemas, ()> {
     pub fn build_tracing(self) -> Self {
         self.new_schema("tracing")
-            .names("logger", "loggers")
-            .prefix("tracing")
-            .suffix("method")
+            .names("tracer", "tracers")
+            .prefix("tracer")
+            .suffix("type")
             // Id
             .new_id_field()
             .label("Logger Id")
-            .help("Unique identifier for the logger")
+            .help("Unique identifier for the tracer")
             .build()
             // Type
-            .new_field("method")
+            .new_field("type")
             .typ(Type::Select {
                 multi: false,
                 source: Source::Static(&[
@@ -23,7 +23,7 @@ impl Builder<Schemas, ()> {
                 ]),
             })
             .label("Method")
-            .help("The type of logger")
+            .help("The type of tracer")
             .input_check([], [Validator::Required])
             .default("log")
             .build()
@@ -46,7 +46,7 @@ impl Builder<Schemas, ()> {
                 ]),
             })
             .label("Logging level")
-            .help("The logging level for this logger")
+            .help("The logging level for this tracer")
             .input_check([], [Validator::Required])
             .default("info")
             .build()
@@ -54,7 +54,7 @@ impl Builder<Schemas, ()> {
             .new_field("enable")
             .typ(Type::Boolean)
             .label("Enable")
-            .help("Enable or disable the logger")
+            .help("Enable or disable the tracer")
             .default("true")
             .build()
             // Log Path
@@ -64,7 +64,7 @@ impl Builder<Schemas, ()> {
             .help("The path to the log file")
             .placeholder("/var/log")
             .input_check([Transformer::Trim], [Validator::Required])
-            .display_if_eq("method", ["log"])
+            .display_if_eq("type", ["log"])
             .build()
             // Log Prefix
             .new_field("prefix")
@@ -73,7 +73,7 @@ impl Builder<Schemas, ()> {
             .help("The prefix for the log file")
             .placeholder("stalwart.log")
             .input_check([Transformer::Trim], [Validator::Required])
-            .display_if_eq("method", ["log"])
+            .display_if_eq("type", ["log"])
             .build()
             // Log Rotate
             .new_field("rotate")
@@ -90,7 +90,7 @@ impl Builder<Schemas, ()> {
             .help("The frequency to rotate the log file")
             .input_check([], [Validator::Required])
             .default("daily")
-            .display_if_eq("method", ["log"])
+            .display_if_eq("type", ["log"])
             .build()
             // OT Transport
             .new_field("transport")
@@ -101,7 +101,7 @@ impl Builder<Schemas, ()> {
             .label("Transport")
             .help("The transport protocol for Open Telemetry")
             .input_check([], [Validator::Required])
-            .display_if_eq("method", ["open-telemetry"])
+            .display_if_eq("type", ["open-telemetry"])
             .default("http")
             .build()
             // OT Endpoint
@@ -111,7 +111,7 @@ impl Builder<Schemas, ()> {
             .help("The endpoint for Open Telemetry")
             .placeholder("https://tracing.example.com/v1/otel")
             .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
-            .display_if_eq("method", ["open-telemetry"])
+            .display_if_eq("type", ["open-telemetry"])
             .build()
             // OT Headers
             .new_field("headers")
@@ -125,7 +125,7 @@ impl Builder<Schemas, ()> {
             .title("Logger settings")
             .fields([
                 "_id",
-                "method",
+                "type",
                 "level",
                 "enable",
                 "path",
@@ -138,7 +138,7 @@ impl Builder<Schemas, ()> {
             .build()
             .list_title("Logging methods")
             .list_subtitle("Manage logging and tracing methods")
-            .list_fields(["_id", "method", "level", "enable"])
+            .list_fields(["_id", "type", "level", "enable"])
             .build()
     }
 }

@@ -1,54 +1,17 @@
 use super::*;
 
-/*
-
-[spam.header]
-add-spam = true
-add-spam-result = true
-is-spam = "X-Spam-Status: Yes"
-
-[spam.autolearn]
-enable = true
-balance = 0.9
-
-[spam.autolearn.ham]
-replies = true
-threshold = -0.5
-
-[spam.autolearn.spam]
-threshold = 6.0
-
-[spam.threshold]
-spam = 5.0
-discard = 0
-reject = 0
-
-[spam.data]
-directory = ""
-lookup = ""
-
-[cache.bayes]
-capacity = 8192
-
-[cache.bayes.ttl]
-positive = "1h"
-negative = "1h"
-
-
-*/
-
 impl Builder<Schemas, ()> {
     pub fn build_spam_lists(self) -> Self {
         // Anti-SPAM settings
         self.new_schema("spam-settings")
-            .new_field("spam.header.add-spam")
-            .label("Add SPAM header")
+            .new_field("lookup.spam-config.add-spam")
+            .label("Add X-Spam-Status header to messages")
             .help("Whether to add the X-Spam-Status header to messages that are detected as SPAM")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("spam.header.add-spam-result")
-            .label("Add SPAM result header")
+            .new_field("lookup.spam-config.add-spam-result")
+            .label("Add X-Spam-Result header to messages")
             .help("Whether to add the X-Spam-Result header to messages that are detected as SPAM")
             .default("true")
             .typ(Type::Boolean)
@@ -60,13 +23,13 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
-            .new_field("spam.autolearn.enable")
-            .label("Enable autolearning")
+            .new_field("lookup.spam-config.learn-enable")
+            .label("Automatically train the Bayes classifier")
             .help("Whether the bayes classifier should be trained automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("spam.autolearn.balance")
+            .new_field("lookup.spam-config.learn-balance")
             .label("Balance")
             .help("Keep difference for spam/ham learns for at least this value")
             .default("0.9")
@@ -80,13 +43,13 @@ impl Builder<Schemas, ()> {
                 ],
             )
             .build()
-            .new_field("spam.autolearn.ham.replies")
-            .label("Replies as Ham")
-            .help("Whether message replies from authenticated users should be learned as ham")
+            .new_field("lookup.spam-config.learn-ham.replies")
+            .label("Train on messages sent from authenticated users")
+            .help("Whether messages sent from authenticated users should be learned as ham")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("spam.autolearn.ham.threshold")
+            .new_field("lookup.spam-config.learn-ham-threshold")
             .label("Ham threshold")
             .help("When to learn ham (score >= threshold)")
             .default("-0.5")
@@ -100,7 +63,7 @@ impl Builder<Schemas, ()> {
                 ],
             )
             .build()
-            .new_field("spam.autolearn.spam.threshold")
+            .new_field("lookup.spam-config.learn-spam-threshold")
             .label("Spam threshold")
             .help("When to learn spam (score >= threshold)")
             .default("6.0")
@@ -114,7 +77,7 @@ impl Builder<Schemas, ()> {
                 ],
             )
             .build()
-            .new_field("spam.threshold.spam")
+            .new_field("lookup.spam-config.threshold-spam")
             .label("Spam threshold")
             .help("Mark as SPAM messages with a score above this threshold")
             .default("5.0")
@@ -128,7 +91,7 @@ impl Builder<Schemas, ()> {
                 ],
             )
             .build()
-            .new_field("spam.threshold.discard")
+            .new_field("lookup.spam-config.threshold-discard")
             .label("Discard threshold")
             .help("Discard messages with a score above this threshold")
             .default("0")
@@ -142,7 +105,7 @@ impl Builder<Schemas, ()> {
                 ],
             )
             .build()
-            .new_field("spam.threshold.reject")
+            .new_field("lookup.spam-config.threshold-reject")
             .label("Reject threshold")
             .help("Reject messages with a score above this threshold")
             .default("0")
@@ -156,7 +119,7 @@ impl Builder<Schemas, ()> {
                 ],
             )
             .build()
-            .new_field("spam.data.directory")
+            .new_field("lookup.spam-config.directory")
             .label("Directory")
             .help("Directory to use for local domain lookups (leave empty for default)")
             .typ(Type::Select {
@@ -168,7 +131,7 @@ impl Builder<Schemas, ()> {
                 multi: false,
             })
             .build()
-            .new_field("spam.data.lookup")
+            .new_field("lookup.spam-config.lookup")
             .label("Lookup")
             .help("Lookup store to use for Bayes tokens and ids (leave empty for default)")
             .typ(Type::Select {
@@ -212,31 +175,31 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Header")
             .fields([
-                "spam.header.add-spam",
-                "spam.header.add-spam-result",
                 "spam.header.is-spam",
+                "lookup.spam-config.add-spam",
+                "lookup.spam-config.add-spam-result",
             ])
             .build()
             .new_form_section()
             .title("Thresholds")
             .fields([
-                "spam.threshold.spam",
-                "spam.threshold.discard",
-                "spam.threshold.reject",
+                "lookup.spam-config.threshold-spam",
+                "lookup.spam-config.threshold-discard",
+                "lookup.spam-config.threshold-reject",
             ])
             .build()
             .new_form_section()
             .title("Data")
-            .fields(["spam.data.directory", "spam.data.lookup"])
+            .fields(["lookup.spam-config.directory", "lookup.spam-config.lookup"])
             .build()
             .new_form_section()
             .title("Bayes Autolearn")
             .fields([
-                "spam.autolearn.enable",
-                "spam.autolearn.balance",
-                "spam.autolearn.spam.threshold",
-                "spam.autolearn.ham.threshold",
-                "spam.autolearn.ham.replies",
+                "lookup.spam-config.learn-balance",
+                "lookup.spam-config.learn-spam-threshold",
+                "lookup.spam-config.learn-ham-threshold",
+                "lookup.spam-config.learn-enable",
+                "lookup.spam-config.learn-ham.replies",
             ])
             .build()
             .new_form_section()

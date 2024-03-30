@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use leptos::*;
 
-use crate::components::icon::{IconClock, IconExclamationCircle};
+use crate::components::icon::{IconClock, IconExclamationCircle, IconInfo};
 
 use super::FormElement;
 
@@ -572,6 +572,8 @@ pub fn InputRate(
 #[component]
 pub fn InputSwitch(
     element: FormElement,
+    #[prop(optional, into)] label: Option<MaybeSignal<String>>,
+    #[prop(optional)] tooltip: Option<&'static str>,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
 ) -> impl IntoView {
@@ -584,7 +586,7 @@ pub fn InputSwitch(
     });
 
     view! {
-        <div class="relative">
+        <div class="flex items-center">
             <input
                 type="checkbox"
                 {..attrs}
@@ -601,6 +603,52 @@ pub fn InputSwitch(
 
                 disabled=move || disabled.get()
             />
+            {label
+                .map(|label| {
+                    view! {
+                        <label class="text-sm text-gray-500 ms-3 dark:text-gray-400">
+                            {label.get()}
+                        </label>
+                    }
+                })}
+
+            {tooltip
+                .filter(|s| !s.is_empty())
+                .map(|tooltip| {
+                    let is_mouse_over = create_rw_signal(false);
+                    view! {
+                        <div class="hs-tooltip inline-block">
+                            <button
+                                type="button"
+                                class="hs-tooltip-toggle ms-1"
+                                on:mouseover=move |_| {
+                                    is_mouse_over.set(true);
+                                }
+
+                                on:mouseleave=move |_| {
+                                    is_mouse_over.set(false);
+                                }
+                            >
+
+                                <IconInfo
+                                    size=16
+                                    attr:stroke-width="1"
+                                    attr:class="inline-block size-3 text-gray-400 dark:text-gray-600"
+                                />
+                            </button>
+                            <span
+                                class="hs-tooltip-content hs-tooltip-shown:opacity-100 hs-tooltip-shown:visible opacity-70 transition-opacity inline-block absolute w-40 text-center z-10 py-1 px-2 bg-gray-900 text-xs font-medium text-white rounded shadow-sm dark:bg-slate-700"
+                                role="tooltip"
+                                class:hidden=move || !is_mouse_over.get()
+                                class:show=move || is_mouse_over.get()
+                            >
+                                {tooltip}
+                            </span>
+
+                        </div>
+                    }
+                })}
+
         </div>
     }
 }

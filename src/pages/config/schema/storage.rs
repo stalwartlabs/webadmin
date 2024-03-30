@@ -95,7 +95,7 @@ impl Builder<Schemas, ()> {
             .input_check([], [Validator::Required])
             .build()
             .new_field("storage.encryption.enable")
-            .label("Enable")
+            .label("Enable encryption at rest")
             .help(concat!(
                 "Allow users to configure encryption at rest for their data"
             ))
@@ -103,7 +103,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Boolean)
             .build()
             .new_field("storage.encryption.append")
-            .label("Append encryption")
+            .label("Encrypt on append")
             .help(concat!(
                 "Encrypt messages that are manually appended by the user using ",
                 "JMAP or IMAP"
@@ -120,19 +120,13 @@ impl Builder<Schemas, ()> {
             .default("en")
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
-            .new_field("storage.cluster.node-id")
-            .label("Node ID")
-            .help(concat!("Unique identifier for this node in the cluster"))
-            .default("1")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::MinValue(0.into())],
-            )
-            .build()
             .new_form_section()
             .title("Data Store")
-            .fields(["storage.data"])
+            .fields([
+                "storage.data",
+                "storage.encryption.enable",
+                "storage.encryption.append",
+            ])
             .build()
             .new_form_section()
             .title("Blob Store")
@@ -145,14 +139,6 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Lookup Store")
             .fields(["storage.lookup"])
-            .build()
-            .new_form_section()
-            .title("Encryption at Rest")
-            .fields(["storage.encryption.enable", "storage.encryption.append"])
-            .build()
-            .new_form_section()
-            .title("Cluster")
-            .fields(["storage.cluster.node-id"])
             .build()
             .build()
     }

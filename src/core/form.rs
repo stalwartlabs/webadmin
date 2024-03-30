@@ -384,11 +384,12 @@ impl FormData {
                 && (!only_required
                     || (!self.values.contains_key(field.id)
                         && field.checks.if_thens.is_empty()
-                        && field
-                            .checks
-                            .default
-                            .as_ref()
-                            .map_or(false, |d| d.validators.contains(&Validator::Required))))
+                        && (matches!(field.typ_, Type::Boolean)
+                            || field
+                                .checks
+                                .default
+                                .as_ref()
+                                .map_or(false, |d| d.validators.contains(&Validator::Required)))))
             {
                 if let Some(default) = field.default.default.as_ref() {
                     let value = match (&field.typ_, default) {
@@ -647,13 +648,10 @@ impl FormData {
                         }
                     }
                     Type::Array | Type::Select { multi: true, .. } => {
-                        data.array_set(
-                            field.id,
-                            settings
-                                .array_values(field.id)
-                                .into_iter()
-                                .map(|(_, value)| value),
-                        );
+                        let values = settings.array_values(field.id);
+                        if !values.is_empty() {
+                            data.array_set(field.id, values.into_iter().map(|(_, value)| value));
+                        }
                     }
                     Type::Expression => {
                         let mut expr = Expression::default();

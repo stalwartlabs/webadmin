@@ -818,6 +818,21 @@ impl Builder<Schemas, ()> {
             .label("Run Script")
             .help("Which Sieve script to run when a client connects")
             .input_check([], [Validator::IsValidExpression(connect_expr)])
+            .new_field("session.connect.greeting")
+            .label("SMTP greeting")
+            .help("The greeting message sent by the SMTP/LMTP server")
+            .placeholder("'Stalwart ESMTP at your service'")
+            .new_field("session.connect.hostname")
+            .label("Server hostname")
+            .help("The SMTP server hostname")
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(connect_expr),
+                ],
+            )
+            .default("key_get('default', 'hostname')")
             .build()
             .new_field("auth.iprev.verify")
             .typ(Type::Expression)
@@ -834,7 +849,12 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Connect Stage")
-            .fields(["session.connect.script", "auth.iprev.verify"])
+            .fields([
+                "session.connect.hostname",
+                "session.connect.greeting",
+                "session.connect.script",
+                "auth.iprev.verify",
+            ])
             .build()
             .build()
             // EHLO stage
@@ -1057,13 +1077,6 @@ impl Builder<Schemas, ()> {
                 "Specifies whether authentication is necessary to send email messages"
             ))
             .default("false")
-            .new_field("session.auth.allow-plain-text")
-            .label("Allow Plain Auth")
-            .help(concat!(
-                "Specifies whether to allow authentication using the PLAIN mechanism ",
-                "over an unencrypted connection"
-            ))
-            .default("false")
             .new_field("session.auth.must-match-sender")
             .label("Must match sender")
             .help(concat!(
@@ -1102,7 +1115,6 @@ impl Builder<Schemas, ()> {
             .fields([
                 "session.auth.directory",
                 "session.auth.require",
-                "session.auth.allow-plain-text",
                 "session.auth.must-match-sender",
                 "session.auth.mechanisms",
             ])
@@ -1138,7 +1150,7 @@ impl Builder<Schemas, ()> {
             .new_field("session.rcpt.directory")
             .label("Directory")
             .help("Directory to use to validate local recipients")
-            .default("\"\"")
+            .default("\"*\"")
             .typ(Type::Expression)
             .input_check(
                 [],
@@ -1172,14 +1184,32 @@ impl Builder<Schemas, ()> {
             .help("Which Sieve script to run after the client sends a RCPT command")
             .input_check([], [Validator::IsValidExpression(rcpt_expr)])
             .build()
+            .new_field("session.rcpt.catch-all")
+            .label("Catch-all")
+            .help("Expression to enable catch-all address")
+            .typ(Type::Expression)
+            .input_check([], [Validator::IsValidExpression(rcpt_expr)])
+            .default("true")
+            .new_field("session.rcpt.sub-addressing")
+            .label("Sub-addressing")
+            .help("Expression to enable sub-addressing")
+            .default("true")
+            .build()
             .new_form_section()
             .title("RCPT TO Stage")
             .fields([
                 "session.rcpt.directory",
                 "session.rcpt.relay",
                 "session.rcpt.max-recipients",
-                "session.rcpt.rewrite",
                 "session.rcpt.script",
+            ])
+            .build()
+            .new_form_section()
+            .title("Address Handling")
+            .fields([
+                "session.rcpt.rewrite",
+                "session.rcpt.catch-all",
+                "session.rcpt.sub-addressing",
             ])
             .build()
             .new_form_section()

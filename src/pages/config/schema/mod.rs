@@ -1,6 +1,5 @@
 pub mod auth;
 pub mod authentication;
-pub mod common;
 pub mod directory;
 pub mod imap;
 pub mod jmap;

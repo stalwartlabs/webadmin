@@ -224,22 +224,9 @@ impl Builder<Schemas, ()> {
             .default("100/1m")
             .typ(Type::Rate)
             .build()
-            .new_field("jmap.rate-limit.use-forwarded")
-            .label("Use forwarded")
-            .help(concat!(
-                "Specifies whether to use the X-Forwarded-For header to ",
-                "determine the client's IP address"
-            ))
-            .typ(Type::Boolean)
-            .default("false")
-            .build()
             .new_form_section()
             .title("Rate Limit")
-            .fields([
-                "jmap.rate-limit.account",
-                "jmap.rate-limit.anonymous",
-                "jmap.rate-limit.use-forwarded",
-            ])
+            .fields(["jmap.rate-limit.account", "jmap.rate-limit.anonymous"])
             .build()
             .build()
             // Push & EventSource

@@ -308,6 +308,7 @@ pub fn SettingsEdit() -> impl IntoView {
                                             let is_optional = create_memo(move |_| {
                                                 !field_.is_required(&data.get())
                                             });
+                                            let is_switch = matches!(field.typ_, Type::Boolean);
                                             let component = match field.typ_ {
                                                 Type::Input => {
                                                     view! {
@@ -372,7 +373,11 @@ pub fn SettingsEdit() -> impl IntoView {
                                                 }
                                                 Type::Boolean => {
                                                     view! {
-                                                        <InputSwitch element=FormElement::new(field.id, data)/>
+                                                        <InputSwitch
+                                                            label=field_label
+                                                            tooltip=help.unwrap_or_default()
+                                                            element=FormElement::new(field.id, data)
+                                                        />
                                                     }
                                                         .into_view()
                                                 }
@@ -407,15 +412,23 @@ pub fn SettingsEdit() -> impl IntoView {
                                                         .into_view()
                                                 }
                                             };
-                                            view! {
-                                                <FormItem
-                                                    label=field_label
-                                                    hide=hide_label
-                                                    is_optional=is_optional
-                                                    tooltip=help.unwrap_or_default()
-                                                >
-                                                    {component}
-                                                </FormItem>
+                                            if !is_switch {
+                                                view! {
+                                                    <FormItem
+                                                        label=field_label
+                                                        hide=hide_label
+                                                        is_optional=is_optional
+                                                        tooltip=help.unwrap_or_default()
+                                                    >
+                                                        {component}
+                                                    </FormItem>
+                                                }
+                                            } else {
+                                                view! {
+                                                    <FormItem label="" hide=hide_label is_optional=is_optional>
+                                                        {component}
+                                                    </FormItem>
+                                                }
                                             }
                                         })
                                         .collect_view();

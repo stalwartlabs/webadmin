@@ -50,24 +50,6 @@ impl Builder<Schemas, ()> {
             .source_filter_if_eq("type", ["sql"], &["mysql", "postgresql", "sqlite"])
             .input_check([], [Validator::Required])
             .build()
-            // Catch-all and subaddressing
-            .new_field("options.catch-all")
-            .label("Catch-all")
-            .help("Expression to enable catch-all address for this directory")
-            .display_if_ne("type", ["lmtp", "smtp", "imap"])
-            .typ(Type::Expression)
-            .input_check(
-                [],
-                [Validator::IsValidExpression(
-                    ExpressionValidator::default().variables(&["address"]),
-                )],
-            )
-            .default("true")
-            .new_field("options.subaddressing")
-            .label("Sub-addressing")
-            .help("Expression to enable sub-addressing for this directory")
-            .default("true")
-            .build()
             // Caches
             .new_field("cache.entries")
             .label("Cache size")
@@ -399,11 +381,6 @@ impl Builder<Schemas, ()> {
                 "attributes.email-alias",
                 "attributes.quota",
             ])
-            .build()
-            .new_form_section()
-            .title("Address Handling")
-            .display_if_ne("type", ["imap", "smtp", "lmtp"])
-            .fields(["options.catch-all", "options.subaddressing"])
             .build()
             .new_form_section()
             .title("Local Domains")
