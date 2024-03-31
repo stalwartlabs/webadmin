@@ -5,7 +5,7 @@ use leptos_router::*;
 
 use crate::{
     components::{
-        icon::{IconAdd, IconTrash},
+        icon::{IconAdd, IconRefresh, IconTrash},
         list::{
             header::ColumnList,
             pagination::Pagination,
@@ -26,7 +26,7 @@ use crate::{
         url::UrlBuilder,
     },
     pages::{
-        config::{SchemaType, Schemas, SettingsValues},
+        config::{ReloadSettings, SchemaType, Schemas, SettingsValues},
         maybe_plural, List,
     },
 };
@@ -94,6 +94,33 @@ pub fn SettingsList() -> impl IntoView {
             }
         },
     );
+
+    let reload_config_action = create_action(move |()| {
+        let schema = current_schema.get();
+        let auth = auth.get();
+
+        async move {
+            match HttpRequest::get(format!(
+                "/api/reload/{}",
+                schema.reload_prefix.unwrap_or_default()
+            ))
+            .with_authorization(&auth)
+            .send::<ReloadSettings>()
+            .await
+            {
+                Ok(result) => {
+                    alert.set(Alert::from(result));
+                }
+                Err(http::Error::Unauthorized) => {
+                    use_navigate()("/login", Default::default());
+                }
+                Err(err) => {
+                    alert.set(Alert::from(err));
+                }
+            }
+
+        }
+    });
 
     let delete_action = create_action(move |items: &Arc<HashSet<String>>| {
         let items = items.clone();
@@ -200,6 +227,18 @@ pub fn SettingsList() -> impl IntoView {
                     >
 
                         <IconTrash/>
+                    </ToolbarButton>
+
+                    <ToolbarButton
+                        text="Reload config"
+
+                        color=Color::Gray
+                        on_click=Callback::new(move |_| {
+                            reload_config_action.dispatch(());
+                        })
+                    >
+
+                        <IconRefresh/>
                     </ToolbarButton>
 
                     <ToolbarButton

@@ -18,7 +18,7 @@ impl Builder<Schemas, ()> {
             )
             .build()
             .new_field("imap.auth.allow-plain-text")
-            .label("Allow Plain Text")
+            .label("Allow plain text authentication")
             .help("Whether to allow plain text authentication on unencrypted connections")
             .default("false")
             .typ(Type::Boolean)

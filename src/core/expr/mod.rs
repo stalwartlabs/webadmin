@@ -154,6 +154,15 @@ pub(super) const FUNCTIONS: &[(&str, u32)] = &[
     ("split_once", 2),
     ("rsplit_once", 2),
     ("split_words", 1),
+    ("is_local_domain", 2),
+    ("is_local_address", 2),
+    ("key_get", 2),
+    ("key_exists", 2),
+    ("key_set", 3),
+    ("counter_incr", 3),
+    ("counter_get", 2),
+    ("dns_query", 2),
+    ("sql_query", 3),
 ];
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

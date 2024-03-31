@@ -18,6 +18,7 @@ use crate::{
             stacked_input::StackedInput,
             Form, FormButtonBar, FormElement, FormItem, FormSection,
         },
+        icon::IconRefresh,
         messages::alert::{use_alerts, Alert},
         skeleton::Skeleton,
         Color,
@@ -28,7 +29,7 @@ use crate::{
         oauth::use_authorization,
     },
     pages::{
-        config::{Schema, SchemaType, Schemas, Settings, Type, UpdateSettings},
+        config::{ReloadSettings, Schema, SchemaType, Schemas, Settings, Type, UpdateSettings},
         List,
     },
 };
@@ -203,47 +204,76 @@ pub fn SettingsEdit() -> impl IntoView {
     let (pending, set_pending) = create_signal(false);
     let data = FormData::default().into_signal();
 
-    let save_changes = create_action(move |changes: &Arc<Vec<UpdateSettings>>| {
-        let changes = changes.clone();
-        let auth = auth.get();
-        let schema = current_schema.get();
+    let save_changes = create_action(
+        move |(changes, reload): &(Arc<Vec<UpdateSettings>>, bool)| {
+            let changes = changes.clone();
+            let reload = *reload;
+            let auth = auth.get();
+            let schema = current_schema.get();
 
-        log::debug!("Saving changes: {:?}", changes);
+            log::debug!("Saving changes: {:?}", changes);
 
-        async move {
-            set_pending.set(true);
-            match HttpRequest::post("/api/settings")
-                .with_authorization(&auth)
-                .with_body(changes)
-                .unwrap()
-                .send::<Option<String>>()
-                .await
-                .map(|_| ())
-            {
-                Ok(_) => {
-                    set_pending.set(false);
-                    use_navigate()(&schema.list_path(), Default::default());
-                }
-                Err(err) => {
-                    set_pending.set(false);
-                    match err {
-                        http::Error::Unauthorized => {
-                            use_navigate()("/login", Default::default());
+            async move {
+                set_pending.set(true);
+                match HttpRequest::post("/api/settings")
+                    .with_authorization(&auth)
+                    .with_body(changes)
+                    .unwrap()
+                    .send::<Option<String>>()
+                    .await
+                    .map(|_| ())
+                {
+                    Ok(_) => {
+                        if reload {
+                            match HttpRequest::get(format!(
+                                "/api/reload/{}",
+                                schema.reload_prefix.unwrap_or_default()
+                            ))
+                            .with_authorization(&auth)
+                            .send::<ReloadSettings>()
+                            .await
+                            {
+                                Ok(result) => {
+                                    set_pending.set(false);
+                                    if result.errors.is_empty() {
+                                        use_navigate()(&schema.list_path(), Default::default());
+                                    } else {
+                                        alert.set(Alert::from(result));
+                                    }
+                                }
+                                Err(http::Error::Unauthorized) => {
+                                    use_navigate()("/login", Default::default());
+                                }
+                                Err(err) => {
+                                    set_pending.set(false);
+                                    alert.set(Alert::from(err));
+                                }
+                            }
+                        } else {
+                            set_pending.set(false);
+                            use_navigate()(&schema.list_path(), Default::default());
                         }
-                        http::Error::Server { error, .. } if error == "assertFailed" => {
-                            alert
-                                .set(Alert::error("Record already exists").with_details(
+                    }
+                    Err(err) => {
+                        set_pending.set(false);
+                        match err {
+                            http::Error::Unauthorized => {
+                                use_navigate()("/login", Default::default());
+                            }
+                            http::Error::Server { error, .. } if error == "assertFailed" => {
+                                alert.set(Alert::error("Record already exists").with_details(
                                     "Another record with the same ID already exists",
                                 ));
-                        }
-                        err => {
-                            alert.set(Alert::from(err));
+                            }
+                            err => {
+                                alert.set(Alert::from(err));
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        },
+    );
 
     view! {
         <Form
@@ -459,12 +489,29 @@ pub fn SettingsEdit() -> impl IntoView {
                 />
 
                 <Button
+                    text="Save & Reload"
+                    color=Color::Gray
+                    on_click=Callback::new(move |_| {
+                        data.update(|data| {
+                            if data.validate_form() {
+                                save_changes.dispatch((Arc::new(data.build_update()), true));
+                            }
+                        });
+                    })
+
+                    disabled=pending
+                >
+
+                    <IconRefresh/>
+                </Button>
+
+                <Button
                     text="Save changes"
                     color=Color::Blue
                     on_click=Callback::new(move |_| {
                         data.update(|data| {
                             if data.validate_form() {
-                                save_changes.dispatch(Arc::new(data.build_update()));
+                                save_changes.dispatch((Arc::new(data.build_update()), false));
                             }
                         });
                     })

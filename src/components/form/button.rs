@@ -9,6 +9,7 @@ pub fn Button(
     #[prop(into)] on_click: Callback<(), ()>,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
     #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     view! {
         <button
@@ -32,7 +33,7 @@ pub fn Button(
             on:click=move |_| on_click.call(())
             {..attrs}
         >
-
+            {children.map(|children| children())}
             {text.get()}
         </button>
     }

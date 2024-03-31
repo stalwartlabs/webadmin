@@ -1,12 +1,10 @@
 use crate::core::schema::*;
 
-use super::smtp::{FUNCTIONS_MAP, IN_CONNECT_VARIABLES};
+use super::CONNECTION_VARS;
 
 impl Builder<Schemas, ()> {
     pub fn build_server(self) -> Self {
-        let connect_expr = ExpressionValidator::default()
-            .variables(IN_CONNECT_VARIABLES)
-            .functions(FUNCTIONS_MAP);
+        let connect_expr = ExpressionValidator::new(CONNECTION_VARS, &[]);
 
         self.new_schema("network")
             // Max connections
@@ -252,6 +250,7 @@ impl Builder<Schemas, ()> {
             .build()
             // Blocked IP addresses
             .new_schema("blocked-ip")
+            .reload_prefix("server.blocked-ip")
             .names("address", "addresses")
             .prefix("server.blocked-ip")
             .new_id_field()
@@ -268,7 +267,7 @@ impl Builder<Schemas, ()> {
             .list_title("Blocked IP addresses")
             .list_subtitle("Manage blocked IP addresses")
             .list_fields(["_id"])
-            .list_actions([Action::Create, Action::Delete, Action::Search])
+            .no_list_action(Action::Modify)
             .build()
     }
 }

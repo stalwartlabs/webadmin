@@ -19,12 +19,12 @@ use crate::{
     core::oauth::{oauth_refresh_token, AuthToken},
     pages::{
         config::{edit::SettingsEdit, list::SettingsList},
-        login::Login,
-        notfound::NotFound,
         directory::{
             domains::{edit::DomainCreate, list::DomainList},
             principals::{edit::PrincipalEdit, list::PrincipalList},
         },
+        login::Login,
+        notfound::NotFound,
         queue::{
             messages::{list::QueueList, manage::QueueManage},
             reports::{display::ReportDisplay, list::ReportList},

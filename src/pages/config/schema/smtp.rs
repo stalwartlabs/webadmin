@@ -1,19 +1,13 @@
-use crate::core::schema::*;
+use crate::core::{form::Expression, schema::*};
+
+use super::*;
 
 impl Builder<Schemas, ()> {
     pub fn build_smtp_outbound(self) -> Self {
-        let host_expr = ExpressionValidator::default()
-            .variables(OUT_HOST_VARIABLES)
-            .functions(FUNCTIONS_MAP);
-        let sender_expr = ExpressionValidator::default()
-            .variables(OUT_SENDER_VARIABLES)
-            .functions(FUNCTIONS_MAP);
-        let rcpt_expr = ExpressionValidator::default()
-            .variables(OUT_RCPT_VARIABLES)
-            .functions(FUNCTIONS_MAP);
-        let mx_expr = ExpressionValidator::default()
-            .variables(OUT_MX_VARIABLES)
-            .functions(FUNCTIONS_MAP);
+        let rcpt_vars = ExpressionValidator::new(SMTP_QUEUE_RCPT_VARS, &[]);
+        let sender_vars = ExpressionValidator::new(SMTP_QUEUE_SENDER_VARS, &[]);
+        let mx_vars = ExpressionValidator::new(SMTP_QUEUE_MX_VARS, &[]);
+        let host_vars = ExpressionValidator::new(SMTP_QUEUE_HOST_VARS, &[]);
 
         // Queue
         self.new_schema("smtp-out-queue")
@@ -27,7 +21,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Expression)
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(host_expr)],
+                [Validator::Required, Validator::IsValidExpression(host_vars)],
             )
             .new_field("queue.schedule.notify")
             .label("Notify")
@@ -38,7 +32,7 @@ impl Builder<Schemas, ()> {
             .default("[1d, 3d]")
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(rcpt_expr)],
+                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
             )
             .new_field("queue.schedule.expire")
             .label("Expire")
@@ -54,13 +48,13 @@ impl Builder<Schemas, ()> {
                 "Name that will be used in the From header of Delivery Status ",
                 "Notifications (DSN) reports"
             ))
-            .default("'Report Subsystem'")
+            .default("'Mail Delivery Subsystem'")
             .typ(Type::Expression)
             .input_check(
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(sender_expr),
+                    Validator::IsValidExpression(sender_vars),
                 ],
             )
             .new_field("report.dsn.from-address")
@@ -69,14 +63,14 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "Delivery Status Notifications (DSN) reports"
             ))
-            .default("'MAILER-DAEMON@example.com'")
+            .default("'MAILER-DAEMON@' + key_get('default', 'domain')")
             .new_field("report.dsn.sign")
             .label("Signature")
             .help(concat!(
                 "List of DKIM signatures to use when signing Delivery Status ",
                 "Notifications"
             ))
-            .default("['rsa']")
+            .default("['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]")
             .build()
             .new_form_section()
             .title("Queue Schedule")
@@ -104,17 +98,17 @@ impl Builder<Schemas, ()> {
                 " to remote SMTP servers"
             ))
             .typ(Type::Expression)
-            .input_check([], [Validator::IsValidExpression(sender_expr)])
+            .input_check([], [Validator::IsValidExpression(sender_vars)])
             .new_field("queue.outbound.next-hop")
             .label("Next hop")
             .help(concat!(
                 "Can either point to a remote host or 'false' which indicates",
                 " that the message delivery should be done through DNS resolution"
             ))
-            .default("false")
+            .default(Expression::new([("is_local_domain('*', rcpt_domain)", "'local'")], "false"))
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(rcpt_expr)],
+                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
             )
             .new_field("queue.outbound.ip-strategy")
             .label("IP Strategy")
@@ -127,7 +121,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(sender_expr.constants(IP_STRATEGY_CONSTANTS)),
+                    Validator::IsValidExpression(sender_vars.constants(IP_STRATEGY_CONSTANTS)),
                 ],
             )
             .new_field("queue.outbound.source-ip.v4")
@@ -136,7 +130,7 @@ impl Builder<Schemas, ()> {
                 "Determines a list of local IPv4 addresses to use when ",
                 "delivery emails to remote SMTP servers"
             ))
-            .input_check([], [Validator::IsValidExpression(mx_expr)])
+            .input_check([], [Validator::IsValidExpression(mx_vars)])
             .new_field("queue.outbound.source-ip.v6")
             .label("IPv6 addresses")
             .help(concat!(
@@ -168,7 +162,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(mx_expr.constants(REQUIRE_OPTIONAL_CONSTANTS)),
+                    Validator::IsValidExpression(mx_vars.constants(REQUIRE_OPTIONAL_CONSTANTS)),
                 ],
             )
             .new_field("queue.outbound.tls.starttls")
@@ -187,7 +181,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(rcpt_expr.constants(REQUIRE_OPTIONAL_CONSTANTS)),
+                    Validator::IsValidExpression(rcpt_vars.constants(REQUIRE_OPTIONAL_CONSTANTS)),
                 ],
             )
             .new_field("queue.outbound.tls.allow-invalid-certs")
@@ -198,7 +192,7 @@ impl Builder<Schemas, ()> {
             .default("false")
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(mx_expr)],
+                [Validator::Required, Validator::IsValidExpression(mx_vars)],
             )
             .build()
             .new_field("report.tls.aggregate.from-name")
@@ -213,7 +207,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(sender_expr),
+                    Validator::IsValidExpression(sender_vars),
                 ],
             )
             .new_field("report.tls.aggregate.from-address")
@@ -222,7 +216,7 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "the TLS aggregate report email"
             ))
-            .default("'noreply-tls@example.com'")
+            .default("'noreply-tls@' + key_get('default', 'domain')")
             .new_field("report.tls.aggregate.subject")
             .label("Subject")
             .help(concat!(
@@ -235,13 +229,13 @@ impl Builder<Schemas, ()> {
                 "List of DKIM signatures to use when signing the TLS ",
                 "aggregate report"
             ))
-            .default("['rsa']")
+            .default("['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]")
             .new_field("report.tls.aggregate.org-name")
             .label("Organization")
             .help(concat!(
                 "Name of the organization to be included in the report"
             ))
-            .default("")
+            .default("key_get('default', 'domain')")
             .new_field("report.tls.aggregate.contact-info")
             .label("Contact")
             .help(concat!("Contact information to be included in the report"))
@@ -261,7 +255,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(sender_expr.constants(AGGREGATE_FREQ_CONSTANTS)),
+                    Validator::IsValidExpression(sender_vars.constants(AGGREGATE_FREQ_CONSTANTS)),
                 ],
             )
             .build()
@@ -299,7 +293,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Expression)
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(rcpt_expr)],
+                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
             )
             .new_field("queue.outbound.limits.multihomed")
             .label("Multi-homed IPs")
@@ -316,7 +310,7 @@ impl Builder<Schemas, ()> {
             .default("3m")
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(host_expr)],
+                [Validator::Required, Validator::IsValidExpression(host_vars)],
             )
             .new_field("queue.outbound.timeouts.greeting")
             .label("Greeting")
@@ -386,7 +380,7 @@ impl Builder<Schemas, ()> {
             .new_schema("smtp-out-resolver")
             .new_field("resolver.type")
             .label("Resolver")
-            .help(concat!(""))
+            .help(concat!("Resolver to use for DNS resolution"))
             .default("system")
             .typ(Type::Select {
                 multi: false,
@@ -404,7 +398,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("resolver.custom")
             .label("DNS Servers")
-            .help(concat!(""))
+            .help(concat!("List of custom DNS server URLs to use for resolution"))
             .default("udp://127.0.0.1:53")
             .typ(Type::Array)
             .input_check([], [Validator::Required])
@@ -466,7 +460,10 @@ impl Builder<Schemas, ()> {
                 "URL of the list of top-level domain names (or suffixes) under ",
                 "which Internet users can register domain names"
             ))
-            .default("https://publicsuffix.org/list/public_suffix_list.dat")
+            .default(&[
+                "https://publicsuffix.org/list/public_suffix_list.dat",
+                "https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat"
+            ][..])
             .typ(Type::Input)
             .input_check([], [Validator::Required, Validator::IsUrl])
             .build()
@@ -683,11 +680,10 @@ impl Builder<Schemas, ()> {
             .input_check(
                 [],
                 [
-                    Validator::IsValidExpression(
-                        ExpressionValidator::default()
-                            .variables(OUT_THROTTLE_VARIABLES)
-                            .functions(FUNCTIONS_MAP),
-                    ),
+                    Validator::IsValidExpression(ExpressionValidator::new(
+                        SMTP_QUEUE_HOST_VARS,
+                        &[],
+                    )),
                     Validator::MaxItems(1),
                 ],
             )
@@ -758,11 +754,10 @@ impl Builder<Schemas, ()> {
             .input_check(
                 [],
                 [
-                    Validator::IsValidExpression(
-                        ExpressionValidator::default()
-                            .variables(QUEUE_QUOTA_VARIABLES)
-                            .functions(FUNCTIONS_MAP),
-                    ),
+                    Validator::IsValidExpression(ExpressionValidator::new(
+                        SMTP_QUEUE_HOST_VARS,
+                        &[],
+                    )),
                     Validator::MaxItems(1),
                 ],
             )
@@ -795,21 +790,10 @@ impl Builder<Schemas, ()> {
     }
 
     pub fn build_smtp_inbound(self) -> Self {
-        let connect_expr = ExpressionValidator::default()
-            .variables(IN_CONNECT_VARIABLES)
-            .functions(FUNCTIONS_MAP);
-        let extensions_expr = ExpressionValidator::default()
-            .variables(IN_EXTENSIONS_VARIABLES)
-            .functions(FUNCTIONS_MAP);
-        let mail_expr = ExpressionValidator::default()
-            .variables(IN_MAIL_VARIABLES)
-            .functions(FUNCTIONS_MAP);
-        let rcpt_expr = ExpressionValidator::default()
-            .variables(IN_RCPT_VARIABLES)
-            .functions(FUNCTIONS_MAP);
-        let data_expr = ExpressionValidator::default()
-            .variables(IN_DATA_VARIABLES)
-            .functions(FUNCTIONS_MAP);
+        let has_conn_vars = ExpressionValidator::new(CONNECTION_VARS, &[]);
+        let has_ehlo_hars = ExpressionValidator::new(SMTP_EHLO_VARS, &[]);
+        let has_sender_vars = ExpressionValidator::new(SMTP_MAIL_FROM_VARS, &[]);
+        let has_rcpt_vars = ExpressionValidator::new(SMTP_RCPT_TO_VARS, &[]);
 
         // Connect
         self.new_schema("smtp-in-connect")
@@ -817,11 +801,11 @@ impl Builder<Schemas, ()> {
             .typ(Type::Expression)
             .label("Run Script")
             .help("Which Sieve script to run when a client connects")
-            .input_check([], [Validator::IsValidExpression(connect_expr)])
+            .input_check([], [Validator::IsValidExpression(has_conn_vars)])
             .new_field("session.connect.greeting")
             .label("SMTP greeting")
             .help("The greeting message sent by the SMTP/LMTP server")
-            .placeholder("'Stalwart ESMTP at your service'")
+            .default("'Stalwart ESMTP at your service'")
             .new_field("session.connect.hostname")
             .label("Server hostname")
             .help("The SMTP server hostname")
@@ -829,7 +813,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(connect_expr),
+                    Validator::IsValidExpression(has_conn_vars),
                 ],
             )
             .default("key_get('default', 'hostname')")
@@ -842,10 +826,13 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(connect_expr.constants(VERIFY_CONSTANTS)),
+                    Validator::IsValidExpression(has_conn_vars.constants(VERIFY_CONSTANTS)),
                 ],
             )
-            .default("relaxed")
+            .default(Expression::new(
+                [("local_port == 25", "relaxed")],
+                "disable",
+            ))
             .build()
             .new_form_section()
             .title("Connect Stage")
@@ -866,7 +853,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(connect_expr),
+                    Validator::IsValidExpression(has_conn_vars),
                 ],
             )
             .default("true")
@@ -882,19 +869,19 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(connect_expr),
+                    Validator::IsValidExpression(has_conn_vars),
                 ],
             )
             .help(concat!(
                 "Whether to reject EHLO commands that do not include a ",
                 "fully-qualified domain name as a parameter"
             ))
-            .default("true")
+            .default(Expression::new([("local_port == 25", "true")], "false"))
             .build()
             .new_field("session.ehlo.script")
             .label("Run Script")
             .typ(Type::Expression)
-            .input_check([], [Validator::IsValidExpression(connect_expr)])
+            .input_check([], [Validator::IsValidExpression(has_conn_vars)])
             .help("Which Sieve script to run after the client sends an EHLO command")
             .build()
             .new_form_section()
@@ -915,7 +902,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(connect_expr),
+                    Validator::IsValidExpression(has_conn_vars),
                 ],
             )
             .default("5m")
@@ -947,7 +934,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(extensions_expr),
+                    Validator::IsValidExpression(has_sender_vars),
                 ],
             )
             .default("true")
@@ -986,7 +973,10 @@ impl Builder<Schemas, ()> {
                 "the sender to request a delivery status notification (DSN) from ",
                 "the recipient's mail server"
             ))
-            .default("false")
+            .default(Expression::new(
+                [("!is_empty(authenticated_as)", "true")],
+                "false",
+            ))
             .new_field("session.extensions.expn")
             .label("EXPN")
             .help(concat!(
@@ -995,7 +985,10 @@ impl Builder<Schemas, ()> {
                 "recommended to disable this command to prevent spammers ",
                 "from harvesting email addresses"
             ))
-            .default("false")
+            .default(Expression::new(
+                [("!is_empty(authenticated_as)", "true")],
+                "false",
+            ))
             .new_field("session.extensions.vrfy")
             .label("VRFY")
             .help(concat!(
@@ -1004,14 +997,20 @@ impl Builder<Schemas, ()> {
                 "to disable this command to prevent spammers from ",
                 "harvesting email addresses"
             ))
-            .default("false")
+            .default(Expression::new(
+                [("!is_empty(authenticated_as)", "true")],
+                "false",
+            ))
             .new_field("session.extensions.future-release")
             .label("Future Release")
             .help(concat!(
                 "Specifies the maximum time that a message can be held for ",
                 "delivery using the FUTURERELEASE (RFC 4865) extension"
             ))
-            .default("false")
+            .default(Expression::new(
+                [("!is_empty(authenticated_as)", "7d")],
+                "false",
+            ))
             .new_field("session.extensions.deliver-by")
             .label("Deliver By")
             .help(concat!(
@@ -1019,7 +1018,10 @@ impl Builder<Schemas, ()> {
                 "DELIVERBY (RFC 2852) extension, which allows the sender to request ",
                 "a specific delivery time for a message"
             ))
-            .default("false")
+            .default(Expression::new(
+                [("!is_empty(authenticated_as)", "15d")],
+                "false",
+            ))
             .new_field("session.extensions.mt-priority")
             .label("MT Priority")
             .help(concat!(
@@ -1032,14 +1034,17 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(extensions_expr.constants(&[
+                    Validator::IsValidExpression(has_sender_vars.constants(&[
                         "mixer",
                         "stanag4406",
                         "nsep",
                     ])),
                 ],
             )
-            .default("false")
+            .default(Expression::new(
+                [("!is_empty(authenticated_as)", "mixer")],
+                "false",
+            ))
             .build()
             .new_form_section()
             .title("SMTP Extensions")
@@ -1062,13 +1067,13 @@ impl Builder<Schemas, ()> {
             .new_field("session.auth.directory")
             .label("Directory")
             .help("Specifies the directory to use for authentication")
-            .default("false")
+            .default(Expression::new([("local_port != 25", "'*'")], "false"))
             .typ(Type::Expression)
             .input_check(
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(connect_expr),
+                    Validator::IsValidExpression(has_ehlo_hars),
                 ],
             )
             .new_field("session.auth.require")
@@ -1076,7 +1081,7 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Specifies whether authentication is necessary to send email messages"
             ))
-            .default("false")
+            .default(Expression::new([("local_port != 25", "true")], "false"))
             .new_field("session.auth.must-match-sender")
             .label("Must match sender")
             .help(concat!(
@@ -1102,11 +1107,14 @@ impl Builder<Schemas, ()> {
                 "empty list to disable authentication. Stalwart SMTP currently supports PLAIN, ",
                 "LOGIN, and OAUTHBEARER mechanisms"
             ))
-            .default("false")
+            .default(Expression::new(
+                [("local_port != 25 && is_tls", "[plain, login]")],
+                "false",
+            ))
             .input_check(
                 [],
                 [Validator::IsValidExpression(
-                    connect_expr.constants(AUTH_CONSTANTS),
+                    has_conn_vars.constants(AUTH_CONSTANTS),
                 )],
             )
             .build()
@@ -1132,13 +1140,16 @@ impl Builder<Schemas, ()> {
             .typ(Type::Expression)
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(mail_expr)],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(has_sender_vars),
+                ],
             )
             .default("false")
             .new_field("session.mail.script")
             .label("Run Script")
             .help("Which Sieve script to run after the client sends a MAIL command")
-            .input_check([], [Validator::IsValidExpression(mail_expr)])
+            .input_check([], [Validator::IsValidExpression(has_sender_vars)])
             .build()
             .new_form_section()
             .title("MAIL FROM Stage")
@@ -1154,12 +1165,18 @@ impl Builder<Schemas, ()> {
             .typ(Type::Expression)
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(rcpt_expr)],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(has_rcpt_vars),
+                ],
             )
             .new_field("session.rcpt.relay")
             .label("Allow Relaying")
             .help("Whether to allow relaying for non-local recipients")
-            .default("false")
+            .default(Expression::new(
+                [("!is_empty(authenticated_as)", "true")],
+                "false",
+            ))
             .new_field("session.rcpt.max-recipients")
             .label("Max Recipients")
             .help("Maximum number of recipients per message")
@@ -1182,13 +1199,13 @@ impl Builder<Schemas, ()> {
             .new_field("session.rcpt.script")
             .label("Run Script")
             .help("Which Sieve script to run after the client sends a RCPT command")
-            .input_check([], [Validator::IsValidExpression(rcpt_expr)])
+            .input_check([], [Validator::IsValidExpression(has_rcpt_vars)])
             .build()
             .new_field("session.rcpt.catch-all")
             .label("Catch-all")
             .help("Expression to enable catch-all address")
             .typ(Type::Expression)
-            .input_check([], [Validator::IsValidExpression(rcpt_expr)])
+            .input_check([], [Validator::IsValidExpression(has_rcpt_vars)])
             .default("true")
             .new_field("session.rcpt.sub-addressing")
             .label("Sub-addressing")
@@ -1223,14 +1240,17 @@ impl Builder<Schemas, ()> {
             .label("Run Script")
             .help("Which Sieve script to run after the client sends a DATA command")
             .typ(Type::Expression)
-            .input_check([], [Validator::IsValidExpression(data_expr)])
+            .input_check([], [Validator::IsValidExpression(has_rcpt_vars)])
             .new_field("session.data.limits.messages")
             .label("Messages")
             .help("Maximum number of messages that can be submitted per SMTP session")
             .default("10")
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(data_expr)],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(has_rcpt_vars),
+                ],
             )
             .new_field("session.data.limits.size")
             .label("Size")
@@ -1246,27 +1266,27 @@ impl Builder<Schemas, ()> {
             .new_field("session.data.add-headers.received")
             .label("Received")
             .help("Whether to add a Received header to the message")
-            .default("false")
+            .default(Expression::new([("local_port == 25", "true")], "false"))
             .new_field("session.data.add-headers.received-spf")
             .label("Received-SPF")
             .help("Whether to add a Received-SPF header to the message")
-            .default("false")
+            .default(Expression::new([("local_port == 25", "true")], "false"))
             .new_field("session.data.add-headers.auth-results")
             .label("Authentication-Results")
             .help("Whether to add an Authentication-Results header to the message")
-            .default("false")
+            .default(Expression::new([("local_port == 25", "true")], "false"))
             .new_field("session.data.add-headers.message-id")
             .label("Message-Id")
             .help("Whether to add a Message-Id header to the message")
-            .default("false")
+            .default(Expression::new([("local_port == 25", "true")], "false"))
             .new_field("session.data.add-headers.date")
             .label("Date")
             .help("Whether to add a Date header to the message")
-            .default("false")
+            .default(Expression::new([("local_port == 25", "true")], "false"))
             .new_field("session.data.add-headers.return-path")
             .label("Return-Path")
             .help("Whether to add a Return-Path header to the message")
-            .default("false")
+            .default(Expression::new([("local_port == 25", "true")], "false"))
             .build()
             .new_form_section()
             .title("DATA Stage")
@@ -1338,11 +1358,7 @@ impl Builder<Schemas, ()> {
             .input_check(
                 [],
                 [
-                    Validator::IsValidExpression(
-                        ExpressionValidator::default()
-                            .variables(IN_THROTTLE_VARIABLES)
-                            .functions(FUNCTIONS_MAP),
-                    ),
+                    Validator::IsValidExpression(has_rcpt_vars),
                     Validator::MaxItems(1),
                 ],
             )
@@ -1388,7 +1404,10 @@ impl Builder<Schemas, ()> {
             .typ(Type::Expression)
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(data_expr)],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(has_rcpt_vars),
+                ],
             )
             .build()
             .new_field("hostname")
@@ -1536,7 +1555,10 @@ impl Builder<Schemas, ()> {
             .typ(Type::Expression)
             .input_check(
                 [],
-                [Validator::Required, Validator::IsValidExpression(data_expr)],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(has_rcpt_vars),
+                ],
             )
             .new_field("arguments")
             .label("Arguments")
@@ -1557,116 +1579,6 @@ impl Builder<Schemas, ()> {
             .build()
     }
 }
-
-pub const V_RECIPIENT: &str = "rcpt";
-pub const V_RECIPIENT_DOMAIN: &str = "rcpt_domain";
-pub const V_SENDER: &str = "sender";
-pub const V_SENDER_DOMAIN: &str = "sender_domain";
-pub const V_MX: &str = "mx";
-pub const V_HELO_DOMAIN: &str = "helo_domain";
-pub const V_AUTHENTICATED_AS: &str = "authenticated_as";
-pub const V_LISTENER: &str = "listener";
-pub const V_REMOTE_IP: &str = "remote_ip";
-pub const V_LOCAL_IP: &str = "local_ip";
-pub const V_PRIORITY: &str = "priority";
-
-pub const OUT_RCPT_VARIABLES: &[&str] =
-    &[V_RECIPIENT_DOMAIN, V_SENDER, V_SENDER_DOMAIN, V_PRIORITY];
-pub const OUT_SENDER_VARIABLES: &[&str] = &[V_SENDER, V_SENDER_DOMAIN, V_PRIORITY];
-pub const OUT_MX_VARIABLES: &[&str] = &[
-    V_RECIPIENT_DOMAIN,
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_PRIORITY,
-    V_MX,
-];
-pub const OUT_HOST_VARIABLES: &[&str] = &[
-    V_RECIPIENT_DOMAIN,
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_PRIORITY,
-    V_LOCAL_IP,
-    V_REMOTE_IP,
-    V_MX,
-];
-pub const IN_CONNECT_VARIABLES: &[&str] = &[V_LISTENER, V_REMOTE_IP, V_LOCAL_IP];
-pub const IN_MAIL_VARIABLES: &[&str] = &[
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_AUTHENTICATED_AS,
-    V_LISTENER,
-    V_REMOTE_IP,
-    V_LOCAL_IP,
-    V_HELO_DOMAIN,
-];
-pub const IN_RCPT_VARIABLES: &[&str] = &[
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_RECIPIENT,
-    V_RECIPIENT_DOMAIN,
-    V_AUTHENTICATED_AS,
-    V_LISTENER,
-    V_REMOTE_IP,
-    V_LOCAL_IP,
-    V_HELO_DOMAIN,
-];
-pub const IN_DATA_VARIABLES: &[&str] = &[
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_AUTHENTICATED_AS,
-    V_LISTENER,
-    V_REMOTE_IP,
-    V_LOCAL_IP,
-    V_PRIORITY,
-    V_HELO_DOMAIN,
-];
-pub const IN_EXTENSIONS_VARIABLES: &[&str] = &[
-    V_LISTENER,
-    V_REMOTE_IP,
-    V_LOCAL_IP,
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_AUTHENTICATED_AS,
-];
-pub const IN_THROTTLE_VARIABLES: &[&str] = &[
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_RECIPIENT,
-    V_RECIPIENT_DOMAIN,
-    V_AUTHENTICATED_AS,
-    V_LISTENER,
-    V_REMOTE_IP,
-    V_LOCAL_IP,
-    V_PRIORITY,
-    V_HELO_DOMAIN,
-];
-pub const OUT_THROTTLE_VARIABLES: &[&str] = &[
-    V_RECIPIENT_DOMAIN,
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_PRIORITY,
-    V_MX,
-    V_REMOTE_IP,
-    V_LOCAL_IP,
-];
-pub const QUEUE_QUOTA_VARIABLES: &[&str] = &[
-    V_RECIPIENT,
-    V_RECIPIENT_DOMAIN,
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_PRIORITY,
-];
-pub const FUNCTIONS_MAP: &[(&str, u32)] = &[
-    ("is_local_domain", 2),
-    ("is_local_address", 2),
-    ("key_get", 2),
-    ("key_exists", 2),
-    ("key_set", 3),
-    ("counter_incr", 3),
-    ("counter_get", 2),
-    ("dns_query", 2),
-    ("sql_query", 3),
-];
 
 pub const VERIFY_CONSTANTS: &[&str] =
     &["relaxed", "strict", "disable", "disabled", "never", "none"];

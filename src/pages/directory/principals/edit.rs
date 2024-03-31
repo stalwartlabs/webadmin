@@ -518,7 +518,10 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [])
             .build()
             .new_field("type")
-            .typ(Type::Select{ source: Source::Static(IDS), multi: false})
+            .typ(Type::Select {
+                source: Source::Static(IDS),
+                multi: false,
+            })
             .default(PrincipalType::Individual.id())
             .build()
             .build()

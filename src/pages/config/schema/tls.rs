@@ -97,6 +97,7 @@ impl Builder<Schemas, ()> {
             .build()
             // ---- TLS certificates ----
             .new_schema("certificate")
+            .reload_prefix("certificate")
             .names("certificate", "certificates")
             .prefix("certificate")
             .suffix("cert")

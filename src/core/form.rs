@@ -384,7 +384,7 @@ impl FormData {
                 && (!only_required
                     || (!self.values.contains_key(field.id)
                         && field.checks.if_thens.is_empty()
-                        && (matches!(field.typ_, Type::Boolean)
+                        && (matches!(field.typ_, Type::Boolean | Type::Expression)
                             || field
                                 .checks
                                 .default
@@ -554,14 +554,6 @@ impl FormData {
                                         Ok(Token::Variable(0))
                                     } else if validator.constants.contains(&token) {
                                         Ok(Token::Constant(Constant::Integer(0)))
-                                    } else if let Some((name, num_args)) =
-                                        validator.functions.iter().find(|(name, _)| name == &token)
-                                    {
-                                        Ok(Token::Function {
-                                            name: (*name).into(),
-                                            id: 0,
-                                            num_args: *num_args,
-                                        })
                                     } else {
                                         Duration::parse_value(token)
                                             .map(|d| {
@@ -911,7 +903,29 @@ impl From<&[&str]> for FormValue {
     }
 }
 
+impl From<Expression> for FormValue {
+    fn from(value: Expression) -> Self {
+        FormValue::Expression(value)
+    }
+}
+
 impl Expression {
+    pub fn new(
+        if_thens: impl IntoIterator<Item = (&'static str, &'static str)>,
+        default: impl AsRef<str>,
+    ) -> Self {
+        Self {
+            if_thens: if_thens
+                .into_iter()
+                .map(|(if_, then)| ExpressionIfThen {
+                    if_: if_.to_string(),
+                    then_: then.to_string(),
+                })
+                .collect(),
+            else_: default.as_ref().to_string(),
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.if_thens.is_empty() && self.else_.is_empty()
     }

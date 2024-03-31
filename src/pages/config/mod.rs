@@ -2,7 +2,7 @@ pub mod edit;
 pub mod list;
 pub mod schema;
 
-use std::str::FromStr;
+use std::{collections::BTreeMap, str::FromStr};
 
 use crate::{
     components::{
@@ -39,6 +39,27 @@ pub enum UpdateSettings {
         values: Vec<(String, String)>,
         assert_empty: bool,
     },
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
+pub struct ReloadSettings {
+    pub warnings: BTreeMap<String, ConfigWarning>,
+    pub errors: BTreeMap<String, ConfigError>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(tag = "type")]
+pub enum ConfigWarning {
+    Missing,
+    AppliedDefault { default: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(tag = "type")]
+pub enum ConfigError {
+    Parse { error: String },
+    Build { error: String },
+    Macro { error: String },
 }
 
 impl FormData {

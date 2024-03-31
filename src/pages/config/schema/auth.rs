@@ -1,15 +1,12 @@
-use crate::core::schema::*;
+use crate::core::{form::Expression, schema::*};
 
-use super::smtp::*;
+use super::{smtp::*, CONNECTION_VARS, RCPT_DOMAIN_VARS, SMTP_RCPT_TO_VARS};
 
 impl Builder<Schemas, ()> {
     pub fn build_mail_auth(self) -> Self {
-        let sender_expr = ExpressionValidator::default()
-            .variables(SENDER_VARIABLES)
-            .functions(FUNCTIONS_MAP);
-        let conn_expr = ExpressionValidator::default()
-            .variables(CONN_VARIABLES)
-            .functions(FUNCTIONS_MAP);
+        let conn_vars = ExpressionValidator::new(CONNECTION_VARS, &[]);
+        let rcpt_domain = ExpressionValidator::new(RCPT_DOMAIN_VARS, &[]);
+        let rcpt_vars = ExpressionValidator::new(SMTP_RCPT_TO_VARS, &[]);
 
         self.new_schema("signature")
             .prefix("signature")
@@ -183,13 +180,13 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Whether DKIM verification is strict, relaxed or disabled"
             ))
-            .default("relaxed")
+            .default(Expression::new([], "relaxed"))
             .typ(Type::Expression)
             .input_check(
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(sender_expr.constants(VERIFY_CONSTANTS)),
+                    Validator::IsValidExpression(rcpt_vars.constants(VERIFY_CONSTANTS)),
                 ],
             )
             .new_field("auth.dkim.sign")
@@ -197,11 +194,15 @@ impl Builder<Schemas, ()> {
             .help(concat!("List of DKIM signatures to use for signing"))
             .input_check(
                 [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(sender_expr),
-                ],
+                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
             )
+            .default(Expression::new(
+                [(
+                    "is_local_domain('*', sender_domain)",
+                    "['rsa_' + sender_domain, 'ed_' + sender_domain]",
+                )],
+                "false",
+            ))
             .new_field("report.dkim.from-name")
             .label("From Name")
             .help(concat!(
@@ -215,7 +216,7 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "the DKIM report email"
             ))
-            .default("'noreply-dkim@example.com'")
+            .default("'noreply-dkim@' + key_get('default', 'domain')")
             .new_field("report.dkim.subject")
             .label("Subject")
             .help(concat!(
@@ -228,7 +229,9 @@ impl Builder<Schemas, ()> {
                 "List of DKIM signatures to use when signing the DKIM ",
                 "report"
             ))
-            .default("['rsa']")
+            .default(
+                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+            )
             .new_field("report.dkim.send")
             .label("Send rate")
             .help(concat!(
@@ -264,24 +267,25 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Whether ARC verification is strict, relaxed or disabled"
             ))
-            .default("relaxed")
+            .default(Expression::new([], "relaxed"))
             .typ(Type::Expression)
             .input_check(
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(sender_expr.constants(VERIFY_CONSTANTS)),
+                    Validator::IsValidExpression(rcpt_vars.constants(VERIFY_CONSTANTS)),
                 ],
             )
             .new_field("auth.arc.seal")
+            .default(Expression::new(
+                [],
+                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+            ))
             .label("Signature")
             .help(concat!("List of DKIM signatures to use for sealing"))
             .input_check(
                 [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(sender_expr),
-                ],
+                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
             )
             .build()
             .new_form_section()
@@ -300,13 +304,16 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Whether SPF EHLO verification is strict, relaxed or disabled"
             ))
-            .default("relaxed")
+            .default(Expression::new(
+                [("local_port == 25", "relaxed")],
+                "disable",
+            ))
             .typ(Type::Expression)
             .input_check(
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(conn_expr.constants(VERIFY_CONSTANTS)),
+                    Validator::IsValidExpression(conn_vars.constants(VERIFY_CONSTANTS)),
                 ],
             )
             .new_field("auth.spf.verify.mail-from")
@@ -314,7 +321,10 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Whether SPF MAIL FROM verification is strict, relaxed or disabled"
             ))
-            .default("relaxed")
+            .default(Expression::new(
+                [("local_port == 25", "relaxed")],
+                "disable",
+            ))
             .new_field("report.spf.from-name")
             .label("From Name")
             .help(concat!(
@@ -326,7 +336,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(sender_expr.constants(VERIFY_CONSTANTS)),
+                    Validator::IsValidExpression(rcpt_vars.constants(VERIFY_CONSTANTS)),
                 ],
             )
             .new_field("report.spf.from-address")
@@ -335,7 +345,7 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "the SPF authentication failure report email"
             ))
-            .default("'noreply-spf@example.com'")
+            .default("'noreply-spf@' + key_get('default', 'domain')")
             .new_field("report.spf.subject")
             .label("Subject")
             .help(concat!(
@@ -348,7 +358,9 @@ impl Builder<Schemas, ()> {
                 "List of DKIM signatures to use when signing the SPF ",
                 "authentication failure report"
             ))
-            .default("['rsa']")
+            .default(
+                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+            )
             .new_field("report.spf.send")
             .label("Send rate")
             .help(concat!(
@@ -380,13 +392,16 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Whether DMARC verification is strict, relaxed or disabled"
             ))
-            .default("relaxed")
+            .default(Expression::new(
+                [("local_port == 25", "relaxed")],
+                "disable",
+            ))
             .typ(Type::Expression)
             .input_check(
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(sender_expr.constants(VERIFY_CONSTANTS)),
+                    Validator::IsValidExpression(rcpt_vars.constants(VERIFY_CONSTANTS)),
                 ],
             )
             .new_field("report.dmarc.from-name")
@@ -402,7 +417,7 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "the DMARC authentication failure report email"
             ))
-            .default("'noreply-dmarc@example.com'")
+            .default("'noreply-dmarc@' + key_get('default', 'domain')")
             .new_field("report.dmarc.subject")
             .label("Subject")
             .help(concat!(
@@ -415,7 +430,9 @@ impl Builder<Schemas, ()> {
                 "List of DKIM signatures to use when signing the DMARC ",
                 "authentication failure report"
             ))
-            .default("['rsa']")
+            .default(
+                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+            )
             .new_field("report.dmarc.send")
             .label("Send rate")
             .help(concat!(
@@ -425,6 +442,13 @@ impl Builder<Schemas, ()> {
             ))
             .default("[1, 1d]")
             .new_field("report.dmarc.aggregate.from-name")
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(rcpt_domain),
+                ],
+            )
             .label("From Name")
             .help(concat!(
                 "Name that will be used in the From header of the DMARC ",
@@ -437,7 +461,7 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "the DMARC aggregate report email"
             ))
-            .default("'noreply-dmarc@example.com'")
+            .default("'noreply-dmarc@' + key_get('default', 'domain')")
             .new_field("report.dmarc.aggregate.subject")
             .label("Subject")
             .help(concat!(
@@ -450,13 +474,15 @@ impl Builder<Schemas, ()> {
                 "List of DKIM signatures to use when signing the DMARC ",
                 "aggregate report"
             ))
-            .default("['rsa']")
+            .default(
+                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+            )
             .new_field("report.dmarc.aggregate.org-name")
             .label("Organization")
             .help(concat!(
                 "Name of the organization to be included in the report"
             ))
-            .default("")
+            .default("key_get('default', 'domain')")
             .new_field("report.dmarc.aggregate.contact-info")
             .label("Contact")
             .help(concat!("Contact information to be included in the report"))
@@ -478,7 +504,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [
                     Validator::Required,
-                    Validator::IsValidExpression(sender_expr.constants(AGGREGATE_FREQ_CONSTANTS)),
+                    Validator::IsValidExpression(rcpt_vars.constants(AGGREGATE_FREQ_CONSTANTS)),
                 ],
             )
             .build()
@@ -548,12 +574,12 @@ impl Builder<Schemas, ()> {
             .typ(Type::Expression)
             .input_check(
                 [],
-                [Validator::IsValidExpression(
-                    ExpressionValidator::default()
-                        .functions(FUNCTIONS_MAP)
-                        .variables(&[V_RECIPIENT_DOMAIN]),
-                )],
+                [Validator::IsValidExpression(ExpressionValidator::new(
+                    RCPT_DOMAIN_VARS,
+                    &[],
+                ))],
             )
+            .default("key_get('default', 'hostname')")
             .build()
             .new_form_section()
             .title("Inbound Report Analysis")
@@ -570,15 +596,3 @@ impl Builder<Schemas, ()> {
             .build()
     }
 }
-
-pub const SENDER_VARIABLES: &[&str] = &[
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_PRIORITY,
-    V_AUTHENTICATED_AS,
-    V_LISTENER,
-    V_REMOTE_IP,
-    V_LOCAL_IP,
-];
-
-pub const CONN_VARIABLES: &[&str] = &[V_LISTENER, V_REMOTE_IP, V_LOCAL_IP];

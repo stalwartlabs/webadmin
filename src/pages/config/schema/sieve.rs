@@ -1,12 +1,10 @@
 use crate::core::schema::*;
 
-use super::smtp::{FUNCTIONS_MAP, IN_DATA_VARIABLES};
+use super::SMTP_RCPT_TO_VARS;
 
 impl Builder<Schemas, ()> {
     pub fn build_sieve(self) -> Self {
-        let data_expr = ExpressionValidator::default()
-            .variables(IN_DATA_VARIABLES)
-            .functions(FUNCTIONS_MAP);
+        let rcpt_vars = ExpressionValidator::new(SMTP_RCPT_TO_VARS, &[]);
 
         self.new_schema("sieve-settings")
             .new_field("sieve.untrusted.disable-capabilities")
@@ -14,15 +12,15 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "List of capabilities to disable in the untrusted interpreter"
             ))
-            .typ(Type::Input)
-            .input_check([], [])
+            .typ(Type::Array)
+            .input_check([Transformer::Trim], [])
             .build()
             .new_field("sieve.untrusted.notification-uris")
             .label("Notification URIs")
             .help(concat!("List of allowed URIs for the notify extension"))
             .default("mailto")
             .typ(Type::Array)
-            .input_check([], [])
+            .input_check([Transformer::Trim], [])
             .build()
             .new_field("sieve.untrusted.protected-headers")
             .label("Protected Headers")
@@ -81,14 +79,17 @@ impl Builder<Schemas, ()> {
             ))
             .default("'Automated Message'")
             .typ(Type::Expression)
-            .input_check([], [Validator::IsValidExpression(data_expr)])
+            .input_check(
+                [],
+                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
+            )
             .new_field("sieve.trusted.from-addr")
             .label("From Address")
             .help(concat!(
                 "Default email address to use for the from field in email ",
                 "notifications sent from a Sieve script"
             ))
-            .placeholder("'no-reply@%example.com'")
+            .default("'MAILER-DAEMON@' + key_get('default', 'domain')")
             .new_field("sieve.trusted.return-path")
             .label("Return Path")
             .help(concat!(
@@ -102,6 +103,9 @@ impl Builder<Schemas, ()> {
                 "DKIM signatures to add to email notifications sent from ",
                 "a Sieve script"
             ))
+            .default(
+                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+            )
             .build()
             .new_field("sieve.trusted.hostname")
             .label("Hostname")
@@ -134,9 +138,9 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Untrusted Interpreter")
             .fields([
-                "sieve.untrusted.disable-capabilities",
                 "sieve.untrusted.notification-uris",
                 "sieve.untrusted.protected-headers",
+                "sieve.untrusted.disable-capabilities",
             ])
             .build()
             .new_form_section()

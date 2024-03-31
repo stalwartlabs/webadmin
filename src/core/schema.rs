@@ -54,6 +54,7 @@ pub struct Schema {
     pub name_plural: &'static str,
     pub fields: AHashMap<&'static str, Arc<Field>>,
     pub typ: SchemaType,
+    pub reload_prefix: Option<&'static str>,
     pub list: List,
     pub form: Form,
 }
@@ -110,6 +111,7 @@ pub enum Action {
     Modify,
     Delete,
     Search,
+    Reload,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -192,7 +194,6 @@ pub enum Validator {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct ExpressionValidator {
     pub variables: &'static [&'static str],
-    pub functions: &'static [(&'static str, u32)],
     pub constants: &'static [&'static str],
 }
 
@@ -365,12 +366,13 @@ impl Builder<Schemas, ()> {
                         Action::Search,
                         Action::Delete,
                         Action::Modify,
+                        Action::Reload,
                     ],
                     page_size: 10,
                     ..Default::default()
                 },
                 form: Form {
-                    actions: vec![Action::Save, Action::Cancel],
+                    actions: vec![Action::Save, Action::Cancel, Action::Reload],
                     ..Default::default()
                 },
                 ..Default::default()
@@ -482,8 +484,13 @@ impl Builder<Schemas, Schema> {
         builder
     }
 
-    pub fn list_actions(mut self, actions: impl IntoIterator<Item = Action>) -> Self {
-        self.item.list.actions = actions.into_iter().collect();
+    pub fn no_list_action(mut self, action: Action) -> Self {
+        self.item.list.actions.retain(|a| *a != action);
+        self
+    }
+
+    pub fn list_action(mut self, action: Action) -> Self {
+        self.item.list.actions.push(action);
         self
     }
 
@@ -497,8 +504,13 @@ impl Builder<Schemas, Schema> {
         self
     }
 
-    pub fn form_actions(mut self, actions: impl IntoIterator<Item = Action>) -> Self {
-        self.item.form.actions = actions.into_iter().collect();
+    pub fn form_action(mut self, action: Action) -> Self {
+        self.item.form.actions.push(action);
+        self
+    }
+
+    pub fn reload_prefix(mut self, prefix: &'static str) -> Self {
+        self.item.reload_prefix = Some(prefix);
         self
     }
 
@@ -887,9 +899,11 @@ impl InputCheck {
 }
 
 impl ExpressionValidator {
-    pub fn functions(mut self, functions: &'static [(&'static str, u32)]) -> Self {
-        self.functions = functions;
-        self
+    pub fn new(variables: &'static [&'static str], constants: &'static [&'static str]) -> Self {
+        ExpressionValidator {
+            variables,
+            constants,
+        }
     }
 
     pub fn constants(mut self, constants: &'static [&'static str]) -> Self {

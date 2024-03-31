@@ -4,17 +4,29 @@
 <head>
     <meta charset="utf-8">
     <link data-trunk rel="rust" data-wasm-opt="z" />
-    <link data-trunk rel="icon" type="image/ico" href="./src/assets/favicon.ico" />
+
+    <!-- Favicon for browsers -->
+    <link data-trunk rel="icon" type="image/ico" href="./src/assets/favicon.ico">
+    <!-- Favicon sizes for different platforms -->
+    <link data-trunk rel="icon" type="image/png" sizes="32x32" href="./src/assets/favicon-32x32.png">
+    <link data-trunk rel="icon" type="image/png" sizes="16x16" href="./src/assets/favicon-16x16.png">
+    <!-- For Android Chrome -->
+    <link data-trunk rel="icon" type="image/png" sizes="192x192" href="./src/assets/android-chrome-192x192.png">
+    <link data-trunk rel="icon" type="image/png" sizes="512x512" href="./src/assets/android-chrome-512x512.png">
+    <!-- For iOS devices -->
+    <link data-trunk rel="copy-file" href="./src/assets/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <!-- Manifest -->
+    <link data-trunk rel="copy-file" href="./src/assets/site.webmanifest" />
+    <link rel="manifest" href="/site.webmanifest">
     <link data-trunk rel="css" href="/style/output.css" />
     <link data-trunk rel="copy-file" href="./src/assets/logo.svg" />
     <link data-trunk rel="copy-dir" href="./src/assets/icons" data-target-path="icons" />
-    <!--link data-trunk rel="copy-file" href="./src/assets/favicon.ico" /-->
 
     <title>Stalwart Management</title>
 </head>
 
 <body>
-    <!--script data-trunk rel="copy-file" src="./node_modules/preline/dist/preline.js"></script-->
 </body>
 
 </html>

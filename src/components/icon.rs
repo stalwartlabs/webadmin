@@ -50,12 +50,7 @@ pub fn IconAdd(
 ) -> impl IntoView {
     view! {
         <SvgWrapper size attrs>
-            <path
-                d="M2.63452 7.50001L13.6345 7.5M8.13452 13V2"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-            ></path>
+            <path d="M2.63452 7.50001L13.6345 7.5M8.13452 13V2"></path>
         </SvgWrapper>
     }
 }

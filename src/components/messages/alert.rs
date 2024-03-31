@@ -7,6 +7,7 @@ use crate::{
         IconCheckCircle, IconExclamationCircle, IconExclamationTriangle, IconXMark,
     },
     core::http,
+    pages::config::{ConfigError, ConfigWarning, ReloadSettings},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -21,7 +22,7 @@ pub enum AlertType {
 pub struct Alert {
     pub typ: AlertType,
     pub message: String,
-    pub details: Option<String>,
+    pub details: Option<View>,
     pub timeout: Option<Duration>,
 }
 
@@ -119,12 +120,7 @@ pub fn Alerts() -> impl IntoView {
                         <h3 class="text-sm font-semibold">
                             {move || { alert.get().message.clone() }}
                         </h3>
-                        <div class="mt-1 text-sm">
-                            {move || {
-                                alert.get().details.as_deref().unwrap_or_default().to_string()
-                            }}
-
-                        </div>
+                        <div class="mt-1 text-sm">{move || { alert.get().details }}</div>
                     </div>
 
                     <div class="ps-3 ms-auto">
@@ -198,7 +194,8 @@ impl Alert {
     }
 
     pub fn with_details(mut self, details: impl Into<String>) -> Self {
-        self.details = Some(details.into());
+        let details = details.into();
+        self.details = Some(details.into_view());
         self
     }
 
@@ -230,6 +227,63 @@ impl From<http::Error> for Alert {
             http::Error::Server { error, details } => Alert::error(error).with_details(details),
             http::Error::NotFound => Alert::error("Not found"),
             http::Error::Unauthorized => Alert::error("Unauthorized"),
+        }
+    }
+}
+
+impl From<ReloadSettings> for Alert {
+    fn from(value: ReloadSettings) -> Self {
+        if value.errors.is_empty() && value.warnings.is_empty() {
+            Alert::success("Settings successfully reloaded")
+        } else {
+            let messages = value
+                .errors
+                .iter()
+                .map(|(key, error)| {
+                    view! {
+                        <li>
+                            {match error {
+                                ConfigError::Parse { error } => {
+                                    format!("Failed to parse {key:?}: {error}")
+                                }
+                                ConfigError::Build { error } => {
+                                    format!("Build error for {key:?}: {error}")
+                                }
+                                ConfigError::Macro { error } => {
+                                    format!("Macro error on {key:?}: {error}")
+                                }
+                            }}
+
+                        </li>
+                    }
+                })
+                .chain(value.warnings.iter().map(|(key, warning)| {
+                    view! {
+                        <li>
+                            {match warning {
+                                ConfigWarning::Missing => format!("Waring: Missing setting {key:?}"),
+                                ConfigWarning::AppliedDefault { default } => {
+                                    format!("Warning: Applied default value {default:?} to {key:?}")
+                                }
+                            }}
+
+                        </li>
+                    }
+                }))
+                .collect_view();
+
+            Alert {
+                typ: if value.errors.is_empty() {
+                    AlertType::Warning
+                } else {
+                    AlertType::Error
+                },
+                message: "Failed to reload settings".to_string(),
+                details: Some(
+                    view! { <ul class="list-disc space-y-1 ps-5">{messages}</ul> }.into_view(),
+                ),
+                timeout: None,
+            }
         }
     }
 }

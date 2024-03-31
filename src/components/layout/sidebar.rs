@@ -13,14 +13,8 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
             class:hidden=move || !show_sidebar.get()
             class:open=move || show_sidebar.get()
         >
-            <div class="px-6">
-                <a
-                    class="flex-none text-xl font-semibold dark:text-white"
-                    href="#"
-                    aria-label="Brand"
-                >
-                    Stalwart
-                </a>
+            <div class="px-8">
+                <img src="/logo.svg" style="height: 25px;"/>
             </div>
 
             <nav
