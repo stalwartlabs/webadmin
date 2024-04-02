@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
 use gloo_net::http::{Headers, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -13,8 +14,20 @@ pub struct HttpRequest {
 #[derive(Deserialize)]
 #[serde(untagged)]
 pub enum Response<T> {
-    Error { error: String, details: String },
+    Error(ManagementApiError),
     Data { data: T },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "error")]
+pub enum ManagementApiError {
+    FieldAlreadyExists { field: String, value: String },
+    FieldMissing { field: String },
+    NotFound { item: String },
+    Unsupported { details: String },
+    AssertFailed,
+    Other { details: String },
+    UnsupportedDirectoryOperation { class: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,7 +36,7 @@ pub enum Error {
     NotFound,
     Network(String),
     Serializer { error: String, response: String },
-    Server { error: String, details: String },
+    Server(ManagementApiError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -84,6 +97,28 @@ impl<'x> HttpRequest {
         result
     }
 
+    pub fn with_base_url(mut self, auth_token: impl AsRef<AuthToken>) -> Self {
+        let auth_token = auth_token.as_ref();
+        if !auth_token.base_url.is_empty() {
+            self.url = UrlBuilder::new(format!("{}{}", auth_token.base_url, self.url.finish()));
+        }
+        self
+    }
+
+    pub fn with_basic_authorization(
+        self,
+        username: impl AsRef<str>,
+        password: impl AsRef<str>,
+    ) -> Self {
+        self.with_header(
+            "Authorization",
+            format!(
+                "Basic {}",
+                STANDARD.encode(format!("{}:{}", username.as_ref(), password.as_ref()).as_bytes())
+            ),
+        )
+    }
+
     pub fn with_header(self, name: impl AsRef<str>, value: impl AsRef<str>) -> Self {
         self.headers.set(name.as_ref(), value.as_ref());
         self
@@ -114,7 +149,7 @@ impl<'x> HttpRequest {
         let response = self.send_raw().await?;
         match serde_json::from_slice::<Response<T>>(response.as_bytes()) {
             Ok(Response::Data { data }) => Ok(data),
-            Ok(Response::Error { error, details }) => Err(Error::Server { error, details }),
+            Ok(Response::Error(error)) => Err(Error::Server(error)),
             Err(err) => Err(Error::Serializer {
                 error: err.to_string(),
                 response,
@@ -160,10 +195,9 @@ impl<'x> HttpRequest {
             200..=299 => response.text().await.map_err(Into::into),
             401 => Err(Error::Unauthorized),
             404 => Err(Error::NotFound),
-            code => Err(Error::Server {
-                error: format!("Invalid response code {code}"),
-                details: response.status_text(),
-            }),
+            code => Err(Error::Server(ManagementApiError::Other {
+                details: format!("Invalid response code {code}: {}", response.status_text()),
+            })),
         }
     }
 }

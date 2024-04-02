@@ -118,7 +118,6 @@ pub fn SettingsList() -> impl IntoView {
                     alert.set(Alert::from(err));
                 }
             }
-
         }
     });
 

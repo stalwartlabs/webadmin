@@ -52,7 +52,7 @@ enum FetchResult {
     NotFound,
 }
 
-const DEFAULT_REDIRECT_URL: &str = "/settings/network/edit";
+pub const DEFAULT_SETTINGS_URL: &str = "/settings/system/edit";
 
 #[component]
 pub fn SettingsEdit() -> impl IntoView {
@@ -259,11 +259,6 @@ pub fn SettingsEdit() -> impl IntoView {
                         match err {
                             http::Error::Unauthorized => {
                                 use_navigate()("/login", Default::default());
-                            }
-                            http::Error::Server { error, .. } if error == "assertFailed" => {
-                                alert.set(Alert::error("Record already exists").with_details(
-                                    "Another record with the same ID already exists",
-                                ));
                             }
                             err => {
                                 alert.set(Alert::from(err));
@@ -529,7 +524,7 @@ impl Schema {
         if !matches!(self.typ, SchemaType::List) {
             format!("/settings/{}", self.id)
         } else {
-            DEFAULT_REDIRECT_URL.to_string()
+            DEFAULT_SETTINGS_URL.to_string()
         }
     }
 }

@@ -3,13 +3,17 @@ use core::schema::Schemas;
 use std::{sync::Arc, time::Duration};
 
 use components::{
-    icon::{IconDocumentChartBar, IconQueueList, IconUserGroup},
+    icon::{
+        IconAdjustmentsHorizontal, IconDocumentChartBar, IconKey, IconLockClosed, IconQueueList,
+        IconUserGroup,
+    },
     layout::MenuItem,
 };
 use gloo_storage::{SessionStorage, Storage};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use pages::config::edit::DEFAULT_SETTINGS_URL;
 
 use crate::{
     components::{
@@ -18,6 +22,8 @@ use crate::{
     },
     core::oauth::{oauth_refresh_token, AuthToken},
     pages::{
+        account::{crypto::ManageCrypto, password::ChangePassword},
+        authorize::Authorize,
         config::{edit::SettingsEdit, list::SettingsList},
         directory::{
             domains::{edit::DomainCreate, list::DomainList},
@@ -107,6 +113,7 @@ pub fn App() -> impl IntoView {
     });
 
     let is_logged_in = create_memo(move |_| auth_token.get().is_logged_in());
+    let is_admin = create_memo(move |_| auth_token.get().is_admin());
 
     view! {
         <Router>
@@ -114,7 +121,7 @@ pub fn App() -> impl IntoView {
                 <ProtectedRoute
                     path="/manage"
                     view=move || {
-                        view! { <Layout menu_items=LayoutBuilder::manage()/> }
+                        view! { <Layout menu_items=LayoutBuilder::manage() is_admin=is_admin/> }
                     }
 
                     redirect_path="/login"
@@ -124,83 +131,106 @@ pub fn App() -> impl IntoView {
                         path="/directory/domains"
                         view=DomainList
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || is_admin.get()
                     />
                     <ProtectedRoute
                         path="/directory/domains/edit"
                         view=DomainCreate
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || is_admin.get()
                     />
 
                     <ProtectedRoute
                         path="/directory/:object"
                         view=PrincipalList
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || is_admin.get()
                     />
                     <ProtectedRoute
                         path="/directory/:object/:id?/edit"
                         view=PrincipalEdit
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || is_admin.get()
                     />
                     <ProtectedRoute
                         path="/queue/messages"
                         view=QueueList
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || is_admin.get()
                     />
                     <ProtectedRoute
                         path="/queue/message/:id"
                         view=QueueManage
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || is_admin.get()
                     />
                     <ProtectedRoute
                         path="/queue/reports"
                         view=ReportList
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || is_admin.get()
                     />
                     <ProtectedRoute
                         path="/queue/report/:id"
                         view=ReportDisplay
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || is_admin.get()
                     />
                     <ProtectedRoute
                         path="/reports/:object"
                         view=IncomingReportList
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || is_admin.get()
                     />
                     <ProtectedRoute
                         path="/reports/:object/:id"
                         view=IncomingReportDisplay
 
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || is_admin.get()
                     />
                 </ProtectedRoute>
                 <ProtectedRoute
                     path="/settings"
                     view=move || {
-                        view! { <Layout menu_items=LayoutBuilder::settings()/> }
+                        view! { <Layout menu_items=LayoutBuilder::settings() is_admin=is_admin/> }
+                    }
+
+                    redirect_path="/login"
+                    condition=move || is_admin.get()
+                >
+                    <ProtectedRoute
+                        path="/:object"
+                        view=SettingsList
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
+                    <ProtectedRoute
+                        path="/:object/:id?/edit"
+                        view=SettingsEdit
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
+
+                </ProtectedRoute>
+                <ProtectedRoute
+                    path="/account"
+                    view=move || {
+                        view! { <Layout menu_items=LayoutBuilder::account() is_admin=is_admin/> }
                     }
 
                     redirect_path="/login"
                     condition=move || is_logged_in.get()
                 >
                     <ProtectedRoute
-                        path="/:object"
-                        view=SettingsList
+                        path="/crypto"
+                        view=ManageCrypto
                         redirect_path="/login"
                         condition=move || is_logged_in.get()
                     />
                     <ProtectedRoute
-                        path="/:object/:id?/edit"
-                        view=SettingsEdit
+                        path="/password"
+                        view=ChangePassword
                         redirect_path="/login"
                         condition=move || is_logged_in.get()
                     />
@@ -209,6 +239,7 @@ pub fn App() -> impl IntoView {
 
                 <Route path="/" view=Login/>
                 <Route path="/login" view=Login/>
+                <Route path="/authorize/:type?" view=Authorize/>
                 <Route path="/*any" view=NotFound/>
             </Routes>
         </Router>
@@ -255,6 +286,23 @@ impl LayoutBuilder {
             .route("/reports/arf")
             .insert()
             .insert()
+            .create("Settings")
+            .icon(view! { <IconAdjustmentsHorizontal/> })
+            .raw_route(DEFAULT_SETTINGS_URL)
+            .insert()
+            .menu_items
+    }
+
+    pub fn account() -> Vec<MenuItem> {
+        LayoutBuilder::new("/account")
+            .create("Encryption-at-rest")
+            .icon(view! { <IconLockClosed/> })
+            .route("/crypto")
+            .insert()
+            .create("Change Password")
+            .icon(view! { <IconKey/> })
+            .route("/password")
+            .insert()
             .menu_items
     }
 }
@@ -262,8 +310,8 @@ impl LayoutBuilder {
 pub fn build_schemas() -> Arc<Schemas> {
     Schemas::builder()
         .build_login()
-        //.build_principals()
-        //.build_domains()
+        .build_principals()
+        .build_domains()
         .build_store()
         .build_directory()
         .build_authentication()
@@ -279,6 +327,9 @@ pub fn build_schemas() -> Arc<Schemas> {
         .build_imap()
         .build_sieve()
         .build_spam_lists()
+        .build_password_change()
+        .build_crypto()
+        .build_authorize()
         .build()
         .into()
 }

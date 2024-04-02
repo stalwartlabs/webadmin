@@ -36,20 +36,22 @@ pub fn Login() -> impl IntoView {
     let query = use_query_map();
 
     let login_action = create_action(
-        move |(user, password, base_url): &(String, String, String)| {
-            let user = user.clone();
+        move |(username, password, base_url): &(String, String, String)| {
+            let username = username.clone();
             let password = password.clone();
             let base_url = base_url.clone();
 
             async move {
-                match oauth_authenticate(&base_url, &user, &password).await {
-                    Ok(grant) => {
+                match oauth_authenticate(&base_url, &username, &password).await {
+                    Ok((grant, is_admin)) => {
                         let refresh_token = grant.refresh_token.unwrap_or_default();
                         auth_token.update(|auth_token| {
                             auth_token.access_token = grant.access_token.into();
                             auth_token.refresh_token = refresh_token.clone().into();
                             auth_token.base_url = base_url.clone().into();
+                            auth_token.username = username.into();
                             auth_token.is_valid = true;
+                            auth_token.is_admin = is_admin;
 
                             if let Err(err) =
                                 SessionStorage::set(STATE_STORAGE_KEY, auth_token.clone())
@@ -75,8 +77,14 @@ pub fn Login() -> impl IntoView {
                             );
                         }
 
-                        //use_navigate()("/manage/directory/accounts", Default::default());
-                        use_navigate()("/settings/store", Default::default());
+                        let todo = "redirect to manage";
+                        let url = if is_admin {
+                            //"/manage/directory/accounts"
+                            "/settings/store"
+                        } else {
+                            "/account/crypto"
+                        };
+                        use_navigate()(url, Default::default());
                     }
                     Err(err) => {
                         alert.set(err);

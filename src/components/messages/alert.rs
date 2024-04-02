@@ -6,7 +6,7 @@ use crate::{
     components::icon::{
         IconCheckCircle, IconExclamationCircle, IconExclamationTriangle, IconXMark,
     },
-    core::http,
+    core::http::{self, ManagementApiError},
     pages::config::{ConfigError, ConfigWarning, ReloadSettings},
 };
 
@@ -193,6 +193,11 @@ impl Alert {
         self
     }
 
+    pub fn without_timeout(mut self) -> Self {
+        self.timeout = None;
+        self
+    }
+
     pub fn with_details(mut self, details: impl Into<String>) -> Self {
         let details = details.into();
         self.details = Some(details.into_view());
@@ -224,7 +229,40 @@ impl From<http::Error> for Alert {
                 log::debug!("Failed to deserialize request: {}", response);
                 Alert::error("Failed to deserialize response").with_details(error)
             }
-            http::Error::Server { error, details } => Alert::error(error).with_details(details),
+            http::Error::Server(error) => {
+                let (title, details) = match error {
+                    ManagementApiError::FieldAlreadyExists { field, value } => (
+                        "Field already exists".to_string(),
+                        format!(
+                            "Another record exists with with value {value:?} in field {field:?}."
+                        ),
+                    ),
+                    ManagementApiError::FieldMissing { field } => (
+                        "Missing required field".to_string(),
+                        format!("Field {} is missing", field),
+                    ),
+                    ManagementApiError::NotFound { item } => {
+                        ("Not found".to_string(), format!("{item} was not found"))
+                    }
+                    ManagementApiError::Unsupported { details } => {
+                        ("Operation not allowed".to_string(), details)
+                    }
+                    ManagementApiError::AssertFailed => (
+                        "Record already exists".to_string(),
+                        "Another record with the same ID already exists".to_string(),
+                    ),
+                    ManagementApiError::Other { details } => {
+                        ("Operation failed".to_string(), details)
+                    }
+                    ManagementApiError::UnsupportedDirectoryOperation { class } => (
+                        format!("{class} directory cannot be managed"),
+                        "Only internal directories support inserts and update operations."
+                            .to_string(),
+                    ),
+                };
+
+                Alert::error(title).with_details(details)
+            }
             http::Error::NotFound => Alert::error("Not found"),
             http::Error::Unauthorized => Alert::error("Unauthorized"),
         }

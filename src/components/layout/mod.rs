@@ -37,14 +37,17 @@ pub struct MenuItem {
 }
 
 #[component]
-pub fn Layout(menu_items: Vec<MenuItem>) -> impl IntoView {
+pub fn Layout(
+    menu_items: Vec<MenuItem>,
+    #[prop(into)] is_admin: MaybeSignal<bool>,
+) -> impl IntoView {
     let menu_items_toggle = menu_items.clone();
     let show_sidebar = create_rw_signal(false);
 
     view! {
         <Body class="bg-gray-50 dark:bg-slate-900"/>
         <Modal/>
-        <Header/>
+        <Header is_admin/>
         <ToggleNavigation menu_items show_sidebar/>
         <SideBar menu_items=menu_items_toggle show_sidebar/>
         <div class="w-full pt-10 px-4 sm:px-6 md:px-8 lg:ps-72">
@@ -97,6 +100,11 @@ impl LayoutBuilder {
         self.last_path = route.into();
         self.chain.last_mut().unwrap().route =
             Some(format!("{}{}", self.base_path, self.last_path));
+        self
+    }
+
+    pub fn raw_route(mut self, route: impl Into<String>) -> Self {
+        self.chain.last_mut().unwrap().route = route.into().into();
         self
     }
 
