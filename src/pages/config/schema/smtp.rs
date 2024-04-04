@@ -70,7 +70,7 @@ impl Builder<Schemas, ()> {
                 "List of DKIM signatures to use when signing Delivery Status ",
                 "Notifications"
             ))
-            .default("['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]")
+            .default("['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]")
             .build()
             .new_form_section()
             .title("Queue Schedule")
@@ -229,7 +229,7 @@ impl Builder<Schemas, ()> {
                 "List of DKIM signatures to use when signing the TLS ",
                 "aggregate report"
             ))
-            .default("['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]")
+            .default("['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]")
             .new_field("report.tls.aggregate.org-name")
             .label("Organization")
             .help(concat!(

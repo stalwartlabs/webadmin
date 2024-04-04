@@ -8,11 +8,7 @@ use crate::{
     components::{
         icon::{IconAdd, IconTrash},
         list::{
-            header::ColumnList,
-            pagination::Pagination,
-            row::SelectItem,
-            toolbar::{SearchBox, ToolbarButton},
-            Footer, ListSection, ListTable, Toolbar, ZeroResults,
+            header::ColumnList, pagination::Pagination, row::SelectItem, toolbar::{SearchBox, ToolbarButton}, Footer, ListItem, ListSection, ListTable, Toolbar, ZeroResults
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -208,7 +204,11 @@ pub fn DomainList() -> impl IntoView {
                             Some(
                                 view! {
                                     <ColumnList
-                                        headers=vec!["Name".to_string(), "Accounts".to_string()]
+                                        headers=vec![
+                                            "Name".to_string(),
+                                            "Accounts".to_string(),
+                                            "".to_string(),
+                                        ]
 
                                         select_all=Callback::new(move |_| {
                                             domains_
@@ -283,39 +283,46 @@ pub fn DomainList() -> impl IntoView {
 fn DomainItem(domain: Domain) -> impl IntoView {
     let action_url = format!("/manage/directory/accounts?filter={}", domain.name);
     let domain_id = domain.name.clone();
+    let manage_url = format!(
+        "/manage/directory/domains/{domain_id}/view",
+    );
 
     view! {
         <tr>
-            <td class="size-px whitespace-nowrap">
-                <div class="ps-6 py-3">
-                    <label class="flex">
-                        <SelectItem item_id=domain_id/>
+            <ListItem>
+                <label class="flex">
+                    <SelectItem item_id=domain_id/>
 
-                        <span class="sr-only">Checkbox</span>
-                    </label>
-                </div>
-            </td>
-            <td class="size-px whitespace-nowrap">
-                <div class="ps-6 lg:ps-3 xl:ps-0 pe-6 py-3">
-                    <div class="flex items-center gap-x-3">
-                        <span class="block text-sm font-semibold text-gray-800 dark:text-gray-200">
-                            {domain.name}
-                        </span>
-                    </div>
-                </div>
-            </td>
+                    <span class="sr-only">Checkbox</span>
+                </label>
+            </ListItem>
 
-            <td class="size-px whitespace-nowrap">
-                <div class="px-6 py-1.5">
-                    <a
-                        class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                        href=action_url
-                    >
-                        {domain.addresses}
-                        accounts
-                    </a>
+            <ListItem subclass="ps-6 lg:ps-3 xl:ps-0 pe-6 py-3">
+                <div class="flex items-center gap-x-3">
+                    <span class="block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        {domain.name}
+                    </span>
                 </div>
-            </td>
+            </ListItem>
+
+            <ListItem subclass="px-6 py-1.5">
+                <a
+                    class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                    href=action_url
+                >
+                    {domain.addresses}
+                    accounts
+                </a>
+            </ListItem>
+
+            <ListItem subclass="px-6 py-1.5">
+                <a
+                    class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                    href=manage_url
+                >
+                    DNS Records
+                </a>
+            </ListItem>
         </tr>
     }
 }

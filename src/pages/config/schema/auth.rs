@@ -29,18 +29,11 @@ impl Builder<Schemas, ()> {
                 ]),
             })
             .build()
-            .new_field("public-key")
-            .label("Public Key")
-            .help(concat!(
-                "Contents or the public key used to sign messages ",
-                "(required only for ED25519)"
-            ))
-            .typ(Type::Text)
-            .input_check_if_eq("algorithm", ["ed25519-sha256"], [], [Validator::Required])
-            .build()
             .new_field("private-key")
             .label("Private Key")
-            .help(concat!("Contents of the private key used to sign messages"))
+            .help(concat!(
+                "Contents of the private key PEM used to sign messages"
+            ))
             .typ(Type::Text)
             .input_check([], [Validator::Required])
             .build()
@@ -151,8 +144,8 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .new_form_section()
-            .title("Keys")
-            .fields(["public-key", "private-key"])
+            .title("Key")
+            .fields(["private-key"])
             .build()
             .new_form_section()
             .title("Options")
@@ -199,7 +192,7 @@ impl Builder<Schemas, ()> {
             .default(Expression::new(
                 [(
                     "is_local_domain('*', sender_domain)",
-                    "['rsa_' + sender_domain, 'ed_' + sender_domain]",
+                    "['rsa-' + sender_domain, 'ed25519-' + sender_domain]",
                 )],
                 "false",
             ))
@@ -230,7 +223,7 @@ impl Builder<Schemas, ()> {
                 "report"
             ))
             .default(
-                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
             )
             .new_field("report.dkim.send")
             .label("Send rate")
@@ -279,7 +272,7 @@ impl Builder<Schemas, ()> {
             .new_field("auth.arc.seal")
             .default(Expression::new(
                 [],
-                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
             ))
             .label("Signature")
             .help(concat!("List of DKIM signatures to use for sealing"))
@@ -359,7 +352,7 @@ impl Builder<Schemas, ()> {
                 "authentication failure report"
             ))
             .default(
-                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
             )
             .new_field("report.spf.send")
             .label("Send rate")
@@ -431,7 +424,7 @@ impl Builder<Schemas, ()> {
                 "authentication failure report"
             ))
             .default(
-                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
             )
             .new_field("report.dmarc.send")
             .label("Send rate")
@@ -475,7 +468,7 @@ impl Builder<Schemas, ()> {
                 "aggregate report"
             ))
             .default(
-                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
             )
             .new_field("report.dmarc.aggregate.org-name")
             .label("Organization")

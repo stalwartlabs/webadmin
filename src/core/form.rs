@@ -130,7 +130,7 @@ impl FormData {
     pub fn update(&mut self, id: &str, value: impl Into<FormValue>) {
         let value = value.into();
         self.cascading_reset(id);
-        log::debug!("Updating field {id:?} with value {value:?}");
+        //let c = log::debug!("Updating field {id:?} with value {value:?}");
         self.values.insert(id.to_string(), value);
         self.update_defaults(id);
         self.errors.remove(id);
@@ -336,7 +336,7 @@ impl FormData {
             }
         }
 
-        let c = log::debug!("Removed fields {removed_fields:?}");
+        //let c = log::debug!("Removed fields {removed_fields:?}");
     }
 
     fn update_defaults(&mut self, id: &str) {
@@ -353,7 +353,7 @@ impl FormData {
                     || (field.display.iter().any(|eval| eval.field.id == id) && field.display(self))
                 {
                     if let Some(default) = field.default.eval(self) {
-                        let c = log::debug!("adding default {:?} = {default:?}", field.id);
+                        //let c = log::debug!("adding default {:?} = {default:?}", field.id);
                         let value = match (&field.typ_, default) {
                             (Type::Expression, FormValue::Value(default)) => {
                                 FormValue::Expression(Expression {
@@ -407,10 +407,10 @@ impl FormData {
             }
         }
 
-        log::debug!(
+        /*let c = log::debug!(
             "Applied defaults to fields {added_fields:?}: {:?}",
             self.values
-        );
+        );*/
 
         // Add default values for fields that depend on top-level fields
         for field_id in added_fields {

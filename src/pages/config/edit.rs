@@ -211,7 +211,7 @@ pub fn SettingsEdit() -> impl IntoView {
             let auth = auth.get();
             let schema = current_schema.get();
 
-            log::debug!("Saving changes: {:?}", changes);
+            //let c = log::debug!("Saving changes: {:?}", changes);
 
             async move {
                 set_pending.set(true);

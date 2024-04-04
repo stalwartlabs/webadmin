@@ -104,7 +104,7 @@ impl Builder<Schemas, ()> {
                 "a Sieve script"
             ))
             .default(
-                "['rsa_' + key_get('default', 'domain'), 'ed_' + key_get('default', 'domain')]",
+                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
             )
             .build()
             .new_field("sieve.trusted.hostname")

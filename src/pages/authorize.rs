@@ -35,6 +35,7 @@ pub fn Authorize() -> impl IntoView {
             let username = username.clone();
             let password = password.clone();
             let request = request.clone();
+            let state = query.get().get("state").cloned();
 
             async move {
                 match &request {
@@ -52,11 +53,20 @@ pub fn Authorize() -> impl IntoView {
                         .await
                         {
                             Ok(response) => {
-                                let url = format!(
-                                    "{}?code={}",
-                                    redirect_uri.as_deref().unwrap_or_default(),
-                                    response.code
-                                );
+                                let url = if let Some(state) = state {
+                                    format!(
+                                        "{}?code={}&state={}",
+                                        redirect_uri.as_deref().unwrap_or_default(),
+                                        response.code,
+                                        state
+                                    )
+                                } else {
+                                    format!(
+                                        "{}?code={}",
+                                        redirect_uri.as_deref().unwrap_or_default(),
+                                        response.code
+                                    )
+                                };
 
                                 if let Err(err) = window().location().set_href(&url) {
                                     log::error!("Failed to redirect to {url}: {err:?}");

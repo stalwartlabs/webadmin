@@ -88,7 +88,7 @@ pub fn ManageCrypto() -> impl IntoView {
                 .with_base_url(&auth)
                 .with_body(changes)
                 .unwrap()
-                .send::<Option<String>>()
+                .send::<Option<u32>>()
                 .await
                 .map(|_| ());
             set_pending.set(false);

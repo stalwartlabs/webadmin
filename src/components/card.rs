@@ -7,8 +7,9 @@ pub struct CardItem {
 
 #[component]
 pub fn Card(children: Children) -> impl IntoView {
-    let children = children()
-    .nodes
+    let nodes = children().nodes;
+    let cols = nodes.len();
+    let children = nodes
     .into_iter()
     .map(|child| view! {
         <a
@@ -20,11 +21,16 @@ pub fn Card(children: Children) -> impl IntoView {
     })
     .collect_view();
 
+    // Workaround for the fact that passing strings as a class prop doesn't work
+    let class = if cols == 3 {
+        "grid md:grid-cols-3 border border-gray-200 shadow-sm rounded-xl overflow-hidden dark:border-gray-700"
+    } else {
+        "grid md:grid-cols-4 border border-gray-200 shadow-sm rounded-xl overflow-hidden dark:border-gray-700"
+    };
+
     view! {
         <div class="max-w-[85rem] px-4 py-2 sm:px-6 lg:px-8 lg:py-2 mx-auto">
-            <div class="grid md:grid-cols-4 border border-gray-200 shadow-sm rounded-xl overflow-hidden dark:border-gray-700">
-                {children}
-            </div>
+            <div class=class>{children}</div>
         </div>
     }
 }

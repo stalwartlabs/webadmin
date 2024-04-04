@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use leptos::*;
 use leptos_router::use_navigate;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     components::{
@@ -13,11 +14,26 @@ use crate::{
         Color,
     },
     core::{
-        http::HttpRequest,
+        http::{Error, HttpRequest, ManagementApiError},
         oauth::use_authorization,
         schema::{Builder, Schemas, Transformer, Type, Validator},
     },
 };
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+enum Algorithm {
+    #[default]
+    Rsa,
+    Ed25519,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+struct DkimSignature {
+    id: Option<String>,
+    algorithm: Algorithm,
+    domain: String,
+    selector: Option<String>,
+}
 
 #[component]
 pub fn DomainCreate() -> impl IntoView {
@@ -36,16 +52,41 @@ pub fn DomainCreate() -> impl IntoView {
 
         async move {
             set_pending.set(true);
-            let result = HttpRequest::post(format!("/api/domain/{name}"))
+            let mut result = HttpRequest::post(format!("/api/domain/{name}"))
                 .with_authorization(&auth)
                 .send::<()>()
                 .await
                 .map(|_| ());
+
+            // Create DKIM keys
+            if result.is_ok() {
+                for algo in [Algorithm::Ed25519, Algorithm::Rsa] {
+                    result = HttpRequest::post("/api/dkim")
+                        .with_authorization(&auth)
+                        .with_body(DkimSignature {
+                            algorithm: algo,
+                            domain: name.clone(),
+                            ..Default::default()
+                        })
+                        .unwrap()
+                        .send::<()>()
+                        .await
+                        .map(|_| ());
+
+                    if !matches!(
+                        result,
+                        Ok(_) | Err(Error::Server(ManagementApiError::FieldAlreadyExists { .. }))
+                    ) {
+                        break;
+                    }
+                }
+            }
+
             set_pending.set(false);
 
             match result {
-                Ok(_) => {
-                    use_navigate()("/manage/directory/domains", Default::default());
+                Ok(_) | Err(Error::Server(ManagementApiError::FieldAlreadyExists { .. })) => {
+                    use_navigate()(&format!("/manage/directory/domains/{name}/view"), Default::default());
                 }
                 Err(err) => {
                     alert.set(Alert::from(err));

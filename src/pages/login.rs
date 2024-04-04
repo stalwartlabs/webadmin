@@ -80,7 +80,7 @@ pub fn Login() -> impl IntoView {
                         let todo = "redirect to manage";
                         let url = if is_admin {
                             //"/manage/directory/accounts"
-                            "/settings/store"
+                            "/settings/system/edit"
                         } else {
                             "/account/crypto"
                         };

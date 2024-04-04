@@ -26,7 +26,7 @@ use crate::{
         authorize::Authorize,
         config::{edit::SettingsEdit, list::SettingsList},
         directory::{
-            domains::{edit::DomainCreate, list::DomainList},
+            domains::{display::DomainDisplay, edit::DomainCreate, list::DomainList},
             principals::{edit::PrincipalEdit, list::PrincipalList},
         },
         login::Login,
@@ -136,6 +136,12 @@ pub fn App() -> impl IntoView {
                     <ProtectedRoute
                         path="/directory/domains/edit"
                         view=DomainCreate
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
+                    <ProtectedRoute
+                        path="/directory/domains/:id/view"
+                        view=DomainDisplay
                         redirect_path="/login"
                         condition=move || is_admin.get()
                     />

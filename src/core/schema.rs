@@ -253,7 +253,7 @@ impl Schema {
     pub fn unwrap_prefix(&self) -> &str {
         match self.typ {
             SchemaType::Record { prefix, .. } | SchemaType::Entry { prefix } => prefix,
-            SchemaType::List => panic!("Schema type is not Record or Entry."),
+            SchemaType::List => panic!("Schema type is not Record or Entry for {:?}.", self.id),
         }
     }
 
