@@ -1239,6 +1239,10 @@ impl Builder<Schemas, ()> {
             .new_field("session.data.script")
             .label("Run Script")
             .help("Which Sieve script to run after the client sends a DATA command")
+            .default(Expression::new(
+                [("is_empty(authenticated_as)", "'spam-filter'")],
+                "'track-replies'",
+            ))
             .typ(Type::Expression)
             .input_check([], [Validator::IsValidExpression(has_rcpt_vars)])
             .new_field("session.data.limits.messages")

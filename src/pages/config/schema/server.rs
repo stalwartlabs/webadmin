@@ -7,6 +7,16 @@ impl Builder<Schemas, ()> {
         let connect_expr = ExpressionValidator::new(CONNECTION_VARS, &[]);
 
         self.new_schema("network")
+            // Default hostname
+            .new_field("lookup.default.hostname")
+            .label("Hostname")
+            .help("The default fully-qualified system hostname")
+            .placeholder("mail.example.com")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsHost],
+            )
             // Max connections
             .new_field("server.max-connections")
             .label("Max connections")
@@ -34,10 +44,20 @@ impl Builder<Schemas, ()> {
             .build()
             // Use X-Forwarded-For
             .new_field("server.http.use-x-forwarded")
-            .label("Use X-Forwarded")
+            .label("Obtain remote IP from Forwarded header")
             .help(concat!(
-                "Specifies whether to use the X-Forwarded-For header to ",
+                "Specifies whether to use the Forwarded or X-Forwarded-For header to ",
                 "determine the client's IP address"
+            ))
+            .typ(Type::Boolean)
+            .default("false")
+            .build()
+            // Use X-Forwarded-For
+            .new_field("server.http.permissive-cors")
+            .label("Permissive CORS policy")
+            .help(concat!(
+                "Specifies whether to allow all origins in the CORS policy ",
+                "for the HTTP server"
             ))
             .typ(Type::Boolean)
             .default("false")
@@ -64,16 +84,21 @@ impl Builder<Schemas, ()> {
             .add_network_fields(false)
             // Forms
             .new_form_section()
+            .title("Network settings")
+            .fields([
+                "lookup.default.hostname",
+                "server.max-connections",
+                "server.proxy.trusted-networks",
+            ])
+            .build()
+            .new_form_section()
             .title("HTTP Settings")
             .fields([
                 "server.http.url",
                 "server.http.headers",
                 "server.http.use-x-forwarded",
+                "server.http.permissive-cors",
             ])
-            .build()
-            .new_form_section()
-            .title("Network settings")
-            .fields(["server.max-connections", "server.proxy.trusted-networks"])
             .build()
             .new_form_section()
             .title("Cluster")
@@ -96,49 +121,17 @@ impl Builder<Schemas, ()> {
             .build()
             // Common settings
             .new_schema("system")
-            // Default hostname
-            .new_field("lookup.default.hostname")
-            .label("Hostname")
-            .help("The default system hostname")
-            .placeholder("mail.example.com")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::IsHost],
-            )
-            // Default hostname
-            .new_field("lookup.default.domain")
-            .label("Domain")
-            .help("The default domain name")
-            .placeholder("example.com")
-            .build()
             // Local keys
             .new_field("config.local-keys")
             .label("Local settings")
             .help(concat!(
                 "List of glob expressions for local configuration keys",
                 " that should be stored locally in the configuration file.",
-                "All other keys will be stored in the database."
+                "All other keys will be stored in the database. If left blank ",
+                "the default settings will be used (check the documentation for more info)"
             ))
             .typ(Type::Array)
-            .input_check([Transformer::Trim], [Validator::Required])
-            .default(
-                &[
-                    "store.*",
-                    "!store.*.query.*",
-                    "server.listener.*",
-                    "server.socket.*",
-                    "server.tls.*",
-                    "cluster.node-id",
-                    "storage.data",
-                    "storage.blob",
-                    "storage.lookup",
-                    "storage.fts",
-                    "server.run-as.user",
-                    "server.run-as.group",
-                    "config.local-keys.*",
-                ][..],
-            )
+            .input_check([Transformer::Trim], [])
             .build()
             // Run as user
             .new_field("server.run-as.user")
@@ -165,10 +158,6 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
             .placeholder("8")
-            .build()
-            .new_form_section()
-            .title("Defaults")
-            .fields(["lookup.default.hostname", "lookup.default.domain"])
             .build()
             .new_form_section()
             .title("Run as")

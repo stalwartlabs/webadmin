@@ -160,25 +160,6 @@ pub fn IncomingReportList() -> impl IntoView {
 
     let total_results = create_rw_signal(None::<u32>);
 
-    // From
-    // Report Range
-    // Domains
-    // Pass
-    // Reject
-    // Quarantine
-
-    // From
-    // Report Start
-    // Domains
-    // Successes
-    // Failures
-
-    // From
-    // Type
-    // Date
-    // Domains
-    // Incidents
-
     let title = create_memo(move |_| {
         match report_type.get() {
             ReportType::Dmarc => "DMARC Aggregate Reports",

@@ -86,7 +86,10 @@ pub fn DomainCreate() -> impl IntoView {
 
             match result {
                 Ok(_) | Err(Error::Server(ManagementApiError::FieldAlreadyExists { .. })) => {
-                    use_navigate()(&format!("/manage/directory/domains/{name}/view"), Default::default());
+                    use_navigate()(
+                        &format!("/manage/directory/domains/{name}/view"),
+                        Default::default(),
+                    );
                 }
                 Err(err) => {
                     alert.set(Alert::from(err));

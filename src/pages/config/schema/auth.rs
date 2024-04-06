@@ -531,6 +531,12 @@ impl Builder<Schemas, ()> {
             .build()
             // Reporting
             .new_schema("report")
+            .new_field("lookup.default.domain")
+            .label("Default Domain")
+            .help("The default domain name used for DSNs and other reports")
+            .placeholder("example.com")
+            .input_check([Transformer::Trim], [Validator::Required, Validator::IsDomain])
+            .build()
             .new_field("report.analysis.addresses")
             .label("Report Addresses")
             .help(concat!(
@@ -584,7 +590,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Outbound Report Settings")
-            .fields(["report.submitter"])
+            .fields(["lookup.default.domain", "report.submitter"])
             .build()
             .build()
     }

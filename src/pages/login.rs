@@ -77,10 +77,8 @@ pub fn Login() -> impl IntoView {
                             );
                         }
 
-                        let todo = "redirect to manage";
                         let url = if is_admin {
-                            //"/manage/directory/accounts"
-                            "/settings/system/edit"
+                            "/manage/directory/accounts"
                         } else {
                             "/account/crypto"
                         };
@@ -104,7 +102,12 @@ pub fn Login() -> impl IntoView {
         .with_value("login", login)
         .into_signal();
     let has_remote = create_memo(move |_| {
-        query.get().get("remote").is_some() || data.get().has_value("base-url")
+        query.get().get("remote").is_some()
+            || data
+                .get()
+                .get("base-url")
+                .filter(|v| !v.is_empty())
+                .is_some()
     });
 
     view! {

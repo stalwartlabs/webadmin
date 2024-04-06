@@ -6,6 +6,7 @@ pub mod authorize;
 pub mod config;
 pub mod directory;
 pub mod login;
+pub mod manage;
 pub mod notfound;
 pub mod queue;
 pub mod reports;

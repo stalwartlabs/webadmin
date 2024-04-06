@@ -32,9 +32,35 @@ impl Builder<Schemas, ()> {
             .typ(Type::Rate)
             .default("10/1m")
             .build()
+            // Fallback admin
+            .new_field("authentication.fallback-admin.user")
+            .label("Username")
+            .help(concat!(
+                "A rescue admin user can access the server in case the ",
+                "directory becomes unavailable"
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("authentication.fallback-admin.secret")
+            .label("Password")
+            .help(concat!(
+                "A rescue admin secret that can access the server ",
+                "in case the directory becomes unavailable"
+            ))
+            .typ(Type::Secret)
+            .input_check([Transformer::Trim], [])
+            .build()
             .new_form_section()
             .title("Authentication")
             .fields(["storage.directory"])
+            .build()
+            .new_form_section()
+            .title("Fallback Administrator")
+            .fields([
+                "authentication.fallback-admin.user",
+                "authentication.fallback-admin.secret",
+            ])
             .build()
             .new_form_section()
             .title("Security")

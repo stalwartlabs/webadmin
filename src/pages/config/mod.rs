@@ -1,6 +1,7 @@
 pub mod edit;
 pub mod list;
 pub mod schema;
+pub mod search;
 
 use std::{collections::BTreeMap, str::FromStr};
 
@@ -259,13 +260,13 @@ impl LayoutBuilder {
             // Server
             .create("Server")
             .icon(view! { <IconServerStack/> })
-            // System
-            .create("System")
-            .route("/system/edit")
-            .insert()
             // Network
             .create("Network")
             .route("/network/edit")
+            .insert()
+            // System
+            .create("System")
+            .route("/system/edit")
             .insert()
             // Listener
             .create("Listeners")

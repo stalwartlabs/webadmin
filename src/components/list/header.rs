@@ -10,38 +10,40 @@ pub fn ColumnList(
 ) -> impl IntoView {
     let headers_ = headers.clone();
     let total_columns = create_memo(move |_| headers_.get().len());
-    let selected = use_context::<RwSignal<HashSet<String>>>().unwrap();
     let has_select_all = select_all.is_some();
 
     view! {
         <thead class="bg-gray-50 dark:bg-slate-800">
             <tr>
-                <Show when=move || { has_select_all }>
-                    <th scope="col" class="ps-6 py-3 text-start">
-                        <label for="hs-at-with-checkboxes-main" class="flex">
-                            <input
-                                type="checkbox"
-                                class="shrink-0 border-gray-300 rounded text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-600 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                                on:change=move |ev| {
-                                    selected
-                                        .update(|t| {
-                                            let items = select_all.unwrap().call(());
-                                            if event_target_checked(&ev) {
-                                                t.extend(items);
-                                            } else {
-                                                for item in items {
-                                                    t.remove(&item);
-                                                }
-                                            }
-                                        });
-                                }
-                            />
+                {select_all
+                    .map(|select_all| {
+                        let selected = use_context::<RwSignal<HashSet<String>>>().unwrap();
+                        view! {
+                            <th scope="col" class="ps-6 py-3 text-start">
+                                <label for="hs-at-with-checkboxes-main" class="flex">
+                                    <input
+                                        type="checkbox"
+                                        class="shrink-0 border-gray-300 rounded text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-600 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
+                                        on:change=move |ev| {
+                                            selected
+                                                .update(|t| {
+                                                    let items = select_all.call(());
+                                                    if event_target_checked(&ev) {
+                                                        t.extend(items);
+                                                    } else {
+                                                        for item in items {
+                                                            t.remove(&item);
+                                                        }
+                                                    }
+                                                });
+                                        }
+                                    />
 
-                            <span class="sr-only">Checkbox</span>
-                        </label>
-                    </th>
-                </Show>
-
+                                    <span class="sr-only">Checkbox</span>
+                                </label>
+                            </th>
+                        }
+                    })}
                 <For
                     each=move || { headers.get().into_iter().enumerate().collect::<Vec<_>>() }
 

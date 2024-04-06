@@ -8,7 +8,11 @@ use crate::{
     components::{
         icon::{IconAdd, IconTrash},
         list::{
-            header::ColumnList, pagination::Pagination, row::SelectItem, toolbar::{SearchBox, ToolbarButton}, Footer, ListItem, ListSection, ListTable, Toolbar, ZeroResults
+            header::ColumnList,
+            pagination::Pagination,
+            row::SelectItem,
+            toolbar::{SearchBox, ToolbarButton},
+            Footer, ListItem, ListSection, ListTable, Toolbar, ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -283,9 +287,7 @@ pub fn DomainList() -> impl IntoView {
 fn DomainItem(domain: Domain) -> impl IntoView {
     let action_url = format!("/manage/directory/accounts?filter={}", domain.name);
     let domain_id = domain.name.clone();
-    let manage_url = format!(
-        "/manage/directory/domains/{domain_id}/view",
-    );
+    let manage_url = format!("/manage/directory/domains/{domain_id}/view",);
 
     view! {
         <tr>

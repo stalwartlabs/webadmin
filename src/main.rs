@@ -4,8 +4,7 @@ use std::{sync::Arc, time::Duration};
 
 use components::{
     icon::{
-        IconAdjustmentsHorizontal, IconDocumentChartBar, IconKey, IconLockClosed, IconQueueList,
-        IconUserGroup,
+        IconAdjustmentsHorizontal, IconDocumentChartBar, IconDocumentText, IconKey, IconLockClosed, IconQueueList, IconUserGroup
     },
     layout::MenuItem,
 };
@@ -22,20 +21,13 @@ use crate::{
     },
     core::oauth::{oauth_refresh_token, AuthToken},
     pages::{
-        account::{crypto::ManageCrypto, password::ChangePassword},
-        authorize::Authorize,
-        config::{edit::SettingsEdit, list::SettingsList},
-        directory::{
+        account::{crypto::ManageCrypto, password::ChangePassword}, authorize::Authorize, config::{edit::SettingsEdit, list::SettingsList, search::SettingsSearch}, directory::{
             domains::{display::DomainDisplay, edit::DomainCreate, list::DomainList},
             principals::{edit::PrincipalEdit, list::PrincipalList},
-        },
-        login::Login,
-        notfound::NotFound,
-        queue::{
+        }, login::Login, manage::logs::Logs, notfound::NotFound, queue::{
             messages::{list::QueueList, manage::QueueManage},
             reports::{display::ReportDisplay, list::ReportList},
-        },
-        reports::{display::IncomingReportDisplay, list::IncomingReportList},
+        }, reports::{display::IncomingReportDisplay, list::IncomingReportList}
     },
 };
 
@@ -195,6 +187,12 @@ pub fn App() -> impl IntoView {
                         redirect_path="/login"
                         condition=move || is_admin.get()
                     />
+                    <ProtectedRoute
+                        path="/logs"
+                        view=Logs
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
                 </ProtectedRoute>
                 <ProtectedRoute
                     path="/settings"
@@ -217,7 +215,12 @@ pub fn App() -> impl IntoView {
                         redirect_path="/login"
                         condition=move || is_admin.get()
                     />
-
+                    <ProtectedRoute
+                        path="/search"
+                        view=SettingsSearch
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
                 </ProtectedRoute>
                 <ProtectedRoute
                     path="/account"
@@ -291,6 +294,10 @@ impl LayoutBuilder {
             .create("Failures")
             .route("/reports/arf")
             .insert()
+            .insert()
+            .create("Logs")
+            .icon(view! { <IconDocumentText/> })
+            .route("/logs")
             .insert()
             .create("Settings")
             .icon(view! { <IconAdjustmentsHorizontal/> })
