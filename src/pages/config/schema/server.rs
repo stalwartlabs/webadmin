@@ -306,7 +306,8 @@ impl Builder<Schemas, Schema> {
             "Time-to-live (TTL) value for the socket, which determines how ",
             "many hops a packet can make before it is discarded"
         ))
-        .typ(Type::Duration)
+        .typ(Type::Input)
+        .input_check([Transformer::Trim], vec![Validator::MinValue(1.into())])
         .display_if_eq("socket.override", do_override.iter().copied())
         .build()
         // Linger

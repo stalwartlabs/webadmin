@@ -71,7 +71,7 @@ impl Builder<Schemas, ()> {
             // Forms
             .new_form_section()
             .title("Listener settings")
-            .fields(["protocol", "bind"])
+            .fields(["_id", "protocol", "bind"])
             .build()
             .new_form_section()
             .title("TLS options")

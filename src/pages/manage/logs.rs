@@ -173,8 +173,6 @@ pub fn Logs() -> impl IntoView {
 fn LogItem(log: LogEntry) -> impl IntoView {
     let timestamp = log.timestamp.format_date_time();
 
-    log::debug!("Rendering log item: {:?}", log);
-
     view! {
         <tr>
             <ListItem>

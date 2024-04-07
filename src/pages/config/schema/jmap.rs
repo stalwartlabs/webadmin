@@ -126,7 +126,7 @@ impl Builder<Schemas, ()> {
                 "Specifies the Time-To-Live (TTL) for each uploaded file, after ",
                 "which the file is deleted from temporary storage"
             ))
-            .default("")
+            .default("1h")
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()

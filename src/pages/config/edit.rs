@@ -236,7 +236,10 @@ pub fn SettingsEdit() -> impl IntoView {
                                 Ok(result) => {
                                     set_pending.set(false);
                                     if result.errors.is_empty() {
-                                        use_navigate()(&schema.list_path(), Default::default());
+                                        match schema.list_path() {
+                                            Some(url) => use_navigate()(&url, Default::default()),
+                                            None => alert.set(Alert::success("Settings successfully saved and reloaded")),
+                                        }
                                     } else {
                                         alert.set(Alert::from(result));
                                     }
@@ -251,7 +254,10 @@ pub fn SettingsEdit() -> impl IntoView {
                             }
                         } else {
                             set_pending.set(false);
-                            use_navigate()(&schema.list_path(), Default::default());
+                            match schema.list_path() {
+                                Some(url) => use_navigate()(&url, Default::default()),
+                                None => alert.set(Alert::success("Settings successfully saved")),
+                            }
                         }
                     }
                     Err(err) => {
@@ -479,7 +485,10 @@ pub fn SettingsEdit() -> impl IntoView {
                     text="Cancel"
                     color=Color::Gray
                     on_click=move |_| {
-                        use_navigate()(&current_schema.get().list_path(), Default::default());
+                        use_navigate()(
+                            &current_schema.get().list_path_or_default(),
+                            Default::default(),
+                        );
                     }
                 />
 
@@ -520,11 +529,15 @@ pub fn SettingsEdit() -> impl IntoView {
 }
 
 impl Schema {
-    fn list_path(&self) -> String {
+    fn list_path(&self) -> Option<String> {
         if !matches!(self.typ, SchemaType::List) {
-            format!("/settings/{}", self.id)
+            format!("/settings/{}", self.id).into()
         } else {
-            DEFAULT_SETTINGS_URL.to_string()
+            None
         }
+    }
+
+    fn list_path_or_default(&self) -> String {
+        self.list_path().unwrap_or_else(|| DEFAULT_SETTINGS_URL.to_string())
     }
 }

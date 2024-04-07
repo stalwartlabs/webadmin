@@ -13,7 +13,7 @@ use crate::pages::config::{Settings, SettingsValues};
 use super::expr::parser::ExpressionParser;
 use super::expr::tokenizer::Tokenizer;
 use super::expr::{Constant, ParseValue, Token};
-use super::schema::{NumberType, Type};
+use super::schema::{NumberType, SchemaType, Type};
 
 use super::schema::{InputCheck, Schema, Transformer, Validator};
 
@@ -381,15 +381,15 @@ impl FormData {
         for field in schema.fields.values() {
             if field.display.is_empty()
                 && field.default.if_thens.is_empty()
+                && !self.values.contains_key(field.id)
+                && field.checks.if_thens.is_empty()
                 && (!only_required
-                    || (!self.values.contains_key(field.id)
-                        && field.checks.if_thens.is_empty()
-                        && (matches!(field.typ_, Type::Boolean | Type::Expression)
-                            || field
-                                .checks
-                                .default
-                                .as_ref()
-                                .map_or(false, |d| d.validators.contains(&Validator::Required)))))
+                    || (matches!(field.typ_, Type::Boolean | Type::Expression)
+                        || field
+                            .checks
+                            .default
+                            .as_ref()
+                            .map_or(false, |d| d.validators.contains(&Validator::Required))))
             {
                 if let Some(default) = field.default.default.as_ref() {
                     let value = match (&field.typ_, default) {
@@ -734,7 +734,7 @@ impl FormData {
                 }
             }
             data.is_update = true;
-            data.apply_defaults(true);
+            data.apply_defaults(schema.typ != SchemaType::List);
         } else {
             data.apply_defaults(false);
         }
@@ -768,7 +768,7 @@ impl InputCheck {
                     Validator::IsId => {
                         if let Some(ch) = value
                             .chars()
-                            .find(|c| !c.is_ascii_alphanumeric() && *c != '_' && *c != '-')
+                            .find(|c| !c.is_alphanumeric() && !['_', '-', '.'].contains(c))
                         {
                             return Err(format!("Invalid character '{ch}' in this field").into());
                         }

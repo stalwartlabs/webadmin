@@ -196,6 +196,13 @@ impl Builder<Schemas, ()> {
             .help("Maximum number of recipients to check per session")
             .default("5")
             .build()
+            .new_field("timeout")
+            .label("Timeout")
+            .help("Connection timeout to the server")
+            .typ(Type::Duration)
+            .display_if_eq("type", ["ldap", "smtp", "lmtp", "imap"])
+            .default("15s")
+            .build()
             // LDAP settings
             .new_field("url")
             .label("URL")
@@ -204,11 +211,6 @@ impl Builder<Schemas, ()> {
             .default("ldap://localhost:389")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
-            .new_field("timeout")
-            .label("Timeout")
-            .help("Connection timeout to the LDAP directory")
-            .typ(Type::Duration)
-            .default("15s")
             .new_field("base-dn")
             .label("Base DN")
             .help("The base distinguished name (DN) from where searches should begin")
@@ -334,7 +336,7 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Configuration")
             .fields([
-                "_id", "type", "store", "url", "base-dn", "timeout", "host", "port",
+                "_id", "type", "store", "url", "base-dn", "host", "port", "timeout",
             ])
             .build()
             .new_form_section()

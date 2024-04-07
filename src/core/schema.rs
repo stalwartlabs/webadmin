@@ -59,7 +59,7 @@ pub struct Schema {
     pub form: Form,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub enum SchemaType {
     Record {
         prefix: &'static str,

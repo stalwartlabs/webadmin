@@ -464,41 +464,41 @@ impl Builder<Schemas, ()> {
                 "https://publicsuffix.org/list/public_suffix_list.dat",
                 "https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat"
             ][..])
-            .typ(Type::Input)
+            .typ(Type::Array)
             .input_check([], [Validator::Required, Validator::IsUrl])
             .build()
-            .new_field("cache.resolver.txt")
+            .new_field("cache.resolver.txt.size")
             .label("TXT Records")
             .help(concat!("Number of TXT records to cache"))
             .default("2048")
             .typ(Type::Input)
-            .input_check([], [Validator::Required, Validator::MaxValue(1.into())])
-            .new_field("cache.resolver.mx")
+            .input_check([], [Validator::Required, Validator::MinValue(1.into())])
+            .new_field("cache.resolver.mx.size")
             .label("MX Records")
             .help(concat!("Number of MX records to cache"))
             .default("1024")
             .typ(Type::Input)
-            .new_field("cache.resolver.ipv4")
+            .new_field("cache.resolver.ipv4.size")
             .label("IPv4 Records")
             .help(concat!("Number of IPv4 records to cache"))
             .default("1024")
             .typ(Type::Input)
-            .new_field("cache.resolver.ipv6")
+            .new_field("cache.resolver.ipv6.size")
             .label("IPv6 Records")
             .help(concat!("Number of IPv6 records to cache"))
             .default("1024")
             .typ(Type::Input)
-            .new_field("cache.resolver.ptr")
+            .new_field("cache.resolver.ptr.size")
             .label("PTR Records")
             .help(concat!("Number of PTR records to cache"))
             .default("1024")
             .typ(Type::Input)
-            .new_field("cache.resolver.tlsa")
+            .new_field("cache.resolver.tlsa.size")
             .label("TLSA Records")
             .help(concat!("Number of TLSA records to cache"))
             .default("1024")
             .typ(Type::Input)
-            .new_field("cache.resolver.mta-sts")
+            .new_field("cache.resolver.mta-sts.size")
             .label("MTA-STS Records")
             .help(concat!("Number of MTA-STS records to cache"))
             .default("1024")
@@ -520,13 +520,13 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("DNS Record Cache")
             .fields([
-                "cache.resolver.txt",
-                "cache.resolver.mx",
-                "cache.resolver.ipv4",
-                "cache.resolver.ipv6",
-                "cache.resolver.ptr",
-                "cache.resolver.tlsa",
-                "cache.resolver.mta-sts",
+                "cache.resolver.txt.size",
+                "cache.resolver.mx.size",
+                "cache.resolver.ipv4.size",
+                "cache.resolver.ipv6.size",
+                "cache.resolver.ptr.size",
+                "cache.resolver.tlsa.size",
+                "cache.resolver.mta-sts.size",
             ])
             .build()
             .build()
@@ -571,25 +571,6 @@ impl Builder<Schemas, ()> {
             })
             .default("smtp")
             .build()
-            .new_field("concurrency")
-            .label("Concurrency")
-            .help(concat!(
-                "The maximum number of concurrent connections to the remote ",
-                "server"
-            ))
-            .typ(Type::Input)
-            .input_check([], [Validator::Required, Validator::MinValue(1.into())])
-            .default("10")
-            .build()
-            .new_field("timeout")
-            .label("Timeout")
-            .help(concat!(
-                "The maximum time to wait for a response from the remote server"
-            ))
-            .typ(Type::Duration)
-            .input_check([], [Validator::Required])
-            .default("1m")
-            .build()
             .new_field("tls.implicit")
             .label("Implicit TLS")
             .help(concat!(
@@ -623,7 +604,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Server Details")
-            .fields(["address", "port", "protocol", "concurrency", "timeout"])
+            .fields(["_id", "address", "port", "protocol"])
             .build()
             .new_form_section()
             .title("TLS")
@@ -1547,6 +1528,7 @@ impl Builder<Schemas, ()> {
             .build()
             // Pipes
             .new_schema("pipe")
+            .names("pipe", "pipes")
             .prefix("session.data.pipe")
             .suffix("command")
             .new_id_field()
