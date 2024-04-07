@@ -4,7 +4,8 @@ use std::{sync::Arc, time::Duration};
 
 use components::{
     icon::{
-        IconAdjustmentsHorizontal, IconDocumentChartBar, IconDocumentText, IconKey, IconLockClosed, IconQueueList, IconUserGroup
+        IconAdjustmentsHorizontal, IconDocumentChartBar, IconDocumentText, IconKey, IconLockClosed,
+        IconQueueList, IconUserGroup, IconWrench,
     },
     layout::MenuItem,
 };
@@ -21,13 +22,21 @@ use crate::{
     },
     core::oauth::{oauth_refresh_token, AuthToken},
     pages::{
-        account::{crypto::ManageCrypto, password::ChangePassword}, authorize::Authorize, config::{edit::SettingsEdit, list::SettingsList, search::SettingsSearch}, directory::{
+        account::{crypto::ManageCrypto, password::ChangePassword},
+        authorize::Authorize,
+        config::{edit::SettingsEdit, list::SettingsList, search::SettingsSearch},
+        directory::{
             domains::{display::DomainDisplay, edit::DomainCreate, list::DomainList},
             principals::{edit::PrincipalEdit, list::PrincipalList},
-        }, login::Login, manage::logs::Logs, notfound::NotFound, queue::{
+        },
+        login::Login,
+        manage::{logs::Logs, maintenance::Maintenance},
+        notfound::NotFound,
+        queue::{
             messages::{list::QueueList, manage::QueueManage},
             reports::{display::ReportDisplay, list::ReportList},
-        }, reports::{display::IncomingReportDisplay, list::IncomingReportList}
+        },
+        reports::{display::IncomingReportDisplay, list::IncomingReportList},
     },
 };
 
@@ -193,6 +202,12 @@ pub fn App() -> impl IntoView {
                         redirect_path="/login"
                         condition=move || is_admin.get()
                     />
+                    <ProtectedRoute
+                        path="/maintenance"
+                        view=Maintenance
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
                 </ProtectedRoute>
                 <ProtectedRoute
                     path="/settings"
@@ -302,6 +317,10 @@ impl LayoutBuilder {
             .create("Settings")
             .icon(view! { <IconAdjustmentsHorizontal/> })
             .raw_route(DEFAULT_SETTINGS_URL)
+            .insert()
+            .create("Maintenance")
+            .icon(view! { <IconWrench/> })
+            .route("/maintenance")
             .insert()
             .menu_items
     }

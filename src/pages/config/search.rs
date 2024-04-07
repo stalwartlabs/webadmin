@@ -3,7 +3,10 @@ use std::sync::Arc;
 use leptos::*;
 use leptos_router::use_query_map;
 
-use crate::pages::config::Schemas;
+use crate::{
+    components::{list::ZeroResults, report::ReportView},
+    pages::config::Schemas,
+};
 
 use super::{Field, Form, Section};
 
@@ -35,67 +38,71 @@ pub fn SettingsSearch() -> impl IntoView {
     });
 
     view! {
-        <div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
-            <div class="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-
-                {move || {
-                    let results = results.get();
-                    let has_results = !results.is_empty();
-                    let results = results
-                        .into_iter()
-                        .map(|(id, title, matches)| {
-                            let url = format!("/settings/{id}/edit");
-                            view! {
-                                <a
-                                    class="group flex flex-col bg-white border shadow-sm rounded-xl hover:shadow-md transition dark:bg-slate-900 dark:border-gray-800"
-                                    href=url
-                                >
-                                    <div class="p-4 md:p-5">
-                                        <div class="flex justify-between items-center">
-                                            <div>
-                                                <h3 class="group-hover:text-blue-600 font-semibold text-gray-800 dark:group-hover:text-gray-400 dark:text-gray-200">
-                                                    {title}
-                                                </h3>
-                                                <p class="text-sm text-gray-500">{matches}</p>
-                                            </div>
-                                            <div class="ps-3">
-                                                <svg
-                                                    class="flex-shrink-0 size-5"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    width="24"
-                                                    height="24"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="2"
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                >
-                                                    <path d="m9 18 6-6-6-6"></path>
-                                                </svg>
-                                            </div>
-                                        </div>
+        {move || {
+            let results = results.get();
+            let has_results = !results.is_empty();
+            let results = results
+                .into_iter()
+                .map(|(id, title, matches)| {
+                    let url = format!("/settings/{id}/edit");
+                    view! {
+                        <a
+                            class="group flex flex-col bg-white border shadow-sm rounded-xl hover:shadow-md transition dark:bg-slate-900 dark:border-gray-800"
+                            href=url
+                        >
+                            <div class="p-4 md:p-5">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <h3 class="group-hover:text-blue-600 font-semibold text-gray-800 dark:group-hover:text-gray-400 dark:text-gray-200">
+                                            {title}
+                                        </h3>
+                                        <p class="text-sm text-gray-500">{matches}</p>
                                     </div>
-                                </a>
-                            }
-                                .into_view()
-                        })
-                        .collect_view();
-                    if has_results {
-                        results
-                    } else {
-                        view! {
-                            <div class="text-center text-gray-500 dark:text-gray-400">
-                                <p>No results found</p>
+                                    <div class="ps-3">
+                                        <svg
+                                            class="flex-shrink-0 size-5"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        >
+                                            <path d="m9 18 6-6-6-6"></path>
+                                        </svg>
+                                    </div>
+                                </div>
                             </div>
-                        }
-                            .into_view()
+                        </a>
                     }
-                }}
+                        .into_view()
+                })
+                .collect_view();
+            if has_results {
+                view! {
+                    <div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-14 mx-auto">
+                        <div class="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+                            {results}
+                        </div>
 
-            </div>
-
-        </div>
+                    </div>
+                }
+                    .into_view()
+            } else {
+                view! {
+                    <ReportView>
+                        <ZeroResults
+                            title="No results"
+                            subtitle="No search settings were found with the selected criteria."
+                        />
+                    </ReportView>
+                }
+                    .into_view()
+            }
+        }}
     }
 }
 
