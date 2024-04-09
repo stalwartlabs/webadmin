@@ -1,41 +1,48 @@
-<h2 align="center">
-    <a href="https://stalw.art">
-    <img src="https://stalw.art/home/apple-touch-icon.png" height="60">
-    </a>
-    <br>
-    Stalwart Webadmin
-</h1>
-
 <p align="center">
-  <i align="center">Web-based Administration Interface for Stalwart Mail Server</i> 🛡️
+    <a href="https://stalw.art">
+    <img src="./img/logo-red.svg" height="150">
+    </a>
 </p>
 
-<h4 align="center">
+<h3 align="center">
+  Web-based Administration Interface for Stalwart Mail Server 🛡️
+</h3>
+
+<br>
+
+<p align="center">
   <a href="https://github.com/stalwartlabs/mail-server/actions/workflows/build.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/stalwartlabs/mail-server/build.yml?style=flat-square" alt="continuous integration">
   </a>
+  &nbsp;
   <a href="https://www.gnu.org/licenses/agpl-3.0">
     <img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg?label=license&style=flat-square" alt="License: AGPL v3">
   </a>
+  &nbsp;
   <a href="https://stalw.art/docs/get-started/">
     <img src="https://img.shields.io/badge/read_the-docs-red?style=flat-square" alt="Documentation">
   </a>
-  <br>
+</p>
+<p align="center">
   <a href="https://mastodon.social/@stalwartlabs">
     <img src="https://img.shields.io/mastodon/follow/109929667531941122?style=flat-square&logo=mastodon&color=%236364ff" alt="Mastodon">
   </a>
+  &nbsp;
   <a href="https://twitter.com/stalwartlabs">
     <img src="https://img.shields.io/twitter/follow/stalwartlabs?style=flat-square&logo=twitter" alt="Twitter">
   </a>
-  <br>
+</p>
+<p align="center">
   <a href="https://discord.gg/jtgtCNj66U">
     <img src="https://img.shields.io/discord/923615863037390889?label=discord&style=flat-square" alt="Discord">
   </a>
+  &nbsp;
   <a href="https://matrix.to/#/#stalwart:matrix.org">
     <img src="https://img.shields.io/matrix/stalwartmail%3Amatrix.org?label=matrix&style=flat-square" alt="Matrix">
   </a>
-</h4>
+</p>
 
+## Features
 
 **Stalwart Webadmin** is an web-based management tool for Stalwart Mail Server. It is written in Rust using the [Leptos](https://github.com/leptos-rs/leptos) web framework.
 
@@ -47,6 +54,10 @@ Key features:
 - Configuration of every aspect of the mail server.
 - Log viewer with search and filtering capabilities.
 - Self-service password reset and encryption-at-rest key management.
+
+## Screenshots
+
+<img src="./img/screencast-setup.gif">
 
 ## Get Started
 
