@@ -1,7 +1,15 @@
 [package]
 name = "webadmin"
+description = "Stalwart Mail Web-based Admin"
+authors = [ "Stalwart Labs Ltd. <hello@stalw.art>"]
+repository = "https://github.com/stalwartlabs/webadmin"
+homepage = "https://stalw.art"
+keywords = ["web", "admin", "email", "mail", "server"]
+categories = ["email"]
+license = "AGPL-3.0-only"
 version = "0.1.0"
 edition = "2021"
+resolver = "2"
 
 [dependencies]
 console_error_panic_hook = "0.1.7"

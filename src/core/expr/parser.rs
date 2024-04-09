@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2020-2023, Stalwart Labs Ltd.
+ * Copyright (c) 2024, Stalwart Labs Ltd.
  *
- * This file is part of Stalwart Mail Server.
+ * This file is part of Stalwart Mail Web-based Admin.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
