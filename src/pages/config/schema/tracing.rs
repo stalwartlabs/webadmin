@@ -53,9 +53,17 @@ impl Builder<Schemas, ()> {
             // Enable
             .new_field("enable")
             .typ(Type::Boolean)
-            .label("Enable")
+            .label("Enable this tracer")
             .help("Enable or disable the tracer")
             .default("true")
+            .build()
+            // Enable
+            .new_field("ansi")
+            .typ(Type::Boolean)
+            .label("Use ANSI colors in logs")
+            .help("Whether to use ANSI colors in logs")
+            .display_if_eq("type", ["log", "stdout"])
+            .default("false")
             .build()
             // Log Path
             .new_field("path")
@@ -127,13 +135,14 @@ impl Builder<Schemas, ()> {
                 "_id",
                 "type",
                 "level",
-                "enable",
                 "path",
                 "prefix",
                 "rotate",
                 "transport",
                 "endpoint",
                 "headers",
+                "ansi",
+                "enable",
             ])
             .build()
             .list_title("Logging methods")

@@ -52,7 +52,7 @@ enum FetchResult {
     NotFound,
 }
 
-pub const DEFAULT_SETTINGS_URL: &str = "/settings/system/edit";
+pub const DEFAULT_SETTINGS_URL: &str = "/settings/network/edit";
 
 #[component]
 pub fn SettingsEdit() -> impl IntoView {

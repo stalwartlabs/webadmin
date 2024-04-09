@@ -23,8 +23,8 @@ impl Builder<Schemas, ()> {
             .new_field("domains")
             .typ(Type::Array)
             .input_check([Transformer::Trim], [Validator::Required])
-            .label("Domains")
-            .help("Domains covered by this ACME manager")
+            .label("Subject names")
+            .help("Hostnames covered by this ACME manager")
             .build()
             // Default provider
             .new_field("default")
