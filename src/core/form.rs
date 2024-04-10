@@ -869,7 +869,7 @@ impl InputCheck {
                         }
                     },
                     Validator::IsIpOrMask => {
-                        if let Some((ip, mask)) = value.rsplit_once('/') {
+                        let value = if let Some((ip, mask)) = value.rsplit_once('/') {
                             if mask.parse::<u8>().is_err() {
                                 return Err("Invalid IP address mask".into());
                             }
