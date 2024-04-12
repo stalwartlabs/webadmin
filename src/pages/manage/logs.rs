@@ -218,7 +218,7 @@ fn LogItem(log: LogEntry) -> impl IntoView {
             </ListItem>
 
             <ListItem>
-                <span class="text-sm text-gray-500">{log.message}</span>
+                <span class="text-sm text-gray-500 text-wrap">{log.message}</span>
             </ListItem>
 
         </tr>
