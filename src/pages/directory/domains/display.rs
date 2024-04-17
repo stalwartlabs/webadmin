@@ -58,7 +58,7 @@ pub fn DomainDisplay() -> impl IntoView {
 
     let params = use_params_map();
     let domain_details = create_resource(
-        move || params().get("id").cloned().unwrap_or_default(),
+        move || params.get().get("id").cloned().unwrap_or_default(),
         move |name| {
             let auth = auth.get_untracked();
 
@@ -110,7 +110,7 @@ pub fn DomainDisplay() -> impl IntoView {
                                 <CardItem
                                     title="Domain"
                                     contents=Signal::derive(move || {
-                                        params().get("id").cloned().unwrap_or_default()
+                                        params.get().get("id").cloned().unwrap_or_default()
                                     })
                                 >
 

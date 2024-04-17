@@ -66,7 +66,7 @@ pub fn PrincipalList() -> impl IntoView {
     let params = use_params_map();
     let selected_type = create_memo(move |_| {
         selected.set(Default::default());
-        match params()
+        match params.get()
             .get("object")
             .map(|id| id.as_str())
             .unwrap_or_default()
@@ -103,7 +103,7 @@ pub fn PrincipalList() -> impl IntoView {
     let modal = use_modals();
 
     let principals = create_resource(
-        move || (page(), filter()),
+        move || (page.get(), filter.get()),
         move |(page, filter)| {
             let auth = auth.get_untracked();
             let selected_type = selected_type.get();
@@ -384,7 +384,7 @@ pub fn PrincipalList() -> impl IntoView {
                                         ),
                                     )
                                     .with_parameter("page", page.to_string())
-                                    .with_optional_parameter("filter", filter())
+                                    .with_optional_parameter("filter", filter.get())
                                     .finish(),
                                 Default::default(),
                             );

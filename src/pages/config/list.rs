@@ -81,7 +81,7 @@ pub fn SettingsList() -> impl IntoView {
     let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
     let params = use_params_map();
     let current_schema = create_memo(move |_| {
-        if let Some(schema) = params()
+        if let Some(schema) = params.get()
             .get("object")
             .and_then(|id| schemas.schemas.get(id.as_str()))
         {
@@ -99,7 +99,7 @@ pub fn SettingsList() -> impl IntoView {
     provide_context(selected);
 
     let settings = create_resource(
-        move || (page(), filter()),
+        move || (page.get(), filter.get()),
         move |(page, filter)| {
             let auth = auth.get_untracked();
             let schema = current_schema.get();
@@ -379,7 +379,7 @@ pub fn SettingsList() -> impl IntoView {
                             use_navigate()(
                                 &UrlBuilder::new(format!("/settings/{}", current_schema.get().id))
                                     .with_parameter("page", page.to_string())
-                                    .with_optional_parameter("filter", filter())
+                                    .with_optional_parameter("filter", filter.get())
                                     .finish(),
                                 Default::default(),
                             );

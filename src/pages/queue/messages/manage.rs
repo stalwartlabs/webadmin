@@ -65,7 +65,7 @@ pub fn QueueManage() -> impl IntoView {
     let modal = use_modals();
     let params = use_params_map();
     let fetch_message = create_resource(
-        move || params().get("id").cloned().unwrap_or_default(),
+        move || params.get().get("id").cloned().unwrap_or_default(),
         move |id| {
             let auth = auth.get_untracked();
             let id = id.clone();
@@ -80,7 +80,7 @@ pub fn QueueManage() -> impl IntoView {
     );
 
     let cancel_action = create_action(move |items: &Vec<String>| {
-        let id = params().get("id").cloned().unwrap_or_default();
+        let id = params.get().get("id").cloned().unwrap_or_default();
         let items = items.clone();
         let auth = auth.get();
 
@@ -105,7 +105,7 @@ pub fn QueueManage() -> impl IntoView {
         }
     });
     let retry_action = create_action(move |items: &Vec<String>| {
-        let id = params().get("id").cloned().unwrap_or_default();
+        let id = params.get().get("id").cloned().unwrap_or_default();
         let items = items.clone();
         let auth = auth.get();
 

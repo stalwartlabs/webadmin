@@ -85,7 +85,7 @@ pub fn SettingsEdit() -> impl IntoView {
 
     let schemas = expect_context::<Arc<Schemas>>();
     let current_schema = create_memo(move |_| {
-        if let Some(schema) = params()
+        if let Some(schema) = params.get()
             .get("object")
             .and_then(|id| schemas.schemas.get(id.as_str()))
         {
@@ -97,7 +97,7 @@ pub fn SettingsEdit() -> impl IntoView {
     });
 
     let fetch_settings = create_resource(
-        move || params().get("id").cloned().unwrap_or_default(),
+        move || params.get().get("id").cloned().unwrap_or_default(),
         move |name| {
             let auth = auth.get_untracked();
             let schema = current_schema.get();

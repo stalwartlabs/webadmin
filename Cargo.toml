@@ -7,15 +7,15 @@ homepage = "https://stalw.art"
 keywords = ["web", "admin", "email", "mail", "server"]
 categories = ["email"]
 license = "AGPL-3.0-only"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 resolver = "2"
 
 [dependencies]
 console_error_panic_hook = "0.1.7"
-leptos = { version = "0.6.9", features = ["csr", "nightly"] }
-leptos_meta = { version = "0.6.9", features = ["csr", "nightly"] }
-leptos_router = { version = "0.6.9", features = ["csr", "nightly"] }
+leptos = { version = "0.6.9", features = ["csr"] }
+leptos_meta = { version = "0.6.9", features = ["csr"] }
+leptos_router = { version = "0.6.9", features = ["csr"] }
 leptos-use = "0.10.2"
 gloo-net = { version = "0.5", features = ["http"] }
 gloo-storage = "0.3.0"

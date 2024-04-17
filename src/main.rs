@@ -94,7 +94,7 @@ pub fn App() -> impl IntoView {
     init_modals();
 
     // Create a resource to refresh the OAuth token
-    let _refresh_token_resource = create_resource(auth_token, move |changed_auth_token| {
+    let _refresh_token_resource = create_resource(move || auth_token.get(), move |changed_auth_token| {
         let changed_auth_token = changed_auth_token.clone();
 
         async move {

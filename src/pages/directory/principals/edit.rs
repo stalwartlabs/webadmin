@@ -57,7 +57,7 @@ pub fn PrincipalEdit() -> impl IntoView {
     let alert = use_alerts();
     let params = use_params_map();
     let fetch_principal = create_resource(
-        move || params().get("id").cloned().unwrap_or_default(),
+        move || params.get().get("id").cloned().unwrap_or_default(),
         move |name| {
             let auth = auth.get_untracked();
 
@@ -74,7 +74,7 @@ pub fn PrincipalEdit() -> impl IntoView {
         },
     );
     let selected_type = create_memo(move |_| {
-        match params()
+        match params.get()
             .get("object")
             .map(|id| id.as_str())
             .unwrap_or_default()
@@ -194,7 +194,7 @@ pub fn PrincipalEdit() -> impl IntoView {
         .to_string()
     });
     let title = create_memo(move |_| {
-        if let Some(name) = params().get("id") {
+        if let Some(name) = params.get().get("id") {
             match selected_type.get() {
                 PrincipalType::Individual => {
                     format!("Update '{name}' Account")

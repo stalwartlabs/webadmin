@@ -43,7 +43,7 @@ pub fn Header(is_admin: MaybeSignal<bool>) -> impl IntoView {
 
                 <div class="w-full flex items-center justify-end ms-auto sm:justify-between sm:gap-x-3 sm:order-3">
 
-                    <Show when=is_admin>
+                    <Show when=move || is_admin.get()>
                         <div class="sm:hidden">
                             <button
                                 type="button"

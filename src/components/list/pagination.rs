@@ -56,8 +56,8 @@ pub fn Pagination(
                             }
                         >
 
-                            <For each=move || (1..=total_pages()) key=|page| *page let:page>
-                                <option selected=move || current_page() == page>{page}</option>
+                            <For each=move || (1..=total_pages.get()) key=|page| *page let:page>
+                                <option selected=move || current_page.get() == page>{page}</option>
 
                             </For>
 
@@ -75,11 +75,11 @@ pub fn Pagination(
                         type="button"
                         class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-white dark:hover:bg-gray-800 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                         disabled=move || {
-                            total_results.get().map_or(true, |r| r == 0) || current_page() <= 1
+                            total_results.get().map_or(true, |r| r == 0) || current_page.get() <= 1
                         }
 
                         on:click=move |_| {
-                            on_page_change.call(current_page() - 1);
+                            on_page_change.call(current_page.get() - 1);
                         }
                     >
 
@@ -93,10 +93,10 @@ pub fn Pagination(
                             type="button"
                             class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-white dark:hover:bg-gray-800 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                             on:click=move |_| {
-                                on_page_change.call(current_page() + 1);
+                                on_page_change.call(current_page.get() + 1);
                             }
 
-                            disabled=move || { current_page() >= total_pages.get() }
+                            disabled=move || { current_page.get() >= total_pages.get() }
                         >
 
                             Next

@@ -30,7 +30,6 @@ jobs:
 
       - name: Add wasm target
         run: |
-          rustup override set nightly
           rustup target add wasm32-unknown-unknown
 
       - name: Install TailwindCSS Forms

@@ -147,7 +147,7 @@ pub fn Login() -> impl IntoView {
                         <Alerts/>
                         <form on:submit=|ev| ev.prevent_default()>
                             <div class="grid gap-y-4">
-                                <Show when=has_remote>
+                                <Show when=move || has_remote.get()>
                                     <div>
                                         <label class="block text-sm mb-2 dark:text-white">
                                             Host

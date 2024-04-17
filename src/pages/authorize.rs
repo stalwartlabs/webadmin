@@ -49,7 +49,7 @@ pub fn Authorize() -> impl IntoView {
     let alert = use_alerts();
     let query = use_query_map();
     let params = use_params_map();
-    let is_device_auth = create_memo(move |_| params().get("type").map_or(true, |t| t != "code"));
+    let is_device_auth = create_memo(move |_| params.get().get("type").map_or(true, |t| t != "code"));
     let redirect_uri = create_memo(move |_| query.get().get("redirect_uri").cloned());
     let client_id = create_memo(move |_| query.get().get("client_id").cloned());
 
@@ -154,7 +154,7 @@ pub fn Authorize() -> impl IntoView {
                                     <InputPassword element=FormElement::new("password", data)/>
                                 </div>
 
-                                <Show when=is_device_auth>
+                                <Show when=move || is_device_auth.get()>
                                     <div>
                                         <label class="block text-sm mb-2 dark:text-white">
                                             Code

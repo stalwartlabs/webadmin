@@ -82,7 +82,7 @@ pub fn Logs() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let logs = create_resource(
-        move || (page(), filter()),
+        move || (page.get(), filter.get()),
         move |(page, filter)| {
             let auth = auth.get_untracked();
 
@@ -179,7 +179,7 @@ pub fn Logs() -> impl IntoView {
                             use_navigate()(
                                 &UrlBuilder::new("/manage/logs")
                                     .with_parameter("page", page.to_string())
-                                    .with_optional_parameter("filter", filter())
+                                    .with_optional_parameter("filter", filter.get())
                                     .finish(),
                                 Default::default(),
                             );

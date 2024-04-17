@@ -46,7 +46,7 @@ pub fn ReportDisplay() -> impl IntoView {
     let alert = use_alerts();
     let params = use_params_map();
     let fetch_report = create_resource(
-        move || params().get("id").cloned().unwrap_or_default(),
+        move || params.get().get("id").cloned().unwrap_or_default(),
         move |id| {
             let auth = auth.get_untracked();
             let id = id.clone();

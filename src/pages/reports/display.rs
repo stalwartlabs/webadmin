@@ -61,7 +61,7 @@ pub fn IncomingReportDisplay() -> impl IntoView {
     let alert = use_alerts();
     let params = use_params_map();
     let report_type = create_memo(move |_| {
-        match params()
+        match params.get()
             .get("object")
             .map(|id| id.as_str())
             .unwrap_or_default()
@@ -73,7 +73,7 @@ pub fn IncomingReportDisplay() -> impl IntoView {
         }
     });
     let fetch_report = create_resource(
-        move || params().get("id").cloned().unwrap_or_default(),
+        move || params.get().get("id").cloned().unwrap_or_default(),
         move |id| {
             let auth = auth.get_untracked();
             let id = id.clone();
@@ -156,7 +156,7 @@ pub fn IncomingReportDisplay() -> impl IntoView {
                         ReportWrapper::Arf(report) => {
                             let (report, extra) = report.unwrap_report();
                             let received = parse_report_date(
-                                &params().get("id").cloned().unwrap_or_default(),
+                                &params.get().get("id").cloned().unwrap_or_default(),
                             );
                             Some(
                                 view! {

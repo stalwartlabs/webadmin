@@ -82,7 +82,7 @@ pub fn IncomingReportList() -> impl IntoView {
     });
     let params = use_params_map();
     let report_type = create_memo(move |_| {
-        match params()
+        match params.get()
             .get("object")
             .map(|id| id.as_str())
             .unwrap_or_default()
@@ -101,7 +101,7 @@ pub fn IncomingReportList() -> impl IntoView {
     provide_context(selected);
 
     let reports = create_resource(
-        move || (page(), filter()),
+        move || (page.get(), filter.get()),
         move |(page, filter)| {
             let auth = auth.get_untracked();
             let report_type = report_type.get();
@@ -369,7 +369,7 @@ pub fn IncomingReportList() -> impl IntoView {
                                         format!("/manage/reports/{}", report_type.get().as_str()),
                                     )
                                     .with_parameter("page", page.to_string())
-                                    .with_optional_parameter("filter", filter())
+                                    .with_optional_parameter("filter", filter.get())
                                     .finish(),
                                 Default::default(),
                             );
