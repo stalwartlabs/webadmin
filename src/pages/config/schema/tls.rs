@@ -76,8 +76,130 @@ impl Builder<Schemas, ()> {
             .typ(Type::Duration)
             .label("Renew before")
             .help("Determines how early before expiration the certificate should be renewed.")
-            .input_check([Transformer::Trim], [Validator::Required])
+            .input_check([], [Validator::Required])
             .default("30d")
+            .build()
+            // Challenge type
+            .new_field("challenge")
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("tls-alpn-01", "TLS-ALPN-01"),
+                    ("dns-01", "DNS-01"),
+                    ("http-01", "HTTP-01"),
+                ]),
+                multi: false,
+            })
+            .label("Challenge type")
+            .help("The ACME challenge type used to validate domain ownership")
+            .input_check([], [Validator::Required])
+            .default("tls-alpn-01")
+            .build()
+            // Polling interval (DNS-01)
+            .new_field("polling-interval")
+            .typ(Type::Duration)
+            .label("Polling interval")
+            .help("How often to check for DNS records to propagate")
+            .display_if_eq("challenge", ["dns-01"])
+            .input_check([], [Validator::Required])
+            .default("15s")
+            // Propagation timeout (DNS-01)
+            .new_field("propagation-timeout")
+            .label("Propagation timeout")
+            .help("How long to wait for DNS records to propagate")
+            .default("1m")
+            // TTL (DNS-01)
+            .new_field("ttl")
+            .label("TTL")
+            .help("The TTL for the DNS record used in the DNS-01 challenge")
+            .default("5m")
+            .build()
+            // Provider
+            .new_field("provider")
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("rfc2136-tsig", "RFC2136"),
+                    ("cloudflare", "Cloudflare"),
+                ]),
+                multi: false,
+            })
+            .label("DNS Provider")
+            .help("The DNS provider used to manage DNS records for the DNS-01 challenge")
+            .input_check([], [Validator::Required])
+            .default("rfc2136-tsig")
+            .display_if_eq("challenge", ["dns-01"])
+            .build()
+            // Secret
+            .new_field("secret")
+            .typ(Type::Secret)
+            .label("Secret")
+            .help("The TSIG secret or token used to authenticate with the DNS provider")
+            .input_check([], [Validator::Required])
+            .display_if_eq("challenge", ["dns-01"])
+            .build()
+            // Request timeout (DNS-01)
+            .new_field("timeout")
+            .typ(Type::Duration)
+            .label("Timeout")
+            .help("Request timeout for the DNS provider")
+            .display_if_eq("provider", ["cloudflare"])
+            .input_check([], [Validator::Required])
+            .default("30s")
+            .build()
+            // TSIG Algorithm
+            .new_field("tsig-algorithm")
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("hmac-md5", "HMAC-MD5"),
+                    ("gss", "GSS"),
+                    ("hmac-sha1", "HMAC-SHA1"),
+                    ("hmac-sha224", "HMAC-SHA224"),
+                    ("hmac-sha256", "HMAC-SHA256"),
+                    ("hmac-sha256-128", "HMAC-SHA256-128"),
+                    ("hmac-sha384", "HMAC-SHA384"),
+                    ("hmac-sha384-192", "HMAC-SHA384-192"),
+                    ("hmac-sha512", "HMAC-SHA512"),
+                    ("hmac-sha512-256", "HMAC-SHA512-256"),
+                ]),
+                multi: false,
+            })
+            .label("TSIG Algorithm")
+            .help("The TSIG algorithm used to authenticate with the DNS provider")
+            .input_check([], [Validator::Required])
+            .default("hmac-sha512")
+            .display_if_eq("provider", ["rfc2136-tsig"])
+            // Protocol
+            .new_field("protocol")
+            .typ(Type::Select {
+                source: Source::Static(&[("udp", "UDP"), ("tcp", "TCP")]),
+                multi: false,
+            })
+            .label("Protocol")
+            .help("The protocol used to communicate with the DNS server")
+            .default("udp")
+            // Port
+            .new_field("port")
+            .typ(Type::Input)
+            .label("Port")
+            .help("The port used to communicate with the DNS server")
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsPort],
+            )
+            .default("53")
+            // Host
+            .new_field("host")
+            .label("Host")
+            .help("The IP address of the DNS server")
+            .placeholder("127.0.0.1")
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsIpOrMask],
+            )
+            // Key
+            .new_field("key")
+            .label("Key")
+            .help("The TSIG key used to authenticate with the DNS provider")
+            .input_check([Transformer::Trim], [Validator::Required])
             .build()
             // Account key
             .new_field("account-key")
@@ -107,10 +229,28 @@ impl Builder<Schemas, ()> {
             .fields([
                 "_id",
                 "directory",
+                "challenge",
                 "contact",
                 "domains",
                 "renew-before",
                 "default",
+            ])
+            .build()
+            .new_form_section()
+            .title("DNS settings")
+            .display_if_eq("challenge", ["dns-01"])
+            .fields([
+                "provider",
+                "host",
+                "port",
+                "protocol",
+                "tsig-algorithm",
+                "key",
+                "secret",
+                "polling-interval",
+                "propagation-timeout",
+                "ttl",
+                "timeout",
             ])
             .build()
             .new_form_section()

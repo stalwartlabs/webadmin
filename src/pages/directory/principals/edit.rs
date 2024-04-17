@@ -63,7 +63,7 @@ pub fn PrincipalEdit() -> impl IntoView {
 
             async move {
                 if !name.is_empty() {
-                    HttpRequest::get(format!("/api/principal/{name}"))
+                    HttpRequest::get(("/api/principal", &name))
                         .with_authorization(&auth)
                         .send::<Principal>()
                         .await
@@ -108,7 +108,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                     return;
                 }
 
-                let result = match HttpRequest::get(format!("/api/principal/{name}"))
+                let result = match HttpRequest::get(("/api/principal", &name))
                     .with_authorization(&auth)
                     .send::<Principal>()
                     .await
@@ -150,7 +150,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                 let updates = current.into_updates(changes);
 
                 if !updates.is_empty() {
-                    HttpRequest::patch(format!("/api/principal/{name}"))
+                    HttpRequest::patch(("/api/principal", &name))
                         .with_authorization(&auth)
                         .with_body(updates)
                         .unwrap()

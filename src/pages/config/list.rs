@@ -202,7 +202,8 @@ pub fn SettingsList() -> impl IntoView {
                         value=filter
                         on_search=move |value| {
                             use_navigate()(
-                                &UrlBuilder::new(format!("/settings/{}", current_schema.get().id))
+                                &UrlBuilder::new("/settings")
+                                    .with_subpath(current_schema.get().id)
                                     .with_parameter("filter", value)
                                     .finish(),
                                 Default::default(),
@@ -377,7 +378,8 @@ pub fn SettingsList() -> impl IntoView {
                         page_size=Signal::derive(move || current_schema.get().list.page_size)
                         on_page_change=move |page: u32| {
                             use_navigate()(
-                                &UrlBuilder::new(format!("/settings/{}", current_schema.get().id))
+                                &UrlBuilder::new("/settings")
+                                    .with_subpath(current_schema.get().id)
                                     .with_parameter("page", page.to_string())
                                     .with_optional_parameter("filter", filter.get())
                                     .finish(),

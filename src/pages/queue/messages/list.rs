@@ -114,7 +114,7 @@ pub fn QueueList() -> impl IntoView {
         async move {
             let mut total_deleted = 0;
             for id in items {
-                match HttpRequest::delete(format!("/api/queue/messages/{id}"))
+                match HttpRequest::delete(("/api/queue/messages", &id))
                     .with_authorization(&auth)
                     .send::<bool>()
                     .await
@@ -146,7 +146,7 @@ pub fn QueueList() -> impl IntoView {
         async move {
             let mut total_rescheduled = 0;
             for id in items {
-                match HttpRequest::patch(format!("/api/queue/messages/{id}"))
+                match HttpRequest::patch(("/api/queue/messages", &id))
                     .with_authorization(&auth)
                     .send::<bool>()
                     .await

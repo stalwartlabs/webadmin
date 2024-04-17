@@ -108,12 +108,12 @@ pub async fn oauth_authenticate(
     let is_admin = response.is_admin;
     match HttpRequest::post(format!("{base_url}/auth/token"))
         .with_raw_body(
-            form_urlencoded::Serializer::new(String::with_capacity(response.code.len() + 64))
-                .append_pair("grant_type", "authorization_code")
-                .append_pair("client_id", "webadmin")
-                .append_pair("code", &response.code)
-                .append_pair("redirect_uri", "")
-                .finish(),
+            serde_urlencoded::to_string([
+                ("grant_type", "authorization_code"),
+                ("client_id", "webadmin"),
+                ("code", &response.code),
+                ("redirect_uri", ""),
+            ]).unwrap(),
         )
         .send_raw()
         .await
@@ -190,10 +190,10 @@ pub async fn oauth_refresh_token(base_url: &str, refresh_token: &str) -> Option<
 
     match HttpRequest::post(format!("{base_url}/auth/token"))
         .with_raw_body(
-            form_urlencoded::Serializer::new(String::with_capacity(refresh_token.len() + 64))
-                .append_pair("grant_type", "refresh_token")
-                .append_pair("refresh_token", refresh_token)
-                .finish(),
+            serde_urlencoded::to_string([
+                ("grant_type", "refresh_token"),
+                ("refresh_token", refresh_token),
+            ]).unwrap(),
         )
         .send_raw()
         .await

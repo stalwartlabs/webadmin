@@ -63,7 +63,7 @@ pub fn DomainDisplay() -> impl IntoView {
             let auth = auth.get_untracked();
 
             async move {
-                let result = HttpRequest::get(format!("/api/domain/{name}"))
+                let result = HttpRequest::get(("/api/domain", &name))
                     .with_authorization(&auth)
                     .send::<Vec<DnsRecord>>()
                     .await?;

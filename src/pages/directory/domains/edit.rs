@@ -75,7 +75,7 @@ pub fn DomainCreate() -> impl IntoView {
 
         async move {
             set_pending.set(true);
-            let mut result = HttpRequest::post(format!("/api/domain/{name}"))
+            let mut result = HttpRequest::post(("/api/domain", &name))
                 .with_authorization(&auth)
                 .send::<()>()
                 .await

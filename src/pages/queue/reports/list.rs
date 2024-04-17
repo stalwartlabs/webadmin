@@ -125,7 +125,7 @@ pub fn ReportList() -> impl IntoView {
         async move {
             let mut total_deleted = 0;
             for id in items {
-                match HttpRequest::delete(format!("/api/queue/reports/{id}"))
+                match HttpRequest::delete(("/api/queue/reports", &id))
                     .with_authorization(&auth)
                     .send::<bool>()
                     .await

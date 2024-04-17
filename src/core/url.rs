@@ -21,41 +21,60 @@
  * for more details.
 */
 
+use ahash::AHashMap;
+
 pub struct UrlBuilder {
-    pub url: form_urlencoded::Serializer<'static, String>,
+    pub path: String,
+    pub params: AHashMap<&'static str, String>,
 }
 
 impl UrlBuilder {
-    pub fn new(url: impl AsRef<str>) -> Self {
-        let url = url.as_ref();
-        let url = if !url.ends_with('?') {
-            format!("{url}?")
-        } else {
-            url.to_string()
-        };
-        let url_len = url.len();
+    pub fn new(path: impl Into<String>) -> Self {
         Self {
-            url: form_urlencoded::Serializer::for_suffix(url, url_len),
+            path: path.into(),
+            params: AHashMap::new(),
         }
     }
 
-    pub fn with_parameter(mut self, key: impl AsRef<str>, value: impl AsRef<str>) -> Self {
-        self.url.append_pair(key.as_ref(), value.as_ref());
+    pub fn prepend_path(&mut self, path: impl AsRef<str>) {
+        self.path.insert_str(0, path.as_ref());
+    }
+
+    pub fn with_subpath(mut self, subpath: impl AsRef<str>) -> Self {
+        self.path.push('/');
+        self.path.push_str(
+            &form_urlencoded::Serializer::new(String::new())
+                .append_key_only(subpath.as_ref())
+                .finish(),
+        );
+        self
+    }
+
+    pub fn with_parameter(mut self, key: &'static str, value: impl Into<String>) -> Self {
+        self.params.insert(key, value.into());
         self
     }
 
     pub fn with_optional_parameter(
         mut self,
-        key: impl AsRef<str>,
-        value: Option<impl AsRef<str>>,
+        key: &'static str,
+        value: Option<impl Into<String>>,
     ) -> Self {
         if let Some(value) = value {
-            self.url.append_pair(key.as_ref(), value.as_ref());
+            self.params.insert(key, value.into());
         }
         self
     }
 
-    pub fn finish(mut self) -> String {
-        self.url.finish()
+    pub fn finish(self) -> String {
+        if self.params.is_empty() {
+            self.path
+        } else {
+            format!(
+                "{}?{}",
+                self.path,
+                serde_urlencoded::to_string(&self.params).unwrap()
+            )
+        }
     }
 }

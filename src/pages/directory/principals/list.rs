@@ -120,12 +120,18 @@ pub fn PrincipalList() -> impl IntoView {
                 let mut items = Vec::with_capacity(principal_names.items.len());
 
                 for name in principal_names.items {
-                    items.push(
-                        HttpRequest::get(format!("/api/principal/{}", name))
-                            .with_authorization(&auth)
-                            .send::<Principal>()
-                            .await?,
-                    );
+                    match HttpRequest::get(("/api/principal", &name))
+                    .with_authorization(&auth)
+                    .send::<Principal>()
+                    .await {
+                        Ok(principal) => {
+                            items.push(principal);
+                        },
+                        Err(http::Error::NotFound) => {
+                            log::debug!("Principal {name} not found.");
+                        },
+                        Err(err) => return Err(err),
+                    }
                 }
 
                 Ok(Arc::new(List {
@@ -142,7 +148,7 @@ pub fn PrincipalList() -> impl IntoView {
 
         async move {
             for item in items.iter() {
-                if let Err(err) = HttpRequest::delete(format!("/api/principal/{item}"))
+                if let Err(err) = HttpRequest::delete(("/api/principal", item))
                     .with_authorization(&auth)
                     .send::<()>()
                     .await

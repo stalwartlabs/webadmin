@@ -62,47 +62,51 @@ pub enum Error {
     Server(ManagementApiError),
 }
 
+pub trait IntoUrlBuilder {
+    fn into_url_builder(self) -> UrlBuilder;
+}
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl<'x> HttpRequest {
-    pub fn new(method: Method, url: impl AsRef<str>) -> Self {
+    pub fn new(method: Method, url: impl IntoUrlBuilder) -> Self {
         Self {
             method,
-            url: UrlBuilder::new(url),
+            url: url.into_url_builder(),
             headers: Headers::new(),
             body: None,
         }
     }
 
-    pub fn get(url: impl AsRef<str>) -> Self {
+    pub fn get(url: impl IntoUrlBuilder) -> Self {
         Self::new(Method::GET, url)
     }
 
-    pub fn post(url: impl AsRef<str>) -> Self {
+    pub fn post(url: impl IntoUrlBuilder) -> Self {
         Self::new(Method::POST, url)
     }
 
-    pub fn put(url: impl AsRef<str>) -> Self {
+    pub fn put(url: impl IntoUrlBuilder) -> Self {
         Self::new(Method::PUT, url)
     }
 
-    pub fn delete(url: impl AsRef<str>) -> Self {
+    pub fn delete(url: impl IntoUrlBuilder) -> Self {
         Self::new(Method::DELETE, url)
     }
 
-    pub fn patch(url: impl AsRef<str>) -> Self {
+    pub fn patch(url: impl IntoUrlBuilder) -> Self {
         Self::new(Method::PATCH, url)
     }
 
-    pub fn with_parameter(mut self, key: impl AsRef<str>, value: impl AsRef<str>) -> Self {
+    pub fn with_parameter(mut self, key: &'static str, value: impl Into<String>) -> Self {
         self.url = self.url.with_parameter(key, value);
         self
     }
 
     pub fn with_optional_parameter(
         mut self,
-        key: impl AsRef<str>,
-        value: Option<impl AsRef<str>>,
+        key: &'static str,
+        value: Option<impl Into<String>>,
     ) -> Self {
         self.url = self.url.with_optional_parameter(key, value);
         self
@@ -115,7 +119,7 @@ impl<'x> HttpRequest {
             format!("Bearer {}", auth_token.access_token),
         );
         if !auth_token.base_url.is_empty() {
-            result.url = UrlBuilder::new(format!("{}{}", auth_token.base_url, result.url.finish()));
+            result.url.prepend_path(auth_token.base_url.as_str());
         }
         result
     }
@@ -123,7 +127,7 @@ impl<'x> HttpRequest {
     pub fn with_base_url(mut self, auth_token: impl AsRef<AuthToken>) -> Self {
         let auth_token = auth_token.as_ref();
         if !auth_token.base_url.is_empty() {
-            self.url = UrlBuilder::new(format!("{}{}", auth_token.base_url, self.url.finish()));
+            self.url.prepend_path(auth_token.base_url.as_str());
         }
         self
     }
@@ -222,6 +226,36 @@ impl<'x> HttpRequest {
                 details: format!("Invalid response code {code}: {}", response.status_text()),
             })),
         }
+    }
+}
+
+impl IntoUrlBuilder for String {
+    fn into_url_builder(self) -> UrlBuilder {
+        UrlBuilder::new(self)
+    }
+}
+
+impl IntoUrlBuilder for &str {
+    fn into_url_builder(self) -> UrlBuilder {
+        UrlBuilder::new(self)
+    }
+}
+
+impl IntoUrlBuilder for (&str, &str) {
+    fn into_url_builder(self) -> UrlBuilder {
+        UrlBuilder::new(self.0).with_subpath(self.1)
+    }
+}
+
+impl IntoUrlBuilder for (&str, String) {
+    fn into_url_builder(self) -> UrlBuilder {
+        UrlBuilder::new(self.0).with_subpath(self.1)
+    }
+}
+
+impl IntoUrlBuilder for (&str, &String) {
+    fn into_url_builder(self) -> UrlBuilder {
+        UrlBuilder::new(self.0).with_subpath(self.1)
     }
 }
 

@@ -129,7 +129,7 @@ pub fn DomainList() -> impl IntoView {
 
         async move {
             for item in items.iter() {
-                if let Err(err) = HttpRequest::delete(format!("/api/domain/{item}"))
+                if let Err(err) = HttpRequest::delete(("/api/domain", item))
                     .with_authorization(&auth)
                     .send::<()>()
                     .await

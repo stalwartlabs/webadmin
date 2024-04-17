@@ -71,7 +71,7 @@ pub fn QueueManage() -> impl IntoView {
             let id = id.clone();
 
             async move {
-                HttpRequest::get(format!("/api/queue/messages/{id}"))
+                HttpRequest::get(("/api/queue/messages", &id))
                     .with_authorization(&auth)
                     .send::<Message>()
                     .await
@@ -86,7 +86,7 @@ pub fn QueueManage() -> impl IntoView {
 
         async move {
             for item in items {
-                match HttpRequest::delete(format!("/api/queue/messages/{id}"))
+                match HttpRequest::delete(("/api/queue/messages", &id))
                     .with_authorization(&auth)
                     .with_parameter("filter", item)
                     .send::<bool>()
@@ -111,7 +111,7 @@ pub fn QueueManage() -> impl IntoView {
 
         async move {
             for item in items {
-                match HttpRequest::patch(format!("/api/queue/messages/{id}"))
+                match HttpRequest::patch(("/api/queue/messages", &id))
                     .with_authorization(&auth)
                     .with_parameter("filter", item)
                     .send::<bool>()

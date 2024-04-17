@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.2] - 2024-04-17
+
+## Added
+- `DNS-01` and `HTTP-01` ACME challenge configuration.
+
+### Changed
+- Use rust stable.
+
+### Fixed
+- Properly escape URL path components.
+
 ## [0.1.1] - 2024-04-12
 
 ## Added
