@@ -335,8 +335,7 @@ fn DomainItem(domain: Domain) -> impl IntoView {
                     class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                     href=action_url
                 >
-                    {domain.addresses}
-                    accounts
+                    {maybe_plural(domain.addresses as usize, "account", "accounts")}
                 </a>
             </ListItem>
 

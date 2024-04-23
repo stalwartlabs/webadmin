@@ -130,7 +130,7 @@ pub fn StackedBadge(
                     }
                 >
 
-                    +
+                    "+ "
                     {add_button_text}
 
                 </button>

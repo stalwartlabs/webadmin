@@ -1068,18 +1068,6 @@ impl Builder<Schemas, ()> {
             .build()
             // AUTH stage
             .new_schema("smtp-in-auth")
-            .new_field("session.auth.directory")
-            .label("Directory")
-            .help("Specifies the directory to use for authentication")
-            .default(Expression::new([("local_port != 25", "'*'")], "false"))
-            .typ(Type::Expression)
-            .input_check(
-                [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(has_ehlo_hars),
-                ],
-            )
             .new_field("session.auth.require")
             .label("Require Authentication")
             .help(concat!(
@@ -1093,6 +1081,25 @@ impl Builder<Schemas, ()> {
                 "e-mail addresses must match the sender of the email message"
             ))
             .default("true")
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(has_sender_vars),
+                ],
+            )
+            .new_field("session.auth.directory")
+            .label("Directory")
+            .help("Specifies the directory to use for authentication")
+            .default(Expression::new([("local_port != 25", "'*'")], "false"))
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(has_ehlo_hars),
+                ],
+            )
             .new_field("session.auth.errors.total")
             .label("Max Errors")
             .help(concat!(
