@@ -74,6 +74,15 @@ impl Builder<Schemas, ()> {
             .typ(Type::Secret)
             .input_check([Transformer::Trim], [])
             .build()
+            .new_field("authentication.fallback-admin.enable-master")
+            .label("Enable master user access")
+            .help(concat!(
+                "Whether the rescue admin can access any user account ",
+                "using 'user-login%fallback-user' as the login name"
+            ))
+            .typ(Type::Boolean)
+            .default("false")
+            .build()
             .new_form_section()
             .title("Authentication")
             .fields(["storage.directory"])
@@ -83,6 +92,7 @@ impl Builder<Schemas, ()> {
             .fields([
                 "authentication.fallback-admin.user",
                 "authentication.fallback-admin.secret",
+                "authentication.fallback-admin.enable-master",
             ])
             .build()
             .new_form_section()
