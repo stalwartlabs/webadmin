@@ -61,7 +61,8 @@ pub fn IncomingReportDisplay() -> impl IntoView {
     let alert = use_alerts();
     let params = use_params_map();
     let report_type = create_memo(move |_| {
-        match params.get()
+        match params
+            .get()
             .get("object")
             .map(|id| id.as_str())
             .unwrap_or_default()

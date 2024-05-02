@@ -32,6 +32,7 @@ use leptos_router::{use_navigate, use_params_map};
 use crate::{
     components::{
         card::{Card, CardItem},
+        form::button::Button,
         icon::{
             IconAlertTriangle, IconBell, IconCancel, IconClock, IconEnvelope, IconId, IconLaunch,
             IconScale,
@@ -64,6 +65,8 @@ pub fn QueueManage() -> impl IntoView {
     let alert = use_alerts();
     let modal = use_modals();
     let params = use_params_map();
+    let blob_hash = RwSignal::new(String::new());
+    let fetch_headers = RwSignal::new(true);
     let fetch_message = create_resource(
         move || params.get().get("id").cloned().unwrap_or_default(),
         move |id| {
@@ -75,6 +78,52 @@ pub fn QueueManage() -> impl IntoView {
                     .with_authorization(&auth)
                     .send::<Message>()
                     .await
+            }
+        },
+    );
+    let fetch_contents = create_resource(
+        move || (blob_hash.get(), fetch_headers.get()),
+        move |(blob_hash, fetch_headers)| {
+            let auth = auth.get_untracked();
+            let blob_hash = blob_hash.clone();
+
+            async move {
+                if !blob_hash.is_empty() {
+                    HttpRequest::get(("/api/store/blobs", &blob_hash))
+                        .with_optional_parameter("limit", fetch_headers.then_some("10240"))
+                        .with_authorization(&auth)
+                        .send_raw()
+                        .await
+                        .map(|bytes| {
+                            let contents = if fetch_headers {
+                                let mut contents = Vec::with_capacity(bytes.len());
+                                for byte in bytes {
+                                    match byte {
+                                        b'\n'
+                                            if contents.last().copied().unwrap_or_default()
+                                                == b'\n' =>
+                                        {
+                                            break;
+                                        }
+                                        b'\r' => {
+                                            continue;
+                                        }
+                                        _ => {}
+                                    }
+                                    contents.push(byte);
+                                }
+                                contents
+                            } else {
+                                bytes
+                            };
+
+                            Some(String::from_utf8(contents).unwrap_or_else(|e| {
+                                String::from_utf8_lossy(e.as_bytes()).into_owned()
+                            }))
+                        })
+                } else {
+                    Ok(None)
+                }
             }
         },
     );
@@ -151,6 +200,7 @@ pub fn QueueManage() -> impl IntoView {
                     Some(view! { <div></div> }.into_view())
                 }
                 Some(Ok(message)) => {
+                    blob_hash.set(message.blob_hash.clone());
                     let return_path = message.return_path().to_string();
                     let num_recipients = message
                         .domains
@@ -453,7 +503,7 @@ pub fn QueueManage() -> impl IntoView {
 
                                                         <ListItem>{display_status}</ListItem>
 
-                                                        <ListItem class="h-px w-72 whitespace-nowrap">
+                                                        <ListItem class="h-px w-72 text-wrap">
                                                             <span class="block text-sm font-semibold text-gray-800 dark:text-gray-200">
                                                                 {status_response}
                                                             </span>
@@ -476,6 +526,68 @@ pub fn QueueManage() -> impl IntoView {
                                     </Footer>
 
                                 </ListTable>
+                            </div>
+                        }
+                            .into_view(),
+                    )
+                }
+            }}
+
+        </Transition>
+
+        <Transition>
+
+            {move || match fetch_contents.get() {
+                None | Some(Err(http::Error::NotFound)) => None,
+                Some(Err(http::Error::Unauthorized)) => {
+                    use_navigate()("/login", Default::default());
+                    Some(view! { <div></div> }.into_view())
+                }
+                Some(Err(err)) => {
+                    alert.set(Alert::from(err));
+                    Some(view! { <div></div> }.into_view())
+                }
+                Some(Ok(message)) => {
+                    Some(
+                        view! {
+                            <div class="max-w-[85rem] px-4 sm:px-6 pb-5 lg:px-8 mx-auto">
+                                <div class="bg-white rounded-xl shadow p-4 sm:p-7 dark:bg-slate-900">
+                                    <div class="grid gap-3 md:flex md:justify-between md:items-center">
+                                        <div>
+                                            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                                                {move || {
+                                                    if fetch_headers.get() { "Headers" } else { "Contents" }
+                                                }}
+
+                                            </h2>
+
+                                        </div>
+                                        <Show when=move || fetch_headers.get()>
+                                            <div class="inline-flex gap-x-2">
+
+                                                <Button
+                                                    text="View Contents"
+                                                    color=Color::Gray
+                                                    on_click=move |_| {
+                                                        fetch_headers.set(false);
+                                                    }
+                                                >
+
+                                                    <IconEnvelope/>
+                                                </Button>
+
+                                            </div>
+                                        </Show>
+                                    </div>
+
+                                    <div
+                                        class="pt-5 text-sm text-gray-600 dark:text-gray-400"
+                                        style="white-space: pre-wrap;"
+                                    >
+                                        {message}
+                                    </div>
+
+                                </div>
                             </div>
                         }
                             .into_view(),

@@ -174,12 +174,12 @@ impl<'x> HttpRequest {
         T: DeserializeOwned,
     {
         let response = self.send_raw().await?;
-        match serde_json::from_slice::<Response<T>>(response.as_bytes()) {
+        match serde_json::from_slice::<Response<T>>(response.as_slice()) {
             Ok(Response::Data { data }) => Ok(data),
             Ok(Response::Error(error)) => Err(Error::Server(error)),
             Err(err) => Err(Error::Serializer {
                 error: err.to_string(),
-                response,
+                response: String::from_utf8_lossy(&response).to_string(),
             }),
         }
     }
@@ -195,7 +195,7 @@ impl<'x> HttpRequest {
         }
     }
 
-    pub async fn send_raw(self) -> Result<String> {
+    pub async fn send_raw(self) -> Result<Vec<u8>> {
         let abort_controller = web_sys::AbortController::new().ok();
         let abort_signal = abort_controller.as_ref().map(|a| a.signal());
 
@@ -219,7 +219,7 @@ impl<'x> HttpRequest {
         let response = req.send().await?;
 
         match response.status() {
-            200..=299 => response.text().await.map_err(Into::into),
+            200..=299 => response.binary().await.map_err(Into::into),
             401 => Err(Error::Unauthorized),
             404 => Err(Error::NotFound),
             code => Err(Error::Server(ManagementApiError::Other {

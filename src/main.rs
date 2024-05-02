@@ -94,47 +94,54 @@ pub fn App() -> impl IntoView {
     init_modals();
 
     // Create a resource to refresh the OAuth token
-    let _refresh_token_resource = create_resource(move || auth_token.get(), move |changed_auth_token| {
-        let changed_auth_token = changed_auth_token.clone();
+    let _refresh_token_resource = create_resource(
+        move || auth_token.get(),
+        move |changed_auth_token| {
+            let changed_auth_token = changed_auth_token.clone();
 
-        async move {
-            if !changed_auth_token.is_valid && !changed_auth_token.refresh_token.is_empty() {
-                if let Some(grant) = oauth_refresh_token(
-                    &changed_auth_token.base_url,
-                    &changed_auth_token.refresh_token,
-                )
-                .await
-                {
-                    let refresh_token = grant.refresh_token.unwrap_or_default();
-                    auth_token.update(|auth_token| {
-                        auth_token.access_token = grant.access_token.into();
-                        auth_token.refresh_token = refresh_token.clone().into();
-                        auth_token.is_valid = true;
+            async move {
+                if !changed_auth_token.is_valid && !changed_auth_token.refresh_token.is_empty() {
+                    if let Some(grant) = oauth_refresh_token(
+                        &changed_auth_token.base_url,
+                        &changed_auth_token.refresh_token,
+                    )
+                    .await
+                    {
+                        let refresh_token = grant.refresh_token.unwrap_or_default();
+                        auth_token.update(|auth_token| {
+                            auth_token.access_token = grant.access_token.into();
+                            auth_token.refresh_token = refresh_token.clone().into();
+                            auth_token.is_valid = true;
 
-                        if let Err(err) = SessionStorage::set(STATE_STORAGE_KEY, auth_token.clone())
-                        {
-                            log::error!(
-                                "Failed to save authorization token to session storage: {}",
-                                err
+                            if let Err(err) =
+                                SessionStorage::set(STATE_STORAGE_KEY, auth_token.clone())
+                            {
+                                log::error!(
+                                    "Failed to save authorization token to session storage: {}",
+                                    err
+                                );
+                            }
+                        });
+                        // Set timer to refresh token
+                        if grant.expires_in > 0 && !refresh_token.is_empty() {
+                            log::debug!(
+                                "Next OAuth token refresh in {} seconds.",
+                                grant.expires_in
+                            );
+                            set_timeout(
+                                move || {
+                                    auth_token.update(|auth_token| {
+                                        auth_token.is_valid = false;
+                                    });
+                                },
+                                Duration::from_secs(grant.expires_in),
                             );
                         }
-                    });
-                    // Set timer to refresh token
-                    if grant.expires_in > 0 && !refresh_token.is_empty() {
-                        log::debug!("Next OAuth token refresh in {} seconds.", grant.expires_in);
-                        set_timeout(
-                            move || {
-                                auth_token.update(|auth_token| {
-                                    auth_token.is_valid = false;
-                                });
-                            },
-                            Duration::from_secs(grant.expires_in),
-                        );
                     }
                 }
             }
-        }
-    });
+        },
+    );
 
     let is_logged_in = create_memo(move |_| auth_token.get().is_logged_in());
     let is_admin = create_memo(move |_| auth_token.get().is_admin());

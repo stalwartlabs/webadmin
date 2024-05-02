@@ -38,6 +38,7 @@ pub struct Message {
     #[serde(default)]
     pub priority: i16,
     pub env_id: Option<String>,
+    pub blob_hash: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

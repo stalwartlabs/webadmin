@@ -85,7 +85,8 @@ pub fn SettingsEdit() -> impl IntoView {
 
     let schemas = expect_context::<Arc<Schemas>>();
     let current_schema = create_memo(move |_| {
-        if let Some(schema) = params.get()
+        if let Some(schema) = params
+            .get()
             .get("object")
             .and_then(|id| schemas.schemas.get(id.as_str()))
         {
@@ -261,7 +262,9 @@ pub fn SettingsEdit() -> impl IntoView {
                                     if result.errors.is_empty() {
                                         match schema.list_path() {
                                             Some(url) => use_navigate()(&url, Default::default()),
-                                            None => alert.set(Alert::success("Settings successfully saved and reloaded")),
+                                            None => alert.set(Alert::success(
+                                                "Settings successfully saved and reloaded",
+                                            )),
                                         }
                                     } else {
                                         alert.set(Alert::from(result));
@@ -561,6 +564,7 @@ impl Schema {
     }
 
     fn list_path_or_default(&self) -> String {
-        self.list_path().unwrap_or_else(|| DEFAULT_SETTINGS_URL.to_string())
+        self.list_path()
+            .unwrap_or_else(|| DEFAULT_SETTINGS_URL.to_string())
     }
 }

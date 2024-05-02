@@ -81,7 +81,8 @@ pub fn SettingsList() -> impl IntoView {
     let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
     let params = use_params_map();
     let current_schema = create_memo(move |_| {
-        if let Some(schema) = params.get()
+        if let Some(schema) = params
+            .get()
             .get("object")
             .and_then(|id| schemas.schemas.get(id.as_str()))
         {

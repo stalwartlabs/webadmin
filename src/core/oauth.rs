@@ -113,12 +113,13 @@ pub async fn oauth_authenticate(
                 ("client_id", "webadmin"),
                 ("code", &response.code),
                 ("redirect_uri", ""),
-            ]).unwrap(),
+            ])
+            .unwrap(),
         )
         .send_raw()
         .await
         .and_then(|response| {
-            serde_json::from_slice::<OAuthResponse>(response.as_bytes()).map_err(Into::into)
+            serde_json::from_slice::<OAuthResponse>(response.as_slice()).map_err(Into::into)
         }) {
         Ok(OAuthResponse::Granted(grant)) => Ok((grant, is_admin)),
         Ok(OAuthResponse::Error { error }) => Err(Alert::error("OAuth failure")
@@ -193,12 +194,13 @@ pub async fn oauth_refresh_token(base_url: &str, refresh_token: &str) -> Option<
             serde_urlencoded::to_string([
                 ("grant_type", "refresh_token"),
                 ("refresh_token", refresh_token),
-            ]).unwrap(),
+            ])
+            .unwrap(),
         )
         .send_raw()
         .await
         .and_then(|response| {
-            serde_json::from_slice::<OAuthResponse>(response.as_bytes()).map_err(Into::into)
+            serde_json::from_slice::<OAuthResponse>(response.as_slice()).map_err(Into::into)
         }) {
         Ok(OAuthResponse::Granted(grant)) => Some(grant),
         Ok(OAuthResponse::Error { error }) => {

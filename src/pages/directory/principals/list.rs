@@ -66,7 +66,8 @@ pub fn PrincipalList() -> impl IntoView {
     let params = use_params_map();
     let selected_type = create_memo(move |_| {
         selected.set(Default::default());
-        match params.get()
+        match params
+            .get()
             .get("object")
             .map(|id| id.as_str())
             .unwrap_or_default()
@@ -121,15 +122,16 @@ pub fn PrincipalList() -> impl IntoView {
 
                 for name in principal_names.items {
                     match HttpRequest::get(("/api/principal", &name))
-                    .with_authorization(&auth)
-                    .send::<Principal>()
-                    .await {
+                        .with_authorization(&auth)
+                        .send::<Principal>()
+                        .await
+                    {
                         Ok(principal) => {
                             items.push(principal);
-                        },
+                        }
                         Err(http::Error::NotFound) => {
                             log::debug!("Principal {name} not found.");
-                        },
+                        }
                         Err(err) => return Err(err),
                     }
                 }

@@ -352,6 +352,7 @@ fn QueueItem(message: Message) -> impl IntoView {
     let mut total_pending = 0;
     let mut total_failed = 0;
     let mut total_recipients = 0;
+    let mut first_recipient = "";
 
     for domain in &message.domains {
         for rcpt in &domain.recipients {
@@ -366,7 +367,11 @@ fn QueueItem(message: Message) -> impl IntoView {
                 },
             }
 
-            total_recipients += 1;
+            if first_recipient.is_empty() {
+                first_recipient = rcpt.address.as_str();
+            } else {
+                total_recipients += 1;
+            }
         }
     }
 
@@ -375,11 +380,14 @@ fn QueueItem(message: Message) -> impl IntoView {
         .map(|dt| HumanTime::from(dt).to_string());
     let next_dsn = message.next_dsn().map(|dt| HumanTime::from(dt).to_string());
     let return_path = message.return_path().to_string();
-    let recipients = format!(
-        "{} in {}",
-        maybe_plural(total_recipients, "recipient", "recipients"),
-        maybe_plural(message.domains.len(), "domain", "domains")
-    );
+    let recipients = if total_recipients > 0 {
+        format!(
+            "{first_recipient} and {}",
+            maybe_plural(total_recipients, "recipient", "recipients")
+        )
+    } else {
+        first_recipient.to_string()
+    };
 
     view! {
         <tr>
