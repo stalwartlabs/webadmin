@@ -212,7 +212,7 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Whether to allow connections to servers with invalid TLS certificates"
             ))
-            .default("false")
+            .default(Expression::new([("retry_num > 0 && last_error == 'tls'", "true")], "false"))
             .input_check(
                 [],
                 [Validator::Required, Validator::IsValidExpression(mx_vars)],

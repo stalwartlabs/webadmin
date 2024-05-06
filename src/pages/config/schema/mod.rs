@@ -54,6 +54,11 @@ pub const V_PRIORITY: &str = "priority";
 pub const V_PROTOCOL: &str = "protocol";
 pub const V_TLS: &str = "is_tls";
 pub const V_RECIPIENTS: &str = "recipients";
+pub const V_QUEUE_RETRY_NUM: &str = "retry_num";
+pub const V_QUEUE_NOTIFY_NUM: &str = "notify_num";
+pub const V_QUEUE_EXPIRES_IN: &str = "expires_in";
+pub const V_QUEUE_LAST_STATUS: &str = "last_status";
+pub const V_QUEUE_LAST_ERROR: &str = "last_error";
 
 pub const CONNECTION_VARS: &[&str] = &[
     V_LISTENER,
@@ -114,6 +119,11 @@ pub const SMTP_QUEUE_HOST_VARS: &[&str] = &[
     V_PRIORITY,
     V_REMOTE_IP,
     V_LOCAL_IP,
+    V_QUEUE_RETRY_NUM,
+    V_QUEUE_NOTIFY_NUM,
+    V_QUEUE_EXPIRES_IN,
+    V_QUEUE_LAST_STATUS,
+    V_QUEUE_LAST_ERROR,
 ];
 pub const SMTP_QUEUE_RCPT_VARS: &[&str] = &[
     V_RECIPIENT_DOMAIN,
@@ -121,8 +131,22 @@ pub const SMTP_QUEUE_RCPT_VARS: &[&str] = &[
     V_SENDER,
     V_SENDER_DOMAIN,
     V_PRIORITY,
+    V_QUEUE_RETRY_NUM,
+    V_QUEUE_NOTIFY_NUM,
+    V_QUEUE_EXPIRES_IN,
+    V_QUEUE_LAST_STATUS,
+    V_QUEUE_LAST_ERROR,
 ];
-pub const SMTP_QUEUE_SENDER_VARS: &[&str] = &[V_SENDER, V_SENDER_DOMAIN, V_PRIORITY];
+pub const SMTP_QUEUE_SENDER_VARS: &[&str] = &[
+    V_SENDER,
+    V_SENDER_DOMAIN,
+    V_PRIORITY,
+    V_QUEUE_RETRY_NUM,
+    V_QUEUE_NOTIFY_NUM,
+    V_QUEUE_EXPIRES_IN,
+    V_QUEUE_LAST_STATUS,
+    V_QUEUE_LAST_ERROR,
+];
 pub const SMTP_QUEUE_MX_VARS: &[&str] = &[
     V_RECIPIENT_DOMAIN,
     V_RECIPIENTS,
@@ -130,4 +154,9 @@ pub const SMTP_QUEUE_MX_VARS: &[&str] = &[
     V_SENDER_DOMAIN,
     V_PRIORITY,
     V_MX,
+    V_QUEUE_RETRY_NUM,
+    V_QUEUE_NOTIFY_NUM,
+    V_QUEUE_EXPIRES_IN,
+    V_QUEUE_LAST_STATUS,
+    V_QUEUE_LAST_ERROR,
 ];
