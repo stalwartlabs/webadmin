@@ -154,21 +154,25 @@ impl Builder<Schemas, ()> {
                 "the default settings will be used (check the documentation for more info)"
             ))
             .typ(Type::Array)
-            .input_check([Transformer::Trim], [])
-            .build()
-            // Run as user
-            .new_field("server.run-as.user")
-            .label("User")
-            .help("The system user the server should run as")
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::IsId])
-            .build()
-            // Run as group
-            .new_field("server.run-as.group")
-            .label("Group")
-            .help("The system group the server should run as")
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::IsId])
+            .input_check([Transformer::Trim], [Validator::Required])
+            .default(
+                &[
+                    "store.*",
+                    "directory.*",
+                    "tracer.*",
+                    "server.*",
+                    "!server.blocked-ip.*",
+                    "certificate.*",
+                    "cluster.node-id",
+                    "storage.data",
+                    "storage.blob",
+                    "storage.lookup",
+                    "storage.fts",
+                    "storage.directory",
+                    "authentication.fallback-admin.*",
+                    "lookup.default.hostname",
+                ][..],
+            )
             .build()
             // Thread pool
             .new_field("global.thread-pool")
@@ -183,16 +187,12 @@ impl Builder<Schemas, ()> {
             .placeholder("8")
             .build()
             .new_form_section()
-            .title("Run as")
-            .fields(["server.run-as.user", "server.run-as.group"])
+            .title("Local configuration keys")
+            .fields(["config.local-keys"])
             .build()
             .new_form_section()
             .title("Thread pool")
             .fields(["global.thread-pool"])
-            .build()
-            .new_form_section()
-            .title("Local configuration keys")
-            .fields(["config.local-keys"])
             .build()
             .build()
             // Caching

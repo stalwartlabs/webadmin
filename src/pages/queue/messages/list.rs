@@ -382,8 +382,7 @@ fn QueueItem(message: Message) -> impl IntoView {
     let return_path = message.return_path().to_string();
     let recipients = if total_recipients > 0 {
         format!(
-            "{first_recipient} and {}",
-            maybe_plural(total_recipients, "recipient", "recipients")
+            "{first_recipient} and {total_recipients} more",
         )
     } else {
         first_recipient.to_string()
