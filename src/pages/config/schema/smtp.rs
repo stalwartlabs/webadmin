@@ -1593,6 +1593,48 @@ impl Builder<Schemas, ()> {
             .list_subtitle("Manage external filters (pipes)")
             .list_fields(["_id", "command", "arguments"])
             .build()
+            // MTA-STS
+            .new_schema("smtp-in-mta-sts")
+            .new_field("session.mta-sts.mode")
+            .typ(Type::Select {
+                multi: false,
+                source: Source::Static(&[
+                    ("enforce", "Enforce"),
+                    ("testing", "Testing"),
+                    ("none", "None"),
+                    ("disable", "Disabled"),
+                ]),
+            })
+            .input_check([], [Validator::Required])
+            .label("Policy Application")
+            .help("Whether to enforce, test, or disable the MTA-STS policy")
+            .default("testing")
+            .build()
+            .new_field("session.mta-sts.max-age")
+            .label("Max lifetime")
+            .typ(Type::Duration)
+            .help("Maximum time to cache the MTA-STS policy")
+            .default("7d")
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("session.mta-sts.mx")
+            .label("MX Patterns (override)")
+            .help(concat!(
+                "Override the allowed MX hosts for the MTA-STS policy domain. ",
+                "If empty, the MX hosts are determined from the available TLS certificates"
+            ))
+            .typ(Type::Array)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_form_section()
+            .title("MTA-STS Policy")
+            .fields([
+                "session.mta-sts.mode",
+                "session.mta-sts.max-age",
+                "session.mta-sts.mx",
+            ])
+            .build()
+            .build()
     }
 }
 
