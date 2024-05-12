@@ -92,17 +92,6 @@ impl Builder<Schemas, ()> {
             .typ(Type::Array)
             .input_check([Transformer::Trim], [])
             .build()
-            // Cluster node ID
-            .new_field("cluster.node-id")
-            .label("Node ID")
-            .help(concat!("Unique identifier for this node in the cluster"))
-            .default("1")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::MinValue(0.into())],
-            )
-            .build()
             // Network fields
             .add_network_fields(false)
             // Forms
@@ -122,10 +111,6 @@ impl Builder<Schemas, ()> {
                 "server.http.use-x-forwarded",
                 "server.http.permissive-cors",
             ])
-            .build()
-            .new_form_section()
-            .title("Cluster")
-            .fields(["cluster.node-id"])
             .build()
             .new_form_section()
             .title("Socket options")
@@ -280,6 +265,91 @@ impl Builder<Schemas, ()> {
             .list_subtitle("Manage blocked IP addresses")
             .list_fields(["_id"])
             .no_list_action(Action::Modify)
+            .build()
+            // Clustering
+            .new_schema("cluster")
+            // Cluster node ID
+            .new_field("cluster.node-id")
+            .label("Node ID")
+            .help(concat!("Unique identifier for this node in the cluster"))
+            .default("1")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::MinValue(0.into())],
+            )
+            .build()
+            // Bind address
+            .new_field("cluster.bind-addr")
+            .label("Bind Address")
+            .help(concat!("The address the gossip protocol will bind to"))
+            .placeholder("[::]")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            // Advertise address
+            .new_field("cluster.advertise-addr")
+            .label("Advertise Address")
+            .help(concat!(
+                "The address the gossip protocol will advertise",
+                " to other nodes in the cluster"
+            ))
+            .placeholder("10.0.0.1")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::IsIpOrMask])
+            .build()
+            // Bind port
+            .new_field("cluster.bind-port")
+            .label("Port")
+            .help(concat!(
+                "The UDP port the gossip protocol will bind to. ",
+                "Must be the same on all nodes"
+            ))
+            .default("1179")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::IsPort])
+            .build()
+            // Seed nodes
+            .new_field("cluster.seed-nodes")
+            .label("Seed Nodes")
+            .help(concat!("The initial nodes to connect to in the cluster"))
+            .typ(Type::Array)
+            .input_check([Transformer::Trim], [Validator::IsIpOrMask])
+            .build()
+            // Heartbeat interval
+            .new_field("cluster.heartbeat")
+            .label("Heartbeat")
+            .help(concat!("The interval between heartbeats in the cluster"))
+            .default("1s")
+            .typ(Type::Duration)
+            .input_check([], [])
+            .build()
+            // Encryption key
+            .new_field("cluster.key")
+            .label("Encryption Key")
+            .help(concat!(
+                "The key used to encrypt gossip messages. ",
+                "Must be the same on all nodes"
+            ))
+            .typ(Type::Secret)
+            .build()
+            // Forms
+            .new_form_section()
+            .title("Cluster settings")
+            .fields(["cluster.node-id"])
+            .build()
+            .new_form_section()
+            .title("Cluster service")
+            .fields([
+                "cluster.bind-addr",
+                "cluster.advertise-addr",
+                "cluster.bind-port",
+            ])
+            .build()
+            .new_form_section()
+            .title("Membership protocol")
+            .fields(["cluster.key", "cluster.heartbeat", "cluster.seed-nodes"])
+            .build()
             .build()
     }
 }

@@ -307,6 +307,10 @@ impl LayoutBuilder {
             .route("/tls/edit")
             .insert()
             .insert()
+            // System
+            .create("Cluster")
+            .route("/cluster/edit")
+            .insert()
             // Logging
             .create("Logging & Tracing")
             .route("/tracing")
