@@ -327,15 +327,19 @@ pub fn PrincipalEdit() -> impl IntoView {
                                         <FormItem label="Disk quota">
                                             <div class="relative">
                                                 <InputSize element=FormElement::new("quota", data)/>
-                                                <Show when=move || { total_quota > 0 }>
+                                                <Show when=move || { used_quota > 0 }>
                                                     <p class="mt-3">
                                                         <label class="inline-flex items-center gap-x-1 text-xs text-black-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600">
 
-                                                            {format!(
-                                                                "{} used ({:.1}%)",
-                                                                format_size(used_quota, DECIMAL),
-                                                                (used_quota as f64 / total_quota as f64) * 100.0,
-                                                            )}
+                                                            {if total_quota > 0 {
+                                                                format!(
+                                                                    "{} used ({:.1}%)",
+                                                                    format_size(used_quota, DECIMAL),
+                                                                    (used_quota as f64 / total_quota as f64) * 100.0,
+                                                                )
+                                                            } else {
+                                                                format!("{} used", format_size(used_quota, DECIMAL))
+                                                            }}
 
                                                         </label>
                                                     </p>

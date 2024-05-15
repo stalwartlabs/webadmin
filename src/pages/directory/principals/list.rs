@@ -485,6 +485,7 @@ fn PrincipalItem(principal: Principal, selected_type: PrincipalType) -> impl Int
                                 (used_quota as f64 / quota as f64 * 100.0).round() as u8,
                             )
                         }
+                        (_, Some(used_quota)) => format_size(used_quota, DECIMAL).to_string(),
                         _ => "N/A".to_string(),
                     }}
 
