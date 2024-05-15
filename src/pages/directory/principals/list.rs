@@ -296,7 +296,7 @@ pub fn PrincipalList() -> impl IntoView {
                                         "Name".to_string(),
                                         "E-mail".to_string(),
                                         "Type".to_string(),
-                                        "Quota".to_string(),
+                                        "Usage".to_string(),
                                         "Member of".to_string(),
                                         "".to_string(),
                                     ]

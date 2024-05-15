@@ -97,6 +97,7 @@ pub fn ReportList() -> impl IntoView {
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
+                    .with_parameter("max-total", "100")
                     .with_optional_parameter("domain", filter)
                     .send::<List<String>>()
                     .await

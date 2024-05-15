@@ -100,6 +100,7 @@ pub fn QueueList() -> impl IntoView {
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
                     .with_parameter("values", "1")
+                    .with_parameter("max-total", "100")
                     .with_optional_parameter("text", filter)
                     .send::<List<Message>>()
                     .await
