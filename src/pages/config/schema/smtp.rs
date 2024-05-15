@@ -1073,6 +1073,14 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Specifies whether authentication is necessary to send email messages"
             ))
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(has_ehlo_hars),
+                ],
+            )
             .default(Expression::new([("local_port != 25", "true")], "false"))
             .new_field("session.auth.must-match-sender")
             .label("Must match sender")
