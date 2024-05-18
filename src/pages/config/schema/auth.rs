@@ -137,15 +137,6 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
             .build()
-            .new_field("set-body-length")
-            .label("Body Length")
-            .help(concat!(
-                "Whether to include the body length in the DKIM ",
-                "signature"
-            ))
-            .default("false")
-            .typ(Type::Boolean)
-            .build()
             .new_field("report")
             .label("Request Reports")
             .help(concat!(
@@ -177,7 +168,6 @@ impl Builder<Schemas, ()> {
                 "third-party",
                 "third-party-algo",
                 "auid",
-                "set-body-length",
                 "report",
             ])
             .build()
