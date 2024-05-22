@@ -809,7 +809,7 @@ impl Builder<Schemas, ()> {
             .new_field("session.connect.greeting")
             .label("SMTP greeting")
             .help("The greeting message sent by the SMTP/LMTP server")
-            .default("'Stalwart ESMTP at your service'")
+            .default("key_get('default', 'hostname') + ' Stalwart ESMTP at your service'")
             .new_field("session.connect.hostname")
             .label("Server hostname")
             .help("The SMTP server hostname")

@@ -285,7 +285,7 @@ impl Builder<Schemas, ()> {
             .new_field("auth.arc.seal")
             .default(Expression::new(
                 [],
-                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
+                "'rsa-' + key_get('default', 'domain')",
             ))
             .label("Signature")
             .help(concat!("List of DKIM signatures to use for sealing"))
