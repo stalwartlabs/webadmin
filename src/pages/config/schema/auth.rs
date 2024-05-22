@@ -181,6 +181,15 @@ impl Builder<Schemas, ()> {
             .build()
             // DKIM Settings
             .new_schema("dkim")
+            .new_field("auth.dkim.strict")
+            .label("Ignore insecure DKIM signatures")
+            .default("true")
+            .typ(Type::Boolean)
+            .help(concat!(
+                "Whether to ignore insecure DKIM signatures such as those ",
+                "containing a length parameter"
+            ))
+            .build()
             .new_field("auth.dkim.verify")
             .label("Strategy")
             .help(concat!(
@@ -249,7 +258,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("DKIM Verification")
-            .fields(["auth.dkim.verify"])
+            .fields(["auth.dkim.verify", "auth.dkim.strict"])
             .build()
             .new_form_section()
             .title("DKIM Signing")

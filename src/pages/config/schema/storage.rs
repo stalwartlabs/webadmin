@@ -143,6 +143,33 @@ impl Builder<Schemas, ()> {
             .default("en")
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
+            .new_field("jmap.account.purge.frequency")
+            .label("Frequency")
+            .help(concat!(
+                "Specifies how often tombstoned messages are deleted ",
+                "from the database"
+            ))
+            .default("0 0 *")
+            .typ(Type::Cron)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("jmap.protocol.changes.max-history")
+            .label("Changes history")
+            .help(concat!(
+                "How long to keep changes history for JMAP and IMAP clients"
+            ))
+            .default("30d")
+            .typ(Type::Duration)
+            .build()
+            .new_field("jmap.email.auto-expunge")
+            .label("Trash auto-expunge")
+            .help(concat!(
+                "How long to keep messages in the Trash and Junk Mail folders ",
+                "before auto-expunging"
+            ))
+            .default("30d")
+            .typ(Type::Duration)
+            .build()
             .new_form_section()
             .title("Data Store")
             .fields([
@@ -162,6 +189,14 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Lookup Store")
             .fields(["storage.lookup"])
+            .build()
+            .new_form_section()
+            .title("Cleanup")
+            .fields([
+                "jmap.account.purge.frequency",
+                "jmap.protocol.changes.max-history",
+                "jmap.email.auto-expunge",
+            ])
             .build()
             .build()
     }

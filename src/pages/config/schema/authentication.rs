@@ -74,14 +74,24 @@ impl Builder<Schemas, ()> {
             .typ(Type::Secret)
             .input_check([Transformer::Trim], [])
             .build()
-            .new_field("authentication.fallback-admin.enable-master")
-            .label("Enable master user access")
+            // Master user
+            .new_field("authentication.master.user")
+            .label("Username")
             .help(concat!(
-                "Whether the rescue admin can access any user account ",
-                "using 'user-login%fallback-user' as the login name"
+                "The master user can access any user account ",
+                "using 'user-login%master-user' as the login name. ",
+                "Leave blank to disable"
             ))
-            .typ(Type::Boolean)
-            .default("false")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("authentication.master.secret")
+            .label("Password")
+            .help(concat!(
+                "The master user secret to access any user account ",
+            ))
+            .typ(Type::Secret)
+            .input_check([Transformer::Trim], [])
             .build()
             .new_form_section()
             .title("Authentication")
@@ -92,8 +102,11 @@ impl Builder<Schemas, ()> {
             .fields([
                 "authentication.fallback-admin.user",
                 "authentication.fallback-admin.secret",
-                "authentication.fallback-admin.enable-master",
             ])
+            .build()
+            .new_form_section()
+            .title("Master User")
+            .fields(["authentication.master.user", "authentication.master.secret"])
             .build()
             .new_form_section()
             .title("Security")

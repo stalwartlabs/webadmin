@@ -45,7 +45,7 @@ pub fn Pagination(
                         <span class="font-semibold text-gray-800 dark:text-gray-200">
                             {move || { total_results.get().map_or(0, |r| r) }}
                         </span>
-                        results. Page
+                        " results. Page"
 
                     </p>
                     <div class="max-w-sm space-y-3">

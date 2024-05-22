@@ -43,6 +43,7 @@ impl Builder<Schemas, ()> {
                     ("lmtp", "LMTP"),
                     ("http", "HTTP"),
                     ("imap", "IMAP4"),
+                    ("pop3", "POP3"),
                     ("managesieve", "ManageSieve"),
                 ]),
             })

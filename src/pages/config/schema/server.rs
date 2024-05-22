@@ -147,6 +147,7 @@ impl Builder<Schemas, ()> {
                     "tracer.*",
                     "server.*",
                     "!server.blocked-ip.*",
+                    "!server.allowed-ip.*",
                     "certificate.*",
                     "cluster.node-id",
                     "storage.data",
@@ -263,6 +264,27 @@ impl Builder<Schemas, ()> {
             .build()
             .list_title("Blocked IP addresses")
             .list_subtitle("Manage blocked IP addresses")
+            .list_fields(["_id"])
+            .no_list_action(Action::Modify)
+            .build()
+            // Allowed IP addresses
+            .new_schema("allowed-ip")
+            .reload_prefix("server.allowed-ip")
+            .names("address", "addresses")
+            .prefix("server.allowed-ip")
+            .new_id_field()
+            .label("IP Address(es)")
+            .help("The IP address or mask to block")
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::IsIpOrMask],
+            )
+            .build()
+            .new_form_section()
+            .field("_id")
+            .build()
+            .list_title("Allowed IP addresses")
+            .list_subtitle("Manage allowed IP addresses")
             .list_fields(["_id"])
             .no_list_action(Action::Modify)
             .build()

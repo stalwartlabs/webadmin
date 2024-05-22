@@ -33,7 +33,7 @@ use crate::{
         form::input::{Duration, Rate},
         icon::{
             IconCircleStack, IconCodeBracket, IconInbox, IconInboxArrowDown, IconInboxStack,
-            IconKey, IconServerStack, IconShieldCheck,
+            IconKey, IconServer, IconServerStack, IconShieldCheck,
         },
         layout::{LayoutBuilder, MenuItem},
     },
@@ -319,9 +319,16 @@ impl LayoutBuilder {
             .create("Cache")
             .route("/cache/edit")
             .insert()
+            // Security
+            .create("Security")
             // Blocked IPs
             .create("Blocked IPs")
             .route("/blocked-ip")
+            .insert()
+            // Blocked IPs
+            .create("Allowed IPs")
+            .route("/allowed-ip")
+            .insert()
             .insert()
             .insert()
             // Storage
@@ -455,7 +462,7 @@ impl LayoutBuilder {
             .insert()
             .insert()
             // IMAP
-            .create("IMAP")
+            .create("IMAP & POP3")
             .icon(view! { <IconInbox/> })
             .create("Authentication")
             .route("/imap-auth/edit")
@@ -516,6 +523,10 @@ impl LayoutBuilder {
             .create("Scripts")
             .route("/script")
             .insert()
+            .insert()
+            .create("Management")
+            .icon(view! { <IconServer/> })
+            .raw_route("/manage/directory/accounts")
             .insert()
             .menu_items
     }
