@@ -48,7 +48,7 @@ impl Builder<Schemas, ()> {
                 source: Source::Static(&[
                     ("ed25519-sha256", "Ed25519 SHA-256"),
                     ("rsa-sha256", "RSA SHA-256"),
-                    ("rsa-sha1", "RSA SHA-1"),
+                    ("rsa-sha1", "RSA SHA-1 (do not use)"),
                 ]),
             })
             .build()
