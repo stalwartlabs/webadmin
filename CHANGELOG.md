@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.5] - 2024-05-23
+
+## Added
+- HTTP Strict Transport Security option
+- Cleanup settings
+- Strict DKIM setting
+- Allowed IP list
+- Display disk usage even when quotas are disabled
+
+### Changed
+- Discourage RSA-SHA1 key usage
+- Master user settings
+- Removed DKIM signature length option
+- Use a single ARC seal by default
+- Add server hostname to SMTP greetings
+
+### Fixed
+- `session.auth.require` variable type
+
 ## [0.1.4] - 2024-05-13
 
 ## Added
