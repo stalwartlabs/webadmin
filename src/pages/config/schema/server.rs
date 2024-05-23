@@ -75,12 +75,22 @@ impl Builder<Schemas, ()> {
             .typ(Type::Boolean)
             .default("false")
             .build()
-            // Use X-Forwarded-For
+            // Permissive CORS
             .new_field("server.http.permissive-cors")
             .label("Permissive CORS policy")
             .help(concat!(
                 "Specifies whether to allow all origins in the CORS policy ",
                 "for the HTTP server"
+            ))
+            .typ(Type::Boolean)
+            .default("false")
+            .build()
+            // HTTPS Strict Transport Security
+            .new_field("server.http.hsts")
+            .label("Enable HTTP Strict Transport Security")
+            .help(concat!(
+                "Specifies whether to enable HTTP Strict Transport Security ",
+                "for the HTTP server."
             ))
             .typ(Type::Boolean)
             .default("false")
@@ -108,6 +118,7 @@ impl Builder<Schemas, ()> {
             .fields([
                 "server.http.url",
                 "server.http.headers",
+                "server.http.hsts",
                 "server.http.use-x-forwarded",
                 "server.http.permissive-cors",
             ])
