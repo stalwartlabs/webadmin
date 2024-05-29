@@ -423,7 +423,7 @@ impl Builder<Schemas, ()> {
             .label("Extension")
             .help("The file name extension")
             .input_check(
-                [Transformer::RemoveSpaces, Transformer::Uppercase],
+                [Transformer::RemoveSpaces],
                 [Validator::Required, Validator::IsId],
             )
             .build()
