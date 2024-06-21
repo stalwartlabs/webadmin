@@ -257,7 +257,7 @@ impl From<http::Error> for Alert {
                     ManagementApiError::FieldAlreadyExists { field, value } => (
                         "Field already exists".to_string(),
                         format!(
-                            "Another record exists with with value {value:?} in field {field:?}."
+                            "Another record exists with value {value:?} in field {field:?}."
                         ),
                     ),
                     ManagementApiError::FieldMissing { field } => (
