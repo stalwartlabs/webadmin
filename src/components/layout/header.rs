@@ -21,13 +21,20 @@
  * for more details.
 */
 
+use gloo_storage::{SessionStorage, Storage};
 use leptos::*;
 use leptos_router::use_navigate;
 
 use crate::{
-    components::icon::{IconAdjustmentsHorizontal, IconServer, IconUserCircle},
-    core::url::UrlBuilder,
+    components::icon::{
+        IconAdjustmentsHorizontal, IconHeart, IconPower, IconServer, IconUserCircle,
+    },
+    core::{
+        oauth::{use_authorization, AuthToken},
+        url::UrlBuilder,
+    },
     pages::config::edit::DEFAULT_SETTINGS_URL,
+    STATE_STORAGE_KEY, VERSION_NAME,
 };
 use web_sys::wasm_bindgen::JsCast;
 
@@ -38,7 +45,7 @@ pub fn Header(is_admin: MaybeSignal<bool>) -> impl IntoView {
             <nav class="flex basis-full items-center w-full mx-auto px-4 sm:px-6 md:px-8">
 
                 <div class="me-5 lg:me-0 lg:hidden">
-                    <img src="/logo.svg"/>
+                    <img src="/logo.svg" title=VERSION_NAME/>
                 </div>
 
                 <div class="w-full flex items-center justify-end ms-auto sm:justify-between sm:gap-x-3 sm:order-3">
@@ -139,6 +146,28 @@ pub fn Header(is_admin: MaybeSignal<bool>) -> impl IntoView {
                             title="Account"
                         >
                             <IconUserCircle/>
+
+                        </a>
+                        <a
+                            class="w-[2.375rem] h-[2.375rem] inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                            href="https://github.com/sponsors/stalwartlabs"
+                            target="_blank"
+                            title="Sponsor Stalwart open source"
+                        >
+                            <IconHeart/>
+
+                        </a>
+                        <a
+                            class="w-[2.375rem] h-[2.375rem] inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                            title="Logout"
+                            on:click=move |_| {
+                                SessionStorage::delete(STATE_STORAGE_KEY);
+                                use_authorization().set(AuthToken::default());
+                                use_navigate()("/login", Default::default());
+                            }
+                        >
+
+                            <IconPower/>
 
                         </a>
                     </div>

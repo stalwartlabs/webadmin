@@ -42,7 +42,7 @@ use super::schema::{InputCheck, Schema, Transformer, Validator};
 
 pub type ExternalSources = AHashMap<String, Vec<(String, String)>>;
 
-#[derive(Clone, PartialEq, Eq, Default)]
+#[derive(Clone, PartialEq, Eq, Default, Debug)]
 pub struct FormData {
     pub values: AHashMap<String, FormValue>,
     pub errors: AHashMap<String, FormError>,
@@ -162,6 +162,12 @@ impl FormData {
     pub fn remove(&mut self, id: &str) {
         self.values.remove(id);
         self.errors.remove(id);
+    }
+
+    pub fn reset(&mut self) {
+        self.values.clear();
+        self.errors.clear();
+        self.apply_defaults(false);
     }
 
     pub fn array_value<'x>(&'x self, id: &str) -> Box<dyn Iterator<Item = &'x str> + 'x> {

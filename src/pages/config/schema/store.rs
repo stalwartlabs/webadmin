@@ -452,6 +452,7 @@ impl Builder<Schemas, ()> {
             .label("Min Wait")
             .help("Minimum time to wait between retries")
             .placeholder("500ms")
+            .build()
             .new_field("read-from-replicas")
             .label("Read from replicas")
             .help("Whether to read from replicas")

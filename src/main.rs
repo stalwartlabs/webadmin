@@ -28,7 +28,7 @@ use std::{sync::Arc, time::Duration};
 use components::{
     icon::{
         IconAdjustmentsHorizontal, IconDocumentChartBar, IconDocumentText, IconKey, IconLockClosed,
-        IconQueueList, IconUserGroup, IconWrench,
+        IconQueueList, IconShieldCheck, IconUserGroup, IconWrench,
     },
     layout::MenuItem,
 };
@@ -36,7 +36,12 @@ use gloo_storage::{SessionStorage, Storage};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use pages::config::edit::DEFAULT_SETTINGS_URL;
+use pages::{
+    config::edit::DEFAULT_SETTINGS_URL,
+    manage::spam::{SpamTest, SpamTrain},
+};
+
+pub static VERSION_NAME: &str = concat!("Stalwart Management UI v", env!("CARGO_PKG_VERSION"),);
 
 use crate::{
     components::{
@@ -71,8 +76,8 @@ pub const STATE_STORAGE_KEY: &str = "webadmin_state";
 pub const STATE_LOGIN_NAME_KEY: &str = "webadmin_login_name";
 
 fn main() {
-    console_error_panic_hook::set_once();
     _ = console_log::init_with_level(log::Level::Debug);
+    console_error_panic_hook::set_once();
     leptos::mount_to_body(|| view! { <App/> })
 }
 
@@ -222,13 +227,24 @@ pub fn App() -> impl IntoView {
                     <ProtectedRoute
                         path="/reports/:object/:id"
                         view=IncomingReportDisplay
-
                         redirect_path="/login"
                         condition=move || is_admin.get()
                     />
                     <ProtectedRoute
                         path="/logs"
                         view=Logs
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
+                    <ProtectedRoute
+                        path="/spam/train"
+                        view=SpamTrain
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
+                    <ProtectedRoute
+                        path="/spam/test"
+                        view=SpamTest
                         redirect_path="/login"
                         condition=move || is_admin.get()
                     />
@@ -340,6 +356,15 @@ impl LayoutBuilder {
             .route("/reports/arf")
             .insert()
             .insert()
+            .create("SPAM Filter")
+            .icon(view! { <IconShieldCheck/> })
+            .create("Train")
+            .route("/spam/train")
+            .insert()
+            .create("Test")
+            .route("/spam/test")
+            .insert()
+            .insert()
             .create("Logs")
             .icon(view! { <IconDocumentText/> })
             .route("/logs")
@@ -389,6 +414,7 @@ pub fn build_schemas() -> Arc<Schemas> {
         .build_imap()
         .build_sieve()
         .build_spam_lists()
+        .build_spam_manage()
         .build_password_change()
         .build_crypto()
         .build_authorize()

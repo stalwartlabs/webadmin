@@ -396,16 +396,9 @@ impl Builder<Schemas, ()> {
             )
             .build()
             .new_value_field()
-            .label("Score")
-            .help("The score for the tag")
-            .input_check(
-                [Transformer::Trim],
-                [
-                    Validator::Required,
-                    Validator::MinValue((-100.0).into()),
-                    Validator::MaxValue(100.0.into()),
-                ],
-            )
+            .label("Score or action")
+            .help("The score for the tag or action to perform (reject or discard)")
+            .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_form_section()
             .fields(["_id", "_value"])

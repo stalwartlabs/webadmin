@@ -1413,7 +1413,7 @@ impl Builder<Schemas, ()> {
             .build()
             // Milter
             .new_schema("milter")
-            .prefix("session.data.milter")
+            .prefix("session.milter")
             .suffix("hostname")
             .names("milter", "milters")
             .new_id_field()
@@ -1469,7 +1469,7 @@ impl Builder<Schemas, ()> {
             .new_field("allow-invalid-certs")
             .label("Allow Invalid Certs")
             .help(concat!(
-                "Whether Stalwart SMTP should accept connections to a Milter filter ",
+                "Whether Stalwart SMTP should connect to a Milter filter ",
                 "server that has an invalid TLS certificate"
             ))
             .default("false")
@@ -1480,7 +1480,7 @@ impl Builder<Schemas, ()> {
             .label("Connection")
             .help(concat!(
                 "Maximum amount of time that Stalwart SMTP will wait to establish ",
-                "a connection with a Milter server"
+                "a connection with this Milter server"
             ))
             .default("30s")
             .typ(Type::Duration)
@@ -1511,7 +1511,7 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Whether to respond with a temporary failure (typically a 4xx ",
                 "SMTP status code) when Stalwart encounters an error while ",
-                "communicating with a Milter server"
+                "communicating with this Milter server"
             ))
             .default("true")
             .typ(Type::Boolean)
@@ -1521,7 +1521,7 @@ impl Builder<Schemas, ()> {
             .label("Max Response")
             .help(concat!(
                 "Maximum size, in bytes, of a response that Stalwart will accept",
-                " from a Milter server"
+                " from this Milter server"
             ))
             .default("52428800")
             .typ(Type::Size)
@@ -1540,17 +1540,30 @@ impl Builder<Schemas, ()> {
             })
             .input_check([], [Validator::Required])
             .build()
-            .new_form_section()
-            .title("Milter settings")
-            .fields(["_id", "hostname", "port", "enable"])
+            .new_field("stages")
+            .label("Run on stages")
+            .help("Which SMTP stages to run the milter on")
+            .typ(Type::Select {
+                multi: true,
+                source: Source::Static(SMTP_STAGES),
+            })
+            .default("data")
             .build()
             .new_form_section()
-            .title("TLS")
-            .fields(["tls", "allow-invalid-certs"])
+            .title("Milter settings")
+            .fields([
+                "_id",
+                "hostname",
+                "port",
+                "enable",
+                "tls",
+                "allow-invalid-certs",
+            ])
             .build()
             .new_form_section()
             .title("Options")
             .fields([
+                "stages",
                 "options.max-response-size",
                 "options.version",
                 "options.tempfail-on-error",
@@ -1563,6 +1576,130 @@ impl Builder<Schemas, ()> {
             .list_title("Milter filters")
             .list_subtitle("Manage Milter filters")
             .list_fields(["_id", "hostname", "port"])
+            .build()
+            // Filter hooks
+            .new_schema("filter-hooks")
+            .prefix("session.hook")
+            .suffix("url")
+            .names("filter hook", "filter hooks")
+            .new_id_field()
+            .label("Hook Id")
+            .help("Unique identifier for this filter hook")
+            .build()
+            .new_field("enable")
+            .label("Enable")
+            .help("Expression that determines whether to enable this filter hook")
+            .default("true")
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(has_rcpt_vars),
+                ],
+            )
+            .build()
+            .new_field("url")
+            .label("Endpoint URL")
+            .help(concat!("URL of the filter hook endpoint"))
+            .placeholder("https://127.0.0.1/filter")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
+            .build()
+            .new_field("allow-invalid-certs")
+            .label("Allow Invalid Certs")
+            .help(concat!(
+                "Whether Stalwart SMTP should connect to a filter hook ",
+                "server that has an invalid TLS certificate"
+            ))
+            .default("false")
+            .typ(Type::Boolean)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("timeout")
+            .label("Timeout")
+            .help(concat!(
+                "Maximum amount of time that Stalwart SMTP will wait for a response ",
+                "from this filter hook server"
+            ))
+            .default("30s")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("options.tempfail-on-error")
+            .label("TempFail on Error")
+            .help(concat!(
+                "Whether to respond with a temporary failure (typically a 4xx ",
+                "SMTP status code) when Stalwart encounters an error while ",
+                "communicating with this Filter hook server"
+            ))
+            .default("true")
+            .typ(Type::Boolean)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("options.max-response-size")
+            .label("Max Size")
+            .help(concat!(
+                "Maximum size, in bytes, of a response that Stalwart will accept",
+                " from this Filter hook server"
+            ))
+            .default("52428800")
+            .typ(Type::Size)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("headers")
+            .typ(Type::Array)
+            .label("HTTP Headers")
+            .help("The headers to be sent with filter hook requests")
+            .build()
+            .new_field("auth.username")
+            .label("Username")
+            .help(concat!(
+                "The username to use when authenticating with the filter hook server"
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("auth.secret")
+            .label("Secret")
+            .help(concat!(
+                "The secret to use when authenticating with the filter hook server"
+            ))
+            .typ(Type::Secret)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("stages")
+            .label("Run on stages")
+            .help("Which SMTP stages to run this filter hook on")
+            .typ(Type::Select {
+                multi: true,
+                source: Source::Static(SMTP_STAGES),
+            })
+            .default("data")
+            .build()
+            .new_form_section()
+            .title("Filter hook settings")
+            .fields(["_id", "url", "enable", "allow-invalid-certs"])
+            .build()
+            .new_form_section()
+            .title("Authentication")
+            .fields(["auth.username", "auth.secret"])
+            .build()
+            .new_form_section()
+            .title("Options")
+            .fields(["stages", "headers"])
+            .build()
+            .new_form_section()
+            .title("Response")
+            .fields([
+                "options.max-response-size",
+                "timeout",
+                "options.tempfail-on-error",
+            ])
+            .build()
+            .list_title("Filter hooks")
+            .list_subtitle("Manage Filter hooks")
+            .list_fields(["_id", "url"])
             .build()
             // Pipes
             .new_schema("pipe")
@@ -1656,4 +1793,12 @@ pub const REQUIRE_OPTIONAL_CONSTANTS: &[&str] = &[
 ];
 pub const AGGREGATE_FREQ_CONSTANTS: &[&str] = &[
     "daily", "day", "hourly", "hour", "weekly", "week", "never", "disable", "false",
+];
+
+pub static SMTP_STAGES: &[(&str, &str)] = &[
+    ("connect", "Connect"),
+    ("ehlo", "EHLO"),
+    ("mail", "MAIL FROM"),
+    ("rcpt", "RCPT TO"),
+    ("data", "DATA"),
 ];

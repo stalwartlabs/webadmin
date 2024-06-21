@@ -384,8 +384,127 @@ impl Builder<Schemas, ()> {
             .fields(["cluster.key", "cluster.heartbeat", "cluster.seed-nodes"])
             .build()
             .build()
+            // Web hooks
+            .new_schema("web-hooks")
+            .prefix("webhook")
+            .suffix("url")
+            .names("webhook", "webhooks")
+            .new_id_field()
+            .label("WebHook Id")
+            .help("Unique identifier for this webhook")
+            .build()
+            .new_field("url")
+            .label("Endpoint URL")
+            .help(concat!("URL of the webhook endpoint"))
+            .placeholder("https://127.0.0.1/webhook")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
+            .build()
+            .new_field("allow-invalid-certs")
+            .label("Allow Invalid Certs")
+            .help(concat!(
+                "Whether Stalwart should connect to a webhook ",
+                "endpoint that has an invalid TLS certificate"
+            ))
+            .default("false")
+            .typ(Type::Boolean)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("timeout")
+            .label("Timeout")
+            .help(concat!(
+                "Maximum amount of time that Stalwart will wait for a response ",
+                "from this webhook"
+            ))
+            .default("30s")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("throttle")
+            .label("Throttle")
+            .help(concat!(
+                "The minimum amount of time that must pass between ",
+                "each request to the webhook endpoint"
+            ))
+            .default("1s")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("signature-key")
+            .label("Signature Key")
+            .help(concat!(
+                "The HMAC key used to sign the webhook request body ",
+                "to prevent tampering"
+            ))
+            .typ(Type::Secret)
+            .build()
+            .new_field("headers")
+            .typ(Type::Array)
+            .label("HTTP Headers")
+            .help("The headers to be sent with webhook requests")
+            .build()
+            .new_field("auth.username")
+            .label("Username")
+            .help(concat!(
+                "The username to use when authenticating with the webhook endpoint"
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("auth.secret")
+            .label("Secret")
+            .help(concat!(
+                "The secret to use when authenticating with the webhook endpoint"
+            ))
+            .typ(Type::Secret)
+            .build()
+            .new_field("events")
+            .label("Events")
+            .help("Which events should trigger this webhook")
+            .typ(Type::Select {
+                multi: true,
+                source: Source::Static(WEBHOOK_EVENTS),
+            })
+            .build()
+            .new_form_section()
+            .title("WebHook settings")
+            .fields(["_id", "url", "signature-key", "allow-invalid-certs"])
+            .build()
+            .new_form_section()
+            .title("Authentication")
+            .fields(["auth.username", "auth.secret"])
+            .build()
+            .new_form_section()
+            .title("Triggers")
+            .fields(["events"])
+            .build()
+            .new_form_section()
+            .title("Options")
+            .fields(["throttle", "timeout", "headers"])
+            .build()
+            .list_title("WebHooks")
+            .list_subtitle("Manage WebHooks")
+            .list_fields(["_id", "url"])
+            .build()
     }
 }
+
+pub static WEBHOOK_EVENTS: &[(&str, &str)] = &[
+    ("auth.success", "Authentication success"),
+    ("auth.failure", "Authentication failure"),
+    ("auth.banned", "Authentication ban"),
+    ("auth.error", "Authentication error"),
+    ("message.accepted", "Message accepted"),
+    ("message.rejected", "Message rejected"),
+    ("message.appended", "Message appended"),
+    ("account.over-quota", "Account over quota"),
+    ("dsn", "Delivery status notification"),
+    ("double-bounce", "Double bounce"),
+    ("report.incoming.dmarc", "Incoming DMARC report"),
+    ("report.incoming.tls", "Incoming TLS report"),
+    ("report.incoming.arf", "Incoming ARF report"),
+    ("report.outgoing", "Outgoing report"),
+];
 
 impl Builder<Schemas, Schema> {
     pub fn add_network_fields(self, is_listener: bool) -> Self {

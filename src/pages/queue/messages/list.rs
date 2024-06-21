@@ -382,9 +382,7 @@ fn QueueItem(message: Message) -> impl IntoView {
     let next_dsn = message.next_dsn().map(|dt| HumanTime::from(dt).to_string());
     let return_path = message.return_path().to_string();
     let recipients = if total_recipients > 0 {
-        format!(
-            "{first_recipient} and {total_recipients} more",
-        )
+        format!("{first_recipient} and {total_recipients} more",)
     } else {
         first_recipient.to_string()
     };

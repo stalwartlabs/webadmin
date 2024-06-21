@@ -23,3 +23,4 @@
 
 pub mod logs;
 pub mod maintenance;
+pub mod spam;

@@ -227,6 +227,22 @@ impl Alert {
         self
     }
 
+    pub fn with_details_list<T, I>(mut self, details: T) -> Self
+    where
+        T: IntoIterator<Item = I>,
+        I: Into<String>,
+    {
+        let items = details
+            .into_iter()
+            .map(|item| {
+                view! { <li>{item.into()}</li> }
+            })
+            .collect_view();
+        self.details =
+            Some(view! { <ul class="list-disc space-y-1 ps-5">{items}</ul> }.into_view());
+        self
+    }
+
     pub fn close(&mut self) {
         self.typ = AlertType::None;
     }

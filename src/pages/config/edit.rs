@@ -42,7 +42,10 @@ use crate::{
             Form, FormButtonBar, FormElement, FormItem, FormSection,
         },
         icon::IconRefresh,
-        messages::alert::{use_alerts, Alert},
+        messages::{
+            alert::{use_alerts, Alert},
+            modal::{use_modals, Modal},
+        },
         skeleton::Skeleton,
         Color,
     },
@@ -82,6 +85,7 @@ pub fn SettingsEdit() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let params = use_params_map();
+    let modal = use_modals();
 
     let schemas = expect_context::<Arc<Schemas>>();
     let current_schema = create_memo(move |_| {
@@ -235,8 +239,6 @@ pub fn SettingsEdit() -> impl IntoView {
             let auth = auth.get();
             let schema = current_schema.get();
 
-            //let c = log::debug!("Saving changes: {:?}", changes);
-
             async move {
                 set_pending.set(true);
                 match HttpRequest::post("/api/settings")
@@ -262,9 +264,18 @@ pub fn SettingsEdit() -> impl IntoView {
                                     if result.errors.is_empty() {
                                         match schema.list_path() {
                                             Some(url) => use_navigate()(&url, Default::default()),
-                                            None => alert.set(Alert::success(
-                                                "Settings successfully saved and reloaded",
-                                            )),
+                                            None => {
+                                                modal.set(
+                                                    Modal::with_title("Settings reloaded")
+                                                        .with_message(concat!(
+                                                            "Your changes have been successfully ",
+                                                            "saved and all settings have been  ",
+                                                            "reloaded. You may now close ",
+                                                            "this window."
+                                                        ))
+                                                        .with_button("OK"),
+                                                );
+                                            }
                                         }
                                     } else {
                                         alert.set(Alert::from(result));
@@ -282,7 +293,17 @@ pub fn SettingsEdit() -> impl IntoView {
                             set_pending.set(false);
                             match schema.list_path() {
                                 Some(url) => use_navigate()(&url, Default::default()),
-                                None => alert.set(Alert::success("Settings successfully saved")),
+                                None => {
+                                    modal.set(
+                                        Modal::with_title("Settings saved")
+                                            .with_message(concat!(
+                                                "Your changes have been saved successfully. ",
+                                                "You may now reload the configuration ",
+                                                "to apply the updates."
+                                            ))
+                                            .with_button("OK"),
+                                    );
+                                }
                             }
                         }
                     }

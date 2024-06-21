@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.6] - 2024-06-22
+
+## Added
+- SPAM training and testing interfaces.
+- WebHooks management.
+- Filter hooks management.
+- IMAP special use folder configuration.
+- Display version number by hovering over the logo.
+- Logout button.
+
+### Changed
+- Show a modal when settings are saved successfully instead of an alert.
+
+### Fixed
+- Accept `reject` and `discard` as valid SPAM scores.
+- Redis cluster can't be configured.
+- Case-insensitive settings search.
+
 ## [0.1.5] - 2024-05-23
 
 ## Added

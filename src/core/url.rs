@@ -21,11 +21,13 @@
  * for more details.
 */
 
+use std::borrow::Cow;
+
 use ahash::AHashMap;
 
 pub struct UrlBuilder {
     pub path: String,
-    pub params: AHashMap<&'static str, String>,
+    pub params: AHashMap<Cow<'static, str>, String>,
 }
 
 impl UrlBuilder {
@@ -51,7 +53,7 @@ impl UrlBuilder {
     }
 
     pub fn with_parameter(mut self, key: &'static str, value: impl Into<String>) -> Self {
-        self.params.insert(key, value.into());
+        self.params.insert(key.into(), value.into());
         self
     }
 
@@ -61,8 +63,14 @@ impl UrlBuilder {
         value: Option<impl Into<String>>,
     ) -> Self {
         if let Some(value) = value {
-            self.params.insert(key, value.into());
+            self.params.insert(key.into(), value.into());
         }
+        self
+    }
+
+    pub fn with_parameters(mut self, params: AHashMap<String, String>) -> Self {
+        self.params
+            .extend(params.into_iter().map(|(k, v)| (k.into(), v)));
         self
     }
 

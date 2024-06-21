@@ -21,6 +21,7 @@
  * for more details.
 */
 
+use ahash::AHashMap;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use gloo_net::http::{Headers, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -100,6 +101,11 @@ impl<'x> HttpRequest {
 
     pub fn with_parameter(mut self, key: &'static str, value: impl Into<String>) -> Self {
         self.url = self.url.with_parameter(key, value);
+        self
+    }
+
+    pub fn with_parameters(mut self, params: AHashMap<String, String>) -> Self {
+        self.url = self.url.with_parameters(params);
         self
     }
 
