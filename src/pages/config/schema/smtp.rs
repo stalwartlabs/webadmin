@@ -1577,18 +1577,18 @@ impl Builder<Schemas, ()> {
             .list_subtitle("Manage Milter filters")
             .list_fields(["_id", "hostname", "port"])
             .build()
-            // Filter hooks
-            .new_schema("filter-hooks")
+            // MTA Hooks
+            .new_schema("mta-hooks")
             .prefix("session.hook")
             .suffix("url")
-            .names("filter hook", "filter hooks")
+            .names("hook", "hooks")
             .new_id_field()
             .label("Hook Id")
-            .help("Unique identifier for this filter hook")
+            .help("Unique identifier for this hook")
             .build()
             .new_field("enable")
             .label("Enable")
-            .help("Expression that determines whether to enable this filter hook")
+            .help("Expression that determines whether to enable this hook")
             .default("true")
             .typ(Type::Expression)
             .input_check(
@@ -1601,7 +1601,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("url")
             .label("Endpoint URL")
-            .help(concat!("URL of the filter hook endpoint"))
+            .help(concat!("URL of the hook endpoint"))
             .placeholder("https://127.0.0.1/filter")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
@@ -1609,7 +1609,7 @@ impl Builder<Schemas, ()> {
             .new_field("allow-invalid-certs")
             .label("Allow Invalid Certs")
             .help(concat!(
-                "Whether Stalwart SMTP should connect to a filter hook ",
+                "Whether Stalwart SMTP should connect to a hook ",
                 "server that has an invalid TLS certificate"
             ))
             .default("false")
@@ -1620,7 +1620,7 @@ impl Builder<Schemas, ()> {
             .label("Timeout")
             .help(concat!(
                 "Maximum amount of time that Stalwart SMTP will wait for a response ",
-                "from this filter hook server"
+                "from this hook server"
             ))
             .default("30s")
             .typ(Type::Duration)
@@ -1631,7 +1631,7 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Whether to respond with a temporary failure (typically a 4xx ",
                 "SMTP status code) when Stalwart encounters an error while ",
-                "communicating with this Filter hook server"
+                "communicating with this MTA Hook server"
             ))
             .default("true")
             .typ(Type::Boolean)
@@ -1641,7 +1641,7 @@ impl Builder<Schemas, ()> {
             .label("Max Size")
             .help(concat!(
                 "Maximum size, in bytes, of a response that Stalwart will accept",
-                " from this Filter hook server"
+                " from this MTA Hook server"
             ))
             .default("52428800")
             .typ(Type::Size)
@@ -1650,12 +1650,12 @@ impl Builder<Schemas, ()> {
             .new_field("headers")
             .typ(Type::Array)
             .label("HTTP Headers")
-            .help("The headers to be sent with filter hook requests")
+            .help("The headers to be sent with hook requests")
             .build()
             .new_field("auth.username")
             .label("Username")
             .help(concat!(
-                "The username to use when authenticating with the filter hook server"
+                "The username to use when authenticating with the hook server"
             ))
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
@@ -1663,14 +1663,14 @@ impl Builder<Schemas, ()> {
             .new_field("auth.secret")
             .label("Secret")
             .help(concat!(
-                "The secret to use when authenticating with the filter hook server"
+                "The secret to use when authenticating with the hook server"
             ))
             .typ(Type::Secret)
             .input_check([Transformer::Trim], [])
             .build()
             .new_field("stages")
             .label("Run on stages")
-            .help("Which SMTP stages to run this filter hook on")
+            .help("Which SMTP stages to run this hook on")
             .typ(Type::Select {
                 multi: true,
                 source: Source::Static(SMTP_STAGES),
@@ -1678,7 +1678,7 @@ impl Builder<Schemas, ()> {
             .default("data")
             .build()
             .new_form_section()
-            .title("Filter hook settings")
+            .title("MTA Hook settings")
             .fields(["_id", "url", "enable", "allow-invalid-certs"])
             .build()
             .new_form_section()
@@ -1697,8 +1697,8 @@ impl Builder<Schemas, ()> {
                 "options.tempfail-on-error",
             ])
             .build()
-            .list_title("Filter hooks")
-            .list_subtitle("Manage Filter hooks")
+            .list_title("MTA Hooks")
+            .list_subtitle("Manage MTA Hooks")
             .list_fields(["_id", "url"])
             .build()
             // Pipes

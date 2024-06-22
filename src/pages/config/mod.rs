@@ -316,7 +316,7 @@ impl LayoutBuilder {
             .route("/tracing")
             .insert()
             // Logging
-            .create("WebHooks")
+            .create("Webhooks")
             .route("/web-hooks")
             .insert()
             // Cache
@@ -395,8 +395,8 @@ impl LayoutBuilder {
             .create("Milters")
             .route("/milter")
             .insert()
-            .create("Hooks")
-            .route("/filter-hooks")
+            .create("MTA Hooks")
+            .route("/mta-hooks")
             .insert()
             .create("Pipes")
             .route("/pipe")
