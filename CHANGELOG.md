@@ -6,8 +6,8 @@ All notable changes to this project will be documented in this file. This projec
 
 ## Added
 - SPAM training and testing interfaces.
-- WebHooks management.
-- Filter hooks management.
+- Webhooks management.
+- MTA Hooks management.
 - IMAP special use folder configuration.
 - Display version number by hovering over the logo.
 - Logout button.
