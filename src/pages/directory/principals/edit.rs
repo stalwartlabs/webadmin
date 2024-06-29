@@ -15,7 +15,7 @@ use crate::{
     components::{
         form::{
             button::Button,
-            input::{InputPassword, InputSize, InputText},
+            input::{InputPassword, InputSize, InputSwitch, InputText},
             select::Select,
             stacked_badge::StackedBadge,
             stacked_input::StackedInput,
@@ -33,6 +33,8 @@ use crate::{
     },
     pages::directory::{Principal, PrincipalType},
 };
+
+use super::{build_app_password, parse_app_password, SpecialSecrets};
 
 #[component]
 pub fn PrincipalEdit() -> impl IntoView {
@@ -283,9 +285,32 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             <Select element=FormElement::new("type", data)/>
 
                                         </FormItem>
+                                        <FormItem label="">
+                                            <InputSwitch
+                                                label="Suspend account"
+                                                tooltip="Temporarily disable the account."
+                                                element=FormElement::new("disabled", data)
+                                            />
+                                        </FormItem>
 
                                         <FormItem label="Password">
                                             <InputPassword element=FormElement::new("password", data)/>
+                                        </FormItem>
+
+                                        <FormItem label="OTP Auth URL">
+                                            <InputPassword element=FormElement::new(
+                                                "otpauth_url",
+                                                data,
+                                            )/>
+                                        </FormItem>
+
+                                        <FormItem label="App Passwords">
+                                            <StackedBadge
+                                                color=Color::Gray
+                                                element=FormElement::new("app_passwords", data)
+                                                add_button_text="".to_string()
+                                            />
+
                                         </FormItem>
                                     </Show>
 
@@ -455,21 +480,46 @@ impl FormData {
         self.array_set("member-of", principal.member_of.iter());
         self.array_set("members", principal.members.iter());
         self.array_set("aliases", principal.emails.iter().skip(1));
+
+        let mut app_passwords = vec![];
+        for secret in &principal.secrets {
+            if let Some((app, _)) = parse_app_password(secret) {
+                app_passwords.push(app);
+            } else if secret.is_disabled() {
+                self.set("disabled", "true");
+            } else if secret.is_otp_auth() {
+                self.set("otpauth_url", secret);
+            }
+        }
+        if !app_passwords.is_empty() {
+            self.array_set("app_passwords", app_passwords);
+        }
     }
 
     fn to_principal(&mut self) -> Option<Principal> {
         if self.validate_form() {
+            let mut secrets = vec![];
+            if self
+                .value::<String>("disabled")
+                .map_or(false, |v| v == "true")
+            {
+                secrets.push("$disabled$".to_string());
+            }
+            for app_name in self.array_value("app_passwords") {
+                secrets.push(build_app_password(app_name, ""));
+            }
+            if let Some(password) = self.value::<String>("password") {
+                secrets.push(sha512_crypt::hash(password).unwrap());
+            }
+            if let Some(otpauth_url) = self.value::<String>("otpauth_url") {
+                secrets.push(otpauth_url);
+            }
+
             Some(Principal {
                 typ: self.value::<PrincipalType>("type").unwrap().into(),
                 quota: self.value("quota"),
                 name: self.value::<String>("name").unwrap().into(),
-                secrets: {
-                    if let Some(password) = self.value::<String>("password") {
-                        vec![sha512_crypt::hash(password).unwrap()]
-                    } else {
-                        vec![]
-                    }
-                },
+                secrets,
                 emails: [self.value::<String>("email").unwrap_or_default()]
                     .into_iter()
                     .chain(self.array_value("aliases").map(|m| m.to_string()))
@@ -534,6 +584,10 @@ impl Builder<Schemas, ()> {
                 multi: false,
             })
             .default(PrincipalType::Individual.id())
+            .build()
+            .new_field("otpauth_url")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::IsUrl])
             .build()
             .build()
     }

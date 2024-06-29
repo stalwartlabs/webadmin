@@ -21,7 +21,7 @@ use crate::{
         messages::alert::{use_alerts, Alerts},
     },
     core::{
-        oauth::{oauth_authenticate, AuthToken},
+        oauth::{oauth_authenticate, AuthToken, AuthenticationResult},
         schema::{Builder, Schemas, Transformer, Type, Validator},
     },
     STATE_LOGIN_NAME_KEY, STATE_STORAGE_KEY,
@@ -37,6 +37,7 @@ struct SavedSession {
 pub fn Login() -> impl IntoView {
     let stored_data: Option<SavedSession> = LocalStorage::get(STATE_LOGIN_NAME_KEY).ok();
     let remember_me = create_rw_signal(stored_data.is_some());
+    let show_totp = create_rw_signal(false);
     let alert = use_alerts();
     let auth_token = use_context::<RwSignal<AuthToken>>().unwrap();
     let query = use_query_map();
@@ -49,15 +50,15 @@ pub fn Login() -> impl IntoView {
 
             async move {
                 match oauth_authenticate(&base_url, &username, &password).await {
-                    Ok((grant, is_admin)) => {
-                        let refresh_token = grant.refresh_token.unwrap_or_default();
+                    AuthenticationResult::Success(response) => {
+                        let refresh_token = response.grant.refresh_token.unwrap_or_default();
                         auth_token.update(|auth_token| {
-                            auth_token.access_token = grant.access_token.into();
+                            auth_token.access_token = response.grant.access_token.into();
                             auth_token.refresh_token = refresh_token.clone().into();
                             auth_token.base_url = base_url.clone().into();
                             auth_token.username = username.into();
                             auth_token.is_valid = true;
-                            auth_token.is_admin = is_admin;
+                            auth_token.is_admin = response.is_admin;
 
                             if let Err(err) =
                                 SessionStorage::set(STATE_STORAGE_KEY, auth_token.clone())
@@ -67,10 +68,10 @@ pub fn Login() -> impl IntoView {
                         });
 
                         // Set timer to refresh token
-                        if grant.expires_in > 0 && !refresh_token.is_empty() {
+                        if response.grant.expires_in > 0 && !refresh_token.is_empty() {
                             log::debug!(
                                 "Next OAuth token refresh in {} seconds.",
-                                grant.expires_in
+                                response.grant.expires_in
                             );
 
                             set_timeout(
@@ -79,18 +80,21 @@ pub fn Login() -> impl IntoView {
                                         auth_token.is_valid = false;
                                     });
                                 },
-                                Duration::from_secs(grant.expires_in),
+                                Duration::from_secs(response.grant.expires_in),
                             );
                         }
 
-                        let url = if is_admin {
+                        let url = if response.is_admin {
                             "/manage/directory/accounts"
                         } else {
                             "/account/crypto"
                         };
                         use_navigate()(url, Default::default());
                     }
-                    Err(err) => {
+                    AuthenticationResult::TotpRequired => {
+                        show_totp.set(true);
+                    }
+                    AuthenticationResult::Error(err) => {
                         alert.set(err);
                     }
                 }
@@ -108,12 +112,13 @@ pub fn Login() -> impl IntoView {
         .with_value("login", login)
         .into_signal();
     let has_remote = create_memo(move |_| {
-        query.get().get("remote").is_some()
+        (query.get().get("remote").is_some()
             || data
                 .get()
                 .get("base-url")
                 .filter(|v| !v.is_empty())
-                .is_some()
+                .is_some())
+            && !show_totp.get()
     });
 
     view! {
@@ -141,22 +146,34 @@ pub fn Login() -> impl IntoView {
                                         />
                                     </div>
                                 </Show>
-                                <div>
-                                    <label class="block text-sm mb-2 dark:text-white">Login</label>
-                                    <InputText
-                                        placeholder="user@example.org"
-                                        element=FormElement::new("login", data)
-                                    />
-                                </div>
-                                <div>
-                                    <div class="flex justify-between items-center">
+                                <Show when=move || !show_totp.get()>
+                                    <div>
                                         <label class="block text-sm mb-2 dark:text-white">
-                                            Password
+                                            Login
                                         </label>
-
+                                        <InputText
+                                            placeholder="user@example.org"
+                                            element=FormElement::new("login", data)
+                                        />
                                     </div>
-                                    <InputPassword element=FormElement::new("password", data)/>
-                                </div>
+                                    <div>
+                                        <div class="flex justify-between items-center">
+                                            <label class="block text-sm mb-2 dark:text-white">
+                                                Password
+                                            </label>
+
+                                        </div>
+                                        <InputPassword element=FormElement::new("password", data)/>
+                                    </div>
+                                </Show>
+                                <Show when=move || show_totp.get()>
+                                    <div>
+                                        <label class="block text-sm mb-2 dark:text-white">
+                                            TOTP Token
+                                        </label>
+                                        <InputText element=FormElement::new("totp-code", data)/>
+                                    </div>
+                                </Show>
                                 <div class="flex items-center">
                                     <div class="flex">
                                         <input
@@ -190,9 +207,13 @@ pub fn Login() -> impl IntoView {
                                                 let login = data
                                                     .value::<String>("login")
                                                     .unwrap_or_default();
-                                                let password = data
-                                                    .value::<String>("password")
-                                                    .unwrap_or_default();
+                                                let password = match (
+                                                    data.value::<String>("password").unwrap_or_default(),
+                                                    data.value::<String>("totp-code"),
+                                                ) {
+                                                    (password, Some(totp)) => format!("{}${}", password, totp),
+                                                    (password, None) => password,
+                                                };
                                                 let base_url = data
                                                     .value::<String>("base-url")
                                                     .unwrap_or_default();
@@ -216,7 +237,6 @@ pub fn Login() -> impl IntoView {
                                         });
                                     }
                                 >
-
                                     Sign in
                                 </button>
                             </div>
@@ -244,6 +264,9 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("base-url")
             .input_check([Transformer::Trim], [Validator::IsUrl])
+            .build()
+            .new_field("totp-code")
+            .input_check([Transformer::Trim], [])
             .build()
             .build()
     }

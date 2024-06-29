@@ -20,6 +20,7 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use pages::{
+    account::mfa::ManageMfa,
     config::edit::DEFAULT_SETTINGS_URL,
     manage::spam::{SpamTest, SpamTrain},
 };
@@ -287,6 +288,12 @@ pub fn App() -> impl IntoView {
                         redirect_path="/login"
                         condition=move || is_logged_in.get()
                     />
+                    <ProtectedRoute
+                        path="/mfa"
+                        view=ManageMfa
+                        redirect_path="/login"
+                        condition=move || is_logged_in.get()
+                    />
 
                 </ProtectedRoute>
 
@@ -373,6 +380,10 @@ impl LayoutBuilder {
             .icon(view! { <IconKey/> })
             .route("/password")
             .insert()
+            .create("Two-Factor Auth")
+            .icon(view! { <IconShieldCheck/> })
+            .route("/mfa")
+            .insert()
             .menu_items
     }
 }
@@ -401,6 +412,7 @@ pub fn build_schemas() -> Arc<Schemas> {
         .build_password_change()
         .build_crypto()
         .build_authorize()
+        .build_mfa()
         .build()
         .into()
 }

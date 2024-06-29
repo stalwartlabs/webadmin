@@ -4,5 +4,29 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+use serde::{Deserialize, Serialize};
+
 pub mod crypto;
+pub mod mfa;
 pub mod password;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+pub enum AccountAuthRequest {
+    SetPassword { password: String },
+    EnableOtpAuth { url: String },
+    DisableOtpAuth { url: Option<String> },
+    AddAppPassword { name: String },
+    RemoveAppPassword { name: String },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AccountAuthResponse {
+    #[serde(rename = "otpEnabled")]
+    pub otp_auth: bool,
+    #[serde(rename = "isAdministrator")]
+    pub is_admin: bool,
+    #[serde(rename = "appPasswords")]
+    pub app_passwords: Vec<String>,
+}

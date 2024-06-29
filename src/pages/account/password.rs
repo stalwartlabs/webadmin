@@ -12,7 +12,7 @@ use pwhash::sha512_crypt;
 use crate::{
     components::{
         form::{
-            button::Button, input::InputPassword, Form, FormButtonBar, FormElement, FormItem,
+            button::Button, input::{InputPassword, InputText}, Form, FormButtonBar, FormElement, FormItem,
             FormSection,
         },
         messages::alert::{use_alerts, Alert},
@@ -21,8 +21,9 @@ use crate::{
     core::{
         http::{Error, HttpRequest},
         oauth::use_authorization,
-        schema::{Builder, Schemas, Type, Validator},
+        schema::{Builder, Schemas, Transformer, Type, Validator},
     },
+    pages::account::AccountAuthRequest,
 };
 
 #[component]
@@ -34,6 +35,7 @@ pub fn ChangePassword() -> impl IntoView {
     let data = expect_context::<Arc<Schemas>>()
         .build_form("change-pass")
         .into_signal();
+    let show_totp = create_rw_signal(false);
 
     let change_password = create_action(move |(old_password, new_password): &(String, String)| {
         let old_password = old_password.clone();
@@ -42,21 +44,39 @@ pub fn ChangePassword() -> impl IntoView {
 
         async move {
             set_pending.set(true);
-            let result = HttpRequest::post("/api/password")
+            let result = HttpRequest::post("/api/account/auth")
                 .with_basic_authorization(auth.username.as_str(), &old_password)
                 .with_base_url(&auth)
-                .with_raw_body(new_password)
+                .with_body(vec![AccountAuthRequest::SetPassword {
+                    password: new_password,
+                }])
+                .unwrap()
                 .send::<()>()
                 .await;
             set_pending.set(false);
 
             alert.set(match result {
-                Ok(_) => Alert::success("Password changed")
-                    .with_details("Your password has been changed successfully")
-                    .without_timeout(),
-                Err(Error::Unauthorized) => Alert::warning("Incorrect password")
-                    .with_details("The password you entered is incorrect"),
-                Err(err) => Alert::from(err),
+                Ok(_) => {
+                    show_totp.set(false);
+
+                    Alert::success("Password changed")
+                        .with_details("Your password has been changed successfully")
+                        .without_timeout()
+                }
+                Err(Error::Unauthorized) => {
+                    show_totp.set(false);
+
+                    Alert::warning("Incorrect password")
+                        .with_details("The password you entered is incorrect")
+                }
+                Err(Error::Forbidden) => {
+                    show_totp.set(true);
+                    return;
+                }
+                Err(err) => {
+                    show_totp.set(false);
+                    Alert::from(err)
+                }
             });
         }
     });
@@ -64,12 +84,20 @@ pub fn ChangePassword() -> impl IntoView {
     view! {
         <Form title="Change Password" subtitle="Update your account password.">
             <FormSection>
-                <FormItem label="Current Password">
-                    <InputPassword element=FormElement::new("old-password", data)/>
-                </FormItem>
-                <FormItem label="New Password">
-                    <InputPassword element=FormElement::new("new-password", data)/>
-                </FormItem>
+                <Show when=move || !show_totp.get()>
+                    <FormItem label="Current Password">
+                        <InputPassword element=FormElement::new("old-password", data)/>
+                    </FormItem>
+                    <FormItem label="New Password">
+                        <InputPassword element=FormElement::new("new-password", data)/>
+                    </FormItem>
+                </Show>
+
+                <Show when=move || show_totp.get()>
+                    <FormItem label="TOTP Token">
+                        <InputText element=FormElement::new("totp-code", data)/>
+                    </FormItem>
+                </Show>
 
             </FormSection>
 
@@ -83,7 +111,13 @@ pub fn ChangePassword() -> impl IntoView {
                             if data.validate_form() {
                                 change_password
                                     .dispatch((
-                                        data.value::<String>("old-password").unwrap(),
+                                        match (
+                                            data.value::<String>("old-password").unwrap_or_default(),
+                                            data.value::<String>("totp-code"),
+                                        ) {
+                                            (password, Some(totp)) => format!("{}${}", password, totp),
+                                            (password, None) => password,
+                                        },
                                         data
                                             .value::<String>("new-password")
                                             .map(|password| sha512_crypt::hash(password).unwrap())
@@ -108,6 +142,9 @@ impl Builder<Schemas, ()> {
             .typ(Type::Secret)
             .input_check([], [Validator::Required])
             .new_field("new-password")
+            .build()
+            .new_field("totp-code")
+            .input_check([Transformer::Trim], [])
             .build()
             .build()
     }

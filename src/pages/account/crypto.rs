@@ -14,7 +14,7 @@ use crate::{
     components::{
         form::{
             button::Button,
-            input::{InputPassword, TextArea},
+            input::{InputPassword, InputText, TextArea},
             select::Select,
             Form, FormButtonBar, FormElement, FormItem, FormSection,
         },
@@ -26,7 +26,7 @@ use crate::{
         form::FormData,
         http::{self, Error, HttpRequest},
         oauth::use_authorization,
-        schema::{Builder, Schemas, Source, Type, Validator},
+        schema::{Builder, Schemas, Source, Transformer, Type, Validator},
     },
 };
 
@@ -61,13 +61,14 @@ pub enum EncryptionMethod {
 pub fn ManageCrypto() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
+    let show_totp = create_rw_signal(false);
     let fetch_crypto = create_resource(
         move || (),
         move |_| {
             let auth = auth.get_untracked();
 
             async move {
-                HttpRequest::get("/api/crypto")
+                HttpRequest::get("/api/account/crypto")
                     .with_authorization(&auth)
                     .send::<EncryptionType>()
                     .await
@@ -89,7 +90,7 @@ pub fn ManageCrypto() -> impl IntoView {
         async move {
             let is_disable = matches!(changes, EncryptionType::Disabled);
             set_pending.set(true);
-            let result = HttpRequest::post("/api/crypto")
+            let result = HttpRequest::post("/api/account/crypto")
                 .with_basic_authorization(auth.username.as_str(), &password)
                 .with_base_url(&auth)
                 .with_body(changes)
@@ -100,23 +101,34 @@ pub fn ManageCrypto() -> impl IntoView {
             set_pending.set(false);
 
             alert.set(match result {
-                Ok(_) => if !is_disable {
-                    Alert::success("Encryption-at-rest enabled").with_details(concat!(
-                        "Automatic encryption of plain text messages has been enabled. ",
-                        "From now on all incoming plain-text messages will be encrypted ",
-                        "before they reach your mailbox."
-                    ))
-                } else {
-                    Alert::success("Encryption-at-rest disabled").with_details(concat!(
-                        "Automatic encryption of plain text messages has been disabled. ",
-                        "From now on all incoming messages will be stored ",
-                        "in their original form."
-                    ))
+                Ok(_) => {
+                    show_totp.set(false);
+
+                    if !is_disable {
+                        Alert::success("Encryption-at-rest enabled").with_details(concat!(
+                            "Automatic encryption of plain text messages has been enabled. ",
+                            "From now on all incoming plain-text messages will be encrypted ",
+                            "before they reach your mailbox."
+                        ))
+                    } else {
+                        Alert::success("Encryption-at-rest disabled").with_details(concat!(
+                            "Automatic encryption of plain text messages has been disabled. ",
+                            "From now on all incoming messages will be stored ",
+                            "in their original form."
+                        ))
+                    }
+                    .without_timeout()
                 }
-                .without_timeout(),
                 Err(Error::Unauthorized) => Alert::warning("Incorrect password")
                     .with_details("The password you entered is incorrect"),
-                Err(err) => Alert::from(err),
+                Err(Error::Forbidden) => {
+                    show_totp.set(true);
+                    return;
+                }
+                Err(err) => {
+                    show_totp.set(false);
+                    Alert::from(err)
+                }
             });
         }
     });
@@ -149,32 +161,40 @@ pub fn ManageCrypto() -> impl IntoView {
                         Some(
                             view! {
                                 <FormSection>
-                                    <FormItem label="Current Password">
-                                        <InputPassword element=FormElement::new("password", data)/>
-                                    </FormItem>
-                                    <FormItem
-                                        label="Encryption type"
-                                        tooltip="Whether to use OpenPGP or S/MIME for encryption."
-                                    >
-                                        <Select element=FormElement::new("type", data)/>
-                                    </FormItem>
+                                    <Show when=move || show_totp.get()>
+                                        <FormItem label="TOTP Token">
+                                            <InputText element=FormElement::new("totp-code", data)/>
+                                        </FormItem>
+                                    </Show>
 
-                                    <FormItem
-                                        label="Algorithm"
-                                        tooltip="The encryption algorithms to use"
-                                        hide=has_no_crypto
-                                    >
-                                        <Select element=FormElement::new("algo", data)/>
+                                    <Show when=move || !show_totp.get()>
+                                        <FormItem label="Current Password">
+                                            <InputPassword element=FormElement::new("password", data)/>
+                                        </FormItem>
+                                        <FormItem
+                                            label="Encryption type"
+                                            tooltip="Whether to use OpenPGP or S/MIME for encryption."
+                                        >
+                                            <Select element=FormElement::new("type", data)/>
+                                        </FormItem>
 
-                                    </FormItem>
+                                        <FormItem
+                                            label="Algorithm"
+                                            tooltip="The encryption algorithms to use"
+                                            hide=has_no_crypto
+                                        >
+                                            <Select element=FormElement::new("algo", data)/>
 
-                                    <FormItem
-                                        label="Certificates"
-                                        tooltip="The armored OpenPGP certificate or S/MIME certificate in PEM format."
-                                        hide=has_no_crypto
-                                    >
-                                        <TextArea element=FormElement::new("certs", data)/>
-                                    </FormItem>
+                                        </FormItem>
+
+                                        <FormItem
+                                            label="Certificates"
+                                            tooltip="The armored OpenPGP certificate or S/MIME certificate in PEM format."
+                                            hide=has_no_crypto
+                                        >
+                                            <TextArea element=FormElement::new("certs", data)/>
+                                        </FormItem>
+                                    </Show>
 
                                 </FormSection>
                             }
@@ -193,7 +213,17 @@ pub fn ManageCrypto() -> impl IntoView {
                     on_click=Callback::new(move |_| {
                         data.update(|data| {
                             if let Some(changes) = data.to_encryption_params() {
-                                save_changes.dispatch((changes, data.value("password").unwrap()));
+                                save_changes
+                                    .dispatch((
+                                        changes,
+                                        match (
+                                            data.value::<String>("password").unwrap_or_default(),
+                                            data.value::<String>("totp-code"),
+                                        ) {
+                                            (password, Some(totp)) => format!("{}${}", password, totp),
+                                            (password, None) => password,
+                                        },
+                                    ));
                             }
                         });
                     })
@@ -294,6 +324,9 @@ impl Builder<Schemas, ()> {
             .new_field("password")
             .typ(Type::Text)
             .input_check([], [Validator::Required])
+            .build()
+            .new_field("totp-code")
+            .input_check([Transformer::Trim], [])
             .build()
             .build()
     }

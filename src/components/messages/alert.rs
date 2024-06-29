@@ -284,6 +284,7 @@ impl From<http::Error> for Alert {
                 Alert::error(title).with_details(details)
             }
             http::Error::NotFound => Alert::error("Not found"),
+            http::Error::Forbidden => Alert::error("Forbidden"),
             http::Error::Unauthorized => Alert::error("Unauthorized"),
         }
     }

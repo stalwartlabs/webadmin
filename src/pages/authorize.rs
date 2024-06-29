@@ -19,7 +19,10 @@ use crate::{
         messages::alert::{use_alerts, Alert, Alerts},
     },
     core::{
-        oauth::{oauth_device_authentication, oauth_user_authentication, OAuthCodeRequest},
+        oauth::{
+            oauth_device_authentication, oauth_user_authentication, AuthenticationResult,
+            OAuthCodeRequest,
+        },
         schema::{Builder, Schemas, Transformer, Type, Validator},
     },
 };
@@ -36,6 +39,7 @@ pub fn Authorize() -> impl IntoView {
         create_memo(move |_| params.get().get("type").map_or(true, |t| t != "code"));
     let redirect_uri = create_memo(move |_| query.get().get("redirect_uri").cloned());
     let client_id = create_memo(move |_| query.get().get("client_id").cloned());
+    let show_totp = create_rw_signal(false);
 
     let login_action = create_action(
         move |(username, password, request): &(String, String, OAuthCodeRequest)| {
@@ -59,7 +63,7 @@ pub fn Authorize() -> impl IntoView {
                         )
                         .await
                         {
-                            Ok(response) => {
+                            AuthenticationResult::Success(response) => {
                                 let url = if let Some(state) = state {
                                     format!(
                                         "{}?code={}&state={}",
@@ -79,15 +83,38 @@ pub fn Authorize() -> impl IntoView {
                                     log::error!("Failed to redirect to {url}: {err:?}");
                                 }
                             }
-                            Err(err) => {
+                            AuthenticationResult::TotpRequired => {
+                                show_totp.set(true);
+                            }
+                            AuthenticationResult::Error(err) => {
                                 alert.set(err);
                             }
                         }
                     }
                     OAuthCodeRequest::Device { code } => {
-                        alert.set(
-                            oauth_device_authentication(BASE_URL, &username, &password, code).await,
-                        );
+                        let message =
+                            match oauth_device_authentication(BASE_URL, &username, &password, code)
+                                .await
+                            {
+                                AuthenticationResult::Success(true) => {
+                                    Alert::success("Device authenticated")
+                                        .with_details(
+                                            "You have successfully authenticated your device",
+                                        )
+                                        .without_timeout()
+                                }
+                                AuthenticationResult::Success(false) => Alert::warning(
+                                    "Device authentication failed",
+                                )
+                                .with_details("The code you entered is invalid or has expired"),
+                                AuthenticationResult::TotpRequired => {
+                                    show_totp.set(true);
+                                    return;
+                                }
+                                AuthenticationResult::Error(err) => err,
+                            };
+
+                        alert.set(message);
                     }
                 }
             }
@@ -121,24 +148,37 @@ pub fn Authorize() -> impl IntoView {
                         <form on:submit=|ev| ev.prevent_default()>
                             <div class="grid gap-y-4">
 
-                                <div>
-                                    <label class="block text-sm mb-2 dark:text-white">Login</label>
-                                    <InputText
-                                        placeholder="user@example.org"
-                                        element=FormElement::new("login", data)
-                                    />
-                                </div>
-                                <div>
-                                    <div class="flex justify-between items-center">
+                                <Show when=move || !show_totp.get()>
+                                    <div>
                                         <label class="block text-sm mb-2 dark:text-white">
-                                            Password
+                                            Login
                                         </label>
-
+                                        <InputText
+                                            placeholder="user@example.org"
+                                            element=FormElement::new("login", data)
+                                        />
                                     </div>
-                                    <InputPassword element=FormElement::new("password", data)/>
-                                </div>
+                                    <div>
+                                        <div class="flex justify-between items-center">
+                                            <label class="block text-sm mb-2 dark:text-white">
+                                                Password
+                                            </label>
 
-                                <Show when=move || is_device_auth.get()>
+                                        </div>
+                                        <InputPassword element=FormElement::new("password", data)/>
+                                    </div>
+                                </Show>
+
+                                <Show when=move || show_totp.get()>
+                                    <div>
+                                        <label class="block text-sm mb-2 dark:text-white">
+                                            TOTP Token
+                                        </label>
+                                        <InputText element=FormElement::new("totp-code", data)/>
+                                    </div>
+                                </Show>
+
+                                <Show when=move || is_device_auth.get() && !show_totp.get()>
                                     <div>
                                         <label class="block text-sm mb-2 dark:text-white">
                                             Code
@@ -187,9 +227,13 @@ pub fn Authorize() -> impl IntoView {
                                                 let login = data
                                                     .value::<String>("login")
                                                     .unwrap_or_default();
-                                                let password = data
-                                                    .value::<String>("password")
-                                                    .unwrap_or_default();
+                                                let password = match (
+                                                    data.value::<String>("password").unwrap_or_default(),
+                                                    data.value::<String>("totp-code"),
+                                                ) {
+                                                    (password, Some(totp)) => format!("{}${}", password, totp),
+                                                    (password, None) => password,
+                                                };
                                                 let request = if let Some(client_id) = client_id {
                                                     OAuthCodeRequest::Code {
                                                         client_id,
@@ -234,6 +278,9 @@ impl Builder<Schemas, ()> {
             .new_field("code")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [Validator::Required])
+            .build()
+            .new_field("totp-code")
+            .input_check([Transformer::Trim], [])
             .build()
             .build()
     }

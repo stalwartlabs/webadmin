@@ -40,6 +40,7 @@ pub enum ManagementApiError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Error {
     Unauthorized,
+    Forbidden,
     NotFound,
     Network(String),
     Serializer { error: String, response: String },
@@ -210,6 +211,7 @@ impl<'x> HttpRequest {
         match response.status() {
             200..=299 => response.binary().await.map_err(Into::into),
             401 => Err(Error::Unauthorized),
+            403 => Err(Error::Forbidden),
             404 => Err(Error::NotFound),
             code => Err(Error::Server(ManagementApiError::Other {
                 details: format!("Invalid response code {code}: {}", response.status_text()),

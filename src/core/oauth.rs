@@ -81,13 +81,28 @@ pub enum ErrorType {
     ExpiredToken,
 }
 
+pub enum AuthenticationResult<T> {
+    Success(T),
+    TotpRequired,
+    Error(Alert),
+}
+
+pub struct AuthenticationResponse {
+    pub grant: OAuthGrant,
+    pub is_admin: bool,
+}
+
 pub async fn oauth_authenticate(
     base_url: &str,
     username: &str,
     password: &str,
-) -> Result<(OAuthGrant, bool), Alert> {
+) -> AuthenticationResult<AuthenticationResponse> {
     let response =
-        oauth_user_authentication(base_url, username, password, "webadmin", None).await?;
+        match oauth_user_authentication(base_url, username, password, "webadmin", None).await {
+            AuthenticationResult::Success(response) => response,
+            AuthenticationResult::TotpRequired => return AuthenticationResult::TotpRequired,
+            AuthenticationResult::Error(err) => return AuthenticationResult::Error(err),
+        };
     let is_admin = response.is_admin;
     match HttpRequest::post(format!("{base_url}/auth/token"))
         .with_raw_body(
@@ -104,10 +119,14 @@ pub async fn oauth_authenticate(
         .and_then(|response| {
             serde_json::from_slice::<OAuthResponse>(response.as_slice()).map_err(Into::into)
         }) {
-        Ok(OAuthResponse::Granted(grant)) => Ok((grant, is_admin)),
-        Ok(OAuthResponse::Error { error }) => Err(Alert::error("OAuth failure")
-            .with_details(format!("Server returned error code {error:?}"))),
-        Err(err) => Err(Alert::from(err)),
+        Ok(OAuthResponse::Granted(grant)) => {
+            AuthenticationResult::Success(AuthenticationResponse { grant, is_admin })
+        }
+        Ok(OAuthResponse::Error { error }) => AuthenticationResult::Error(
+            Alert::error("OAuth failure")
+                .with_details(format!("Server returned error code {error:?}")),
+        ),
+        Err(err) => AuthenticationResult::Error(Alert::from(err)),
     }
 }
 
@@ -117,7 +136,7 @@ pub async fn oauth_user_authentication(
     password: &str,
     client_id: &str,
     redirect_uri: Option<&str>,
-) -> Result<OAuthCodeResponse, Alert> {
+) -> AuthenticationResult<OAuthCodeResponse> {
     match HttpRequest::post(format!("{base_url}/api/oauth"))
         .with_basic_authorization(username, password)
         .with_body(OAuthCodeRequest::Code {
@@ -128,12 +147,15 @@ pub async fn oauth_user_authentication(
         .send::<OAuthCodeResponse>()
         .await
     {
-        Ok(response) => Ok(response),
-        Err(http::Error::Unauthorized) => {
-            Err(Alert::warning("Incorrect username or password")
-                .with_timeout(Duration::from_secs(3)))
+        Ok(response) => AuthenticationResult::Success(response),
+        Err(http::Error::Unauthorized) => AuthenticationResult::Error(
+            Alert::warning("Incorrect username or password").with_timeout(Duration::from_secs(3)),
+        ),
+        Err(http::Error::Forbidden) => {
+            // Password matched but TOTP required
+            AuthenticationResult::TotpRequired
         }
-        Err(err) => Err(Alert::from(err)),
+        Err(err) => AuthenticationResult::Error(Alert::from(err)),
     }
 }
 
@@ -142,7 +164,7 @@ pub async fn oauth_device_authentication(
     username: &str,
     password: &str,
     code: &str,
-) -> Alert {
+) -> AuthenticationResult<bool> {
     match HttpRequest::post(format!("{base_url}/api/oauth"))
         .with_basic_authorization(username, password)
         .with_body(OAuthCodeRequest::Device {
@@ -152,20 +174,12 @@ pub async fn oauth_device_authentication(
         .send::<bool>()
         .await
     {
-        Ok(is_valid) => {
-            if is_valid {
-                Alert::success("Device authenticated")
-                    .with_details("You have successfully authenticated your device")
-                    .without_timeout()
-            } else {
-                Alert::warning("Device authentication failed")
-                    .with_details("The code you entered is invalid or has expired")
-            }
-        }
-        Err(http::Error::Unauthorized) => {
-            Alert::warning("Incorrect username or password").with_timeout(Duration::from_secs(3))
-        }
-        Err(err) => Alert::from(err),
+        Ok(is_valid) => AuthenticationResult::Success(is_valid),
+        Err(http::Error::Unauthorized) => AuthenticationResult::Error(
+            Alert::warning("Incorrect username or password").with_timeout(Duration::from_secs(3)),
+        ),
+        Err(http::Error::Forbidden) => AuthenticationResult::TotpRequired,
+        Err(err) => AuthenticationResult::Error(Alert::from(err)),
     }
 }
 

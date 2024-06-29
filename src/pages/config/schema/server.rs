@@ -166,6 +166,17 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
             .placeholder("8")
             .build()
+            // License key
+            .new_field("enterprise.license-key")
+            .label("License Key")
+            .help(concat!(
+                "Upgrade to the enterprise version of Stalwart by ",
+                "entering your license key here."
+            ))
+            .typ(Type::Secret)
+            .input_check([Transformer::Trim], [])
+            .placeholder("8")
+            .build()
             .new_form_section()
             .title("Local configuration keys")
             .fields(["config.local-keys"])
@@ -173,6 +184,10 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Thread pool")
             .fields(["global.thread-pool"])
+            .build()
+            .new_form_section()
+            .title("Enterprise")
+            .fields(["enterprise.license-key"])
             .build()
             .build()
             // Caching

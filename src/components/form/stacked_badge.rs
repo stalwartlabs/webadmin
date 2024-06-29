@@ -31,6 +31,7 @@ pub fn StackedBadge(
             .map(|(idx, s)| (idx, s.to_string()))
             .collect::<Vec<_>>()
     });
+    let add_button_text = (!add_button_text.is_empty()).then_some(add_button_text);
 
     let validate_value = move || {
         let add_value = add_value.get().trim().to_string();
@@ -102,23 +103,29 @@ pub fn StackedBadge(
                 }
             />
 
-            <div class="inline-flex flex-wrap gap-2 p-1 hs-tooltip inline-block [--trigger:hover]">
-                <button
-                    type="button"
-                    class="py-1.5 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full border border-dashed border-gray-200 bg-white text-gray-800 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                    on:click=move |_| {
-                        add_value.set(String::new());
-                        validation_error.set(None);
-                        show_tooltip.set(true);
+            {add_button_text
+                .map(|add_button_text| {
+                    view! {
+                        <div class="inline-flex flex-wrap gap-2 p-1 hs-tooltip inline-block [--trigger:hover]">
+                            <button
+                                type="button"
+                                class="py-1.5 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full border border-dashed border-gray-200 bg-white text-gray-800 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                                on:click=move |_| {
+                                    add_value.set(String::new());
+                                    validation_error.set(None);
+                                    show_tooltip.set(true);
+                                }
+                            >
+
+                                "+ "
+                                {add_button_text}
+
+                            </button>
+
+                        </div>
                     }
-                >
-
-                    "+ "
-                    {add_button_text}
-
-                </button>
-
-            </div>
+                        .into_view()
+                })}
 
         </div>
 

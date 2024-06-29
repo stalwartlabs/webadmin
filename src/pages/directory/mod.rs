@@ -6,6 +6,7 @@
 
 use std::str::FromStr;
 
+use principals::SpecialSecrets;
 use serde::{Deserialize, Serialize};
 
 pub mod domains;
@@ -169,12 +170,48 @@ impl Principal {
             }
             _ => {}
         }
-        if !changes.secrets.is_empty() {
-            updates.push(PrincipalUpdate {
-                action: PrincipalAction::Set,
-                field: PrincipalField::Secrets,
-                value: PrincipalValue::StringList(changes.secrets),
-            });
+
+        let mut changed_password = false;
+
+        for new_secret in &changes.secrets {
+            if !new_secret.is_app_password() && !current.secrets.contains(new_secret) {
+                updates.push(PrincipalUpdate {
+                    action: PrincipalAction::AddItem,
+                    field: PrincipalField::Secrets,
+                    value: PrincipalValue::String(new_secret.clone()),
+                });
+
+                if new_secret.is_password() {
+                    changed_password = true;
+                }
+            }
+        }
+
+        for prev_secret in current.secrets {
+            if !prev_secret.is_password() {
+                let mut found = false;
+
+                for new_secret in &changes.secrets {
+                    if prev_secret.starts_with(new_secret) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if !found {
+                    updates.push(PrincipalUpdate {
+                        action: PrincipalAction::RemoveItem,
+                        field: PrincipalField::Secrets,
+                        value: PrincipalValue::String(prev_secret),
+                    });
+                }
+            } else if changed_password {
+                updates.push(PrincipalUpdate {
+                    action: PrincipalAction::RemoveItem,
+                    field: PrincipalField::Secrets,
+                    value: PrincipalValue::String(prev_secret),
+                });
+            }
         }
 
         for (field, current, change) in [
