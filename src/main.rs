@@ -11,7 +11,7 @@ use std::{sync::Arc, time::Duration};
 use components::{
     icon::{
         IconAdjustmentsHorizontal, IconDocumentChartBar, IconDocumentText, IconKey, IconLockClosed,
-        IconQueueList, IconShieldCheck, IconUserGroup, IconWrench,
+        IconQueueList, IconShieldCheck, IconSquare2x2, IconUserGroup, IconWrench,
     },
     layout::MenuItem,
 };
@@ -20,7 +20,7 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use pages::{
-    account::mfa::ManageMfa,
+    account::{app_password::{AppPasswordCreate, AppPasswords}, mfa::ManageMfa},
     config::edit::DEFAULT_SETTINGS_URL,
     manage::spam::{SpamTest, SpamTrain},
 };
@@ -294,6 +294,18 @@ pub fn App() -> impl IntoView {
                         redirect_path="/login"
                         condition=move || is_logged_in.get()
                     />
+                    <ProtectedRoute
+                        path="/app-passwords"
+                        view=AppPasswords
+                        redirect_path="/login"
+                        condition=move || is_logged_in.get()
+                    />
+                    <ProtectedRoute
+                        path="/app-passwords/edit"
+                        view=AppPasswordCreate
+                        redirect_path="/login"
+                        condition=move || is_logged_in.get()
+                    />
 
                 </ProtectedRoute>
 
@@ -380,9 +392,13 @@ impl LayoutBuilder {
             .icon(view! { <IconKey/> })
             .route("/password")
             .insert()
-            .create("Two-Factor Auth")
+            .create("Two-factor Auth")
             .icon(view! { <IconShieldCheck/> })
             .route("/mfa")
+            .insert()
+            .create("App Passwords")
+            .icon(view! { <IconSquare2x2/> })
+            .route("/app-passwords")
             .insert()
             .menu_items
     }
@@ -413,6 +429,7 @@ pub fn build_schemas() -> Arc<Schemas> {
         .build_crypto()
         .build_authorize()
         .build_mfa()
+        .build_app_passwords()
         .build()
         .into()
 }

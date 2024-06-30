@@ -6,6 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
+pub mod app_password;
 pub mod crypto;
 pub mod mfa;
 pub mod password;
@@ -17,7 +18,7 @@ pub enum AccountAuthRequest {
     SetPassword { password: String },
     EnableOtpAuth { url: String },
     DisableOtpAuth { url: Option<String> },
-    AddAppPassword { name: String },
+    AddAppPassword { name: String, password: String },
     RemoveAppPassword { name: String },
 }
 

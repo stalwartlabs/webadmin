@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.7] - 2024-07-01
+
+## Added
+- Two-factor authentication with TOTP.
+- Application passwords.
+
+### Changed
+
+### Fixed
+
 ## [0.1.6] - 2024-06-22
 
 ## Added

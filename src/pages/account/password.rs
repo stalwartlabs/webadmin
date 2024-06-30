@@ -12,8 +12,9 @@ use pwhash::sha512_crypt;
 use crate::{
     components::{
         form::{
-            button::Button, input::{InputPassword, InputText}, Form, FormButtonBar, FormElement, FormItem,
-            FormSection,
+            button::Button,
+            input::{InputPassword, InputText},
+            Form, FormButtonBar, FormElement, FormItem, FormSection,
         },
         messages::alert::{use_alerts, Alert},
         Color,
