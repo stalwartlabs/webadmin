@@ -20,7 +20,10 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use pages::{
-    account::{app_password::{AppPasswordCreate, AppPasswords}, mfa::ManageMfa},
+    account::{
+        app_password::{AppPasswordCreate, AppPasswords},
+        mfa::ManageMfa,
+    },
     config::edit::DEFAULT_SETTINGS_URL,
     manage::spam::{SpamTest, SpamTrain},
 };

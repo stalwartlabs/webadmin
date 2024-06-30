@@ -11,13 +11,14 @@ use chrono_humanize::HumanTime;
 use leptos::*;
 use leptos_router::{use_navigate, use_query_map};
 use pwhash::sha512_crypt;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     components::{
         form::{
             button::Button,
-            input::{InputPassword, InputText},
+            input::InputText,
             Form, FormButtonBar, FormElement, FormItem, FormSection,
         },
         icon::{IconAdd, IconTrash},
@@ -374,9 +375,20 @@ pub fn AppPasswordCreate() -> impl IntoView {
 
     let (pending, set_pending) = create_signal(false);
 
-    let data = expect_context::<Arc<Schemas>>()
-        .build_form("app-password")
-        .into_signal();
+    let mut data = expect_context::<Arc<Schemas>>().build_form("app-password");
+
+    // Generate a random Application Password
+    let mut app_password = String::with_capacity(19);
+    for _ in 0..20 {
+        app_password.push(rand::thread_rng().gen_range(b'a'..=b'z') as char);
+        // Add a space every 4 characters
+        if app_password.len() % 5 == 0 {
+            app_password.push(' ');
+        }
+    }
+    data.set("password", app_password);
+
+    let data = data.into_signal();
 
     let save_changes = create_action(move |(name, password): &(String, String)| {
         let auth = auth.get();
@@ -390,7 +402,7 @@ pub fn AppPasswordCreate() -> impl IntoView {
                 .with_authorization(&auth)
                 .with_body(vec![AccountAuthRequest::AddAppPassword {
                     name: STANDARD.encode(format!("{}${}", name, Utc::now().to_rfc3339())),
-                    password: sha512_crypt::hash(password).unwrap()
+                    password: sha512_crypt::hash(password).unwrap(),
                 }])
                 .unwrap()
                 .send::<()>()
@@ -417,7 +429,7 @@ pub fn AppPasswordCreate() -> impl IntoView {
                     <InputText element=FormElement::new("name", data)/>
                 </FormItem>
                 <FormItem label="Password">
-                    <InputPassword element=FormElement::new("password", data)/>
+                    <InputText element=FormElement::new("password", data)/>
                 </FormItem>
 
             </FormSection>

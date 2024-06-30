@@ -2261,6 +2261,7 @@ dependencies = [
  "leptos_router",
  "log",
  "pwhash",
+ "rand",
  "regex",
  "serde",
  "serde_json",
