@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. This projec
 ## Added
 - Two-factor authentication with TOTP.
 - Application passwords.
+- Option to disable accounts.
 
 ### Changed
 

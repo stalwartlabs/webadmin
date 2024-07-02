@@ -59,6 +59,8 @@ pub struct ReloadSettings {
 pub enum ConfigWarning {
     Missing,
     AppliedDefault { default: String },
+    Unread { value: String },
+    Build { error: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
