@@ -9,9 +9,8 @@ use std::time::Duration;
 use leptos::*;
 
 use crate::{
-    components::{
-        form,
-        icon::{IconCheckCircle, IconExclamationCircle, IconExclamationTriangle, IconXMark},
+    components::icon::{
+        IconCheckCircle, IconExclamationCircle, IconExclamationTriangle, IconXMark,
     },
     core::http::{self, ManagementApiError},
     pages::config::{ConfigError, ConfigWarning, ReloadSettings},
