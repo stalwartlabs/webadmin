@@ -9,8 +9,9 @@ use std::time::Duration;
 use leptos::*;
 
 use crate::{
-    components::icon::{
-        IconCheckCircle, IconExclamationCircle, IconExclamationTriangle, IconXMark,
+    components::{
+        form,
+        icon::{IconCheckCircle, IconExclamationCircle, IconExclamationTriangle, IconXMark},
     },
     core::http::{self, ManagementApiError},
     pages::config::{ConfigError, ConfigWarning, ReloadSettings},
@@ -323,6 +324,12 @@ impl From<ReloadSettings> for Alert {
                                 ConfigWarning::Missing => format!("Waring: Missing setting {key:?}"),
                                 ConfigWarning::AppliedDefault { default } => {
                                     format!("Warning: Applied default value {default:?} to {key:?}")
+                                }
+                                ConfigWarning::Unread { value } => {
+                                    format!("Warning: Unread value {value:?} for {key:?}")
+                                }
+                                ConfigWarning::Build { error } => {
+                                    format!("Error for {key:?}: {error}")
                                 }
                             }}
 
