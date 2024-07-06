@@ -31,6 +31,6 @@ module.exports = {
       },
     },
   },
-  darkMode: 'class',
+  darkMode: 'media',
   plugins: [require('@tailwindcss/forms'), require("@tailwindcss/typography"), require("preline/plugin")],
 }
