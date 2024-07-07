@@ -17,9 +17,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     components::{
         form::{
-            button::Button,
-            input::InputText,
-            Form, FormButtonBar, FormElement, FormItem, FormSection,
+            button::Button, input::InputText, Form, FormButtonBar, FormElement, FormItem,
+            FormSection,
         },
         icon::{IconAdd, IconTrash},
         list::{

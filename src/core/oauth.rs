@@ -21,6 +21,7 @@ pub struct AuthToken {
     pub username: Arc<String>,
     pub is_valid: bool,
     pub is_admin: bool,
+    pub is_enterprise: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +40,8 @@ pub enum OAuthCodeRequest {
 pub struct OAuthCodeResponse {
     pub code: String,
     pub is_admin: bool,
+    #[serde(default)]
+    pub is_enterprise: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -90,6 +93,7 @@ pub enum AuthenticationResult<T> {
 pub struct AuthenticationResponse {
     pub grant: OAuthGrant,
     pub is_admin: bool,
+    pub is_enterprise: bool,
 }
 
 pub async fn oauth_authenticate(
@@ -104,6 +108,7 @@ pub async fn oauth_authenticate(
             AuthenticationResult::Error(err) => return AuthenticationResult::Error(err),
         };
     let is_admin = response.is_admin;
+    let is_enterprise = response.is_enterprise;
     match HttpRequest::post(format!("{base_url}/auth/token"))
         .with_raw_body(
             serde_urlencoded::to_string([
@@ -120,7 +125,11 @@ pub async fn oauth_authenticate(
             serde_json::from_slice::<OAuthResponse>(response.as_slice()).map_err(Into::into)
         }) {
         Ok(OAuthResponse::Granted(grant)) => {
-            AuthenticationResult::Success(AuthenticationResponse { grant, is_admin })
+            AuthenticationResult::Success(AuthenticationResponse {
+                grant,
+                is_admin,
+                is_enterprise,
+            })
         }
         Ok(OAuthResponse::Error { error }) => AuthenticationResult::Error(
             Alert::error("OAuth failure")
@@ -222,6 +231,10 @@ impl AuthToken {
 
     pub fn is_admin(&self) -> bool {
         self.is_admin && self.is_logged_in()
+    }
+
+    pub fn is_enterprise(&self) -> bool {
+        self.is_enterprise
     }
 }
 

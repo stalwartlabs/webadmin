@@ -341,6 +341,7 @@ pub fn SettingsEdit() -> impl IntoView {
                         };
                         let schema = current_schema.get();
                         let sections = schema.form.sections.iter().cloned();
+                        let is_enterprise = auth.get().is_enterprise();
                         data.set(
                             FormData::from_settings(schema.clone(), settings)
                                 .with_external_sources(external_sources),
@@ -358,7 +359,8 @@ pub fn SettingsEdit() -> impl IntoView {
                                         .iter()
                                         .cloned()
                                         .map(|field| {
-                                            let is_disabled = field.readonly && !is_create;
+                                            let is_disabled = (field.readonly && !is_create)
+                                                || (!is_enterprise && field.enterprise);
                                             let field_label = field.label_form;
                                             let help = field.help;
                                             let field_ = field.clone();
@@ -444,7 +446,10 @@ pub fn SettingsEdit() -> impl IntoView {
                                                 }
                                                 Type::Duration => {
                                                     view! {
-                                                        <InputDuration element=FormElement::new(field.id, data)/>
+                                                        <InputDuration
+                                                            element=FormElement::new(field.id, data)
+                                                            disabled=is_disabled
+                                                        />
                                                     }
                                                         .into_view()
                                                 }

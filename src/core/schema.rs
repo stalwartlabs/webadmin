@@ -51,6 +51,7 @@ pub struct Field {
     pub placeholder: Value<&'static str>,
     pub display: Vec<Eval>,
     pub readonly: bool,
+    pub enterprise: bool,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -594,6 +595,11 @@ impl Builder<(Schemas, Schema), Field> {
 
     pub fn readonly(mut self) -> Self {
         self.item.readonly = true;
+        self
+    }
+
+    pub fn enterprise_feature(mut self) -> Self {
+        self.item.enterprise = true;
         self
     }
 

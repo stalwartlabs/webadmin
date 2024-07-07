@@ -13,7 +13,7 @@ use leptos_router::*;
 use crate::{
     components::{
         badge::Badge,
-        icon::{IconAdd, IconTrash},
+        icon::{IconAdd, IconThreeDots, IconTrash},
         list::{
             header::ColumnList,
             pagination::Pagination,
@@ -151,6 +151,30 @@ pub fn PrincipalList() -> impl IntoView {
                     selected_type.get().item_name(true)
                 )
             )));
+        }
+    });
+    let purge_action = create_action(move |item: &String| {
+        let item = item.clone();
+        let auth = auth.get();
+
+        async move {
+
+            match  HttpRequest::get(("/api/store/purge/account", &item))
+            .with_authorization(&auth)
+            .send::<()>()
+            .await {
+                Ok(_) => {
+                    alert.set(Alert::success(format!(
+                        "Account purge requested for {item}.",
+                        
+                    )));
+        
+                },
+                Err(err) => {
+                    alert.set(Alert::from(err));
+                },
+            }
+
         }
     });
 
@@ -323,7 +347,17 @@ pub fn PrincipalList() -> impl IntoView {
                                             key=|principal| principal.name.clone().unwrap_or_default()
                                             let:principal
                                         >
-                                            <PrincipalItem principal selected_type=selected_type.get()/>
+                                            <PrincipalItem
+                                                principal
+                                                params=Parameters {
+                                                    selected_type: selected_type.get(),
+                                                    is_enterprise: auth.get().is_enterprise(),
+                                                    delete_action,
+                                                    purge_action,
+                                                    modal,
+                                                }
+                                            />
+
                                         </For>
                                     </ColumnList>
                                 }
@@ -388,8 +422,17 @@ pub fn PrincipalList() -> impl IntoView {
     }
 }
 
+struct Parameters {
+    selected_type: PrincipalType,
+    is_enterprise: bool,
+    delete_action: Action<Arc<HashSet<String>>, ()>,
+    purge_action: Action<String, ()>,
+    modal: RwSignal<Modal>,
+}
+
 #[component]
-fn PrincipalItem(principal: Principal, selected_type: PrincipalType) -> impl IntoView {
+fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
+    let selected_type = params.selected_type;
     let name = principal.name.as_deref().unwrap_or("unknown").to_string();
     let display_name = principal
         .description
@@ -403,13 +446,17 @@ fn PrincipalItem(principal: Principal, selected_type: PrincipalType) -> impl Int
         .and_then(|ch| ch.to_uppercase().next())
         .unwrap_or_default();
     let principal_id = principal.name.as_deref().unwrap_or_default().to_string();
+    let principal_id_2 = principal_id.clone();
+    let principal_id_3 = principal_id.clone();
     let manage_url = format!(
         "/manage/directory/{}/{}/edit",
-        selected_type.resource_name(),
+        params.selected_type.resource_name(),
         principal_id
     );
+    let undelete_url = format!("/manage/undelete/{principal_id}",);
     let num_members = principal.members.len();
     let num_member_of = principal.member_of.len();
+    let show_dropdown = RwSignal::new(false);
 
     view! {
         <tr>
@@ -485,12 +532,98 @@ fn PrincipalItem(principal: Principal, selected_type: PrincipalType) -> impl Int
                 <ListTextItem>{maybe_plural(num_member_of, "group", "groups")}</ListTextItem>
             </Show>
             <ListItem subclass="px-6 py-1.5">
-                <a
-                    class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                    href=manage_url
-                >
-                    Edit
-                </a>
+                <div class="hs-dropdown [--placement:bottom-right] relative inline-block">
+                    <button
+                        id="hs-table-dropdown-1"
+                        type="button"
+                        class="hs-dropdown-toggle py-1.5 px-2 inline-flex justify-center items-center gap-2 rounded-lg text-gray-700 align-middle disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-blue-600 transition-all text-sm dark:text-neutral-400 dark:hover:text-white dark:focus:ring-offset-gray-800"
+                        on:click=move |_| {
+                            show_dropdown.update(|v| *v = !*v);
+                        }
+                    >
+
+                        <IconThreeDots/>
+                    </button>
+                    <div
+                        class=move || {
+                            if show_dropdown.get() {
+                                "hs-dropdown-menu transition-[opacity,margin] fixed right-0 duration opacity-100 open block divide-y divide-gray-200 min-w-40 z-20 bg-white shadow-2xl rounded-lg p-2 mt-2 dark:divide-neutral-700 dark:bg-neutral-800 dark:border dark:border-neutral-700"
+                            } else {
+                                "hs-dropdown-menu transition-[opacity,margin] duration hs-dropdown-open:opacity-100 opacity-0 hidden divide-y divide-gray-200 min-w-40 z-20 bg-white shadow-2xl rounded-lg p-2 mt-2 dark:divide-neutral-700 dark:bg-neutral-800 dark:border dark:border-neutral-700"
+                            }
+                        }
+
+                        aria-labelledby="hs-table-dropdown-1"
+                    >
+                        <div class="py-2 first:pt-0 last:pb-0">
+                            <span class="block py-2 px-3 text-xs font-medium uppercase text-gray-400 dark:text-neutral-600">
+                                Actions
+                            </span>
+                            <a
+                                class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+                                href=manage_url
+                            >
+                                Edit
+                            </a>
+                            <a
+                                class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+                                on:click=move |_| {
+                                    show_dropdown.set(false);
+                                    params.purge_action.dispatch(principal_id_3.clone());
+                                }
+                            >
+
+                                Purge deleted
+                            </a>
+                            <a
+                                class=move || {
+                                    if params.is_enterprise {
+                                        "flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+                                    } else {
+                                        "flex items-center pointer-events-none opacity-50 cursor-not-allowed gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+                                    }
+                                }
+
+                                href=undelete_url
+                            >
+                                {if !params.is_enterprise {
+                                    "Undelete emails 💎"
+                                } else {
+                                    "Undelete emails"
+                                }}
+                            </a>
+                        </div>
+                        <div class="py-2 first:pt-0 last:pb-0">
+                            <a
+                                class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-red-600 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-red-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+                                on:click=move |_| {
+                                    let principal_id_2 = principal_id_2.clone();
+                                    show_dropdown.set(false);
+                                    params
+                                        .modal
+                                        .set(
+                                            Modal::with_title("Confirm deletion")
+                                                .with_message(
+                                                    "Are you sure you want to delete this account? This action cannot be undone.",
+                                                )
+                                                .with_button(format!("Delete {principal_id_2}"))
+                                                .with_dangerous_callback(move || {
+                                                    params
+                                                        .delete_action
+                                                        .dispatch(
+                                                            Arc::new(HashSet::from_iter(vec![principal_id_2.clone()])),
+                                                        );
+                                                }),
+                                        );
+                                }
+                            >
+
+                                Delete
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
             </ListItem>
 
         </tr>

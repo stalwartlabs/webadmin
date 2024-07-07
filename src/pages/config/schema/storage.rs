@@ -153,6 +153,16 @@ impl Builder<Schemas, ()> {
             .default("30d")
             .typ(Type::Duration)
             .build()
+            .new_field("enterprise.undelete-period")
+            .label("Un-delete period 💎")
+            .help(concat!(
+                "How long to keep deleted emails before they are permanently ",
+                "removed from the system. (Enterprise feature)"
+            ))
+            .default("false")
+            .typ(Type::Duration)
+            .enterprise_feature()
+            .build()
             .new_form_section()
             .title("Data Store")
             .fields([
@@ -163,7 +173,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Blob Store")
-            .fields(["storage.blob"])
+            .fields(["storage.blob", "enterprise.undelete-period"])
             .build()
             .new_form_section()
             .title("Full Text Index Store")

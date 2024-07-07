@@ -59,6 +59,7 @@ pub fn Login() -> impl IntoView {
                             auth_token.username = username.into();
                             auth_token.is_valid = true;
                             auth_token.is_admin = response.is_admin;
+                            auth_token.is_enterprise = response.is_enterprise;
 
                             if let Err(err) =
                                 SessionStorage::set(STATE_STORAGE_KEY, auth_token.clone())
@@ -237,6 +238,7 @@ pub fn Login() -> impl IntoView {
                                         });
                                     }
                                 >
+
                                     Sign in
                                 </button>
                             </div>

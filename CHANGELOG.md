@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.8] - 2024-07-07
+
+## Added
+- Restore deleted emails (Enterprise edition only).
+- Option to purge accounts.
+
+### Changed
+
+### Fixed
+
 ## [0.1.7] - 2024-07-01
 
 ## Added

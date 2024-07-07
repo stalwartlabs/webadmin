@@ -25,6 +25,7 @@ use pages::{
         mfa::ManageMfa,
     },
     config::edit::DEFAULT_SETTINGS_URL,
+    enterprise::undelete::UndeleteList,
     manage::spam::{SpamTest, SpamTrain},
 };
 
@@ -137,6 +138,7 @@ pub fn App() -> impl IntoView {
 
     let is_logged_in = create_memo(move |_| auth_token.get().is_logged_in());
     let is_admin = create_memo(move |_| auth_token.get().is_admin());
+    let is_enterprise = create_memo(move |_| auth_token.get().is_enterprise());
 
     view! {
         <Router>
@@ -240,6 +242,12 @@ pub fn App() -> impl IntoView {
                         view=Maintenance
                         redirect_path="/login"
                         condition=move || is_admin.get()
+                    />
+                    <ProtectedRoute
+                        path="/undelete/:id"
+                        view=UndeleteList
+                        redirect_path="/login"
+                        condition=move || is_admin.get() && is_enterprise.get()
                     />
                 </ProtectedRoute>
                 <ProtectedRoute
