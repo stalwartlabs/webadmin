@@ -19,7 +19,7 @@ use crate::pages::config::{Settings, SettingsValues};
 use super::expr::parser::ExpressionParser;
 use super::expr::tokenizer::Tokenizer;
 use super::expr::{Constant, ParseValue, Token};
-use super::schema::{NumberType, SchemaType, Type};
+use super::schema::{NumberType, SchemaType, SelectType, Type};
 
 use super::schema::{InputCheck, Schema, Transformer, Validator};
 
@@ -464,7 +464,10 @@ impl FormData {
                     | Type::Duration
                     | Type::Rate
                     | Type::Cron
-                    | Type::Select { multi: false, .. } => {
+                    | Type::Select {
+                        typ: SelectType::Single,
+                        ..
+                    } => {
                         match check.check_value(self.value::<String>(field.id).unwrap_or_default())
                         {
                             Ok(value) => {
@@ -479,7 +482,11 @@ impl FormData {
                             }
                         }
                     }
-                    Type::Array | Type::Select { multi: true, .. } => {
+                    Type::Array
+                    | Type::Select {
+                        typ: SelectType::Many | SelectType::ManyWithSearch,
+                        ..
+                    } => {
                         let mut total_values = 0;
                         for (idx, result) in self
                             .array_value(field.id)
@@ -641,7 +648,10 @@ impl FormData {
                     Type::Input
                     | Type::Secret
                     | Type::Text
-                    | Type::Select { multi: false, .. }
+                    | Type::Select {
+                        typ: SelectType::Single,
+                        ..
+                    }
                     | Type::Boolean
                     | Type::Duration
                     | Type::Rate
@@ -651,7 +661,11 @@ impl FormData {
                             data.set(field.id, value);
                         }
                     }
-                    Type::Array | Type::Select { multi: true, .. } => {
+                    Type::Array
+                    | Type::Select {
+                        typ: SelectType::Many | SelectType::ManyWithSearch,
+                        ..
+                    } => {
                         let values = settings.array_values(field.id);
                         if !values.is_empty() {
                             data.array_set(field.id, values.into_iter().map(|(_, value)| value));

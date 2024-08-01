@@ -135,7 +135,7 @@ impl Builder<Schemas, ()> {
                     field: "type",
                     filter: Default::default(),
                 },
-                multi: false,
+                typ: SelectType::Single,
             })
             .build()
             .new_field("lookup.spam-config.lookup")
@@ -147,7 +147,7 @@ impl Builder<Schemas, ()> {
                     field: "type",
                     filter: Default::default(),
                 },
-                multi: false,
+                typ: SelectType::Single,
             })
             .source_filter(&[
                 "foundationdb",

@@ -274,11 +274,6 @@ impl From<http::Error> for Alert {
                     ManagementApiError::Other { details } => {
                         ("Operation failed".to_string(), details)
                     }
-                    ManagementApiError::UnsupportedDirectoryOperation { class } => (
-                        format!("{class} directory cannot be managed"),
-                        "Only internal directories support inserts and update operations."
-                            .to_string(),
-                    ),
                 };
 
                 Alert::error(title).with_details(details)

@@ -389,7 +389,7 @@ impl Builder<Schemas, ()> {
             .help(concat!("Resolver to use for DNS resolution"))
             .default("system")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(&[
                     ("system", "System Resolver"),
                     ("custom", "Custom DNS"),
@@ -572,7 +572,7 @@ impl Builder<Schemas, ()> {
                 "server, which can be either SMTP or LMTP"
             ))
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(&[("smtp", "SMTP"), ("lmtp", "LMTP")]),
             })
             .default("smtp")
@@ -646,7 +646,7 @@ impl Builder<Schemas, ()> {
                 "where this throttle should be applied"
             ))
             .typ(Type::Select {
-                multi: true,
+                typ: SelectType::Many,
                 source: Source::Static(&[
                     (V_MX, "MX Host"),
                     (V_REMOTE_IP, "Remote IP"),
@@ -722,7 +722,7 @@ impl Builder<Schemas, ()> {
                 "where this quota should be applied"
             ))
             .typ(Type::Select {
-                multi: true,
+                typ: SelectType::Many,
                 source: Source::Static(&[
                     (V_SENDER, "Sender"),
                     (V_SENDER_DOMAIN, "Sender Domain"),
@@ -1340,7 +1340,7 @@ impl Builder<Schemas, ()> {
                 "where this throttle should be applied"
             ))
             .typ(Type::Select {
-                multi: true,
+                typ: SelectType::Many,
                 source: Source::Static(&[
                     (V_LISTENER, "Listener"),
                     (V_REMOTE_IP, "Remote IP"),
@@ -1518,7 +1518,7 @@ impl Builder<Schemas, ()> {
             ))
             .default("6")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(&[("2", "Version 2"), ("6", "Version 6")]),
             })
             .input_check([], [Validator::Required])
@@ -1527,7 +1527,7 @@ impl Builder<Schemas, ()> {
             .label("Run on stages")
             .help("Which SMTP stages to run the milter on")
             .typ(Type::Select {
-                multi: true,
+                typ: SelectType::Many,
                 source: Source::Static(SMTP_STAGES),
             })
             .default("data")
@@ -1655,7 +1655,7 @@ impl Builder<Schemas, ()> {
             .label("Run on stages")
             .help("Which SMTP stages to run this hook on")
             .typ(Type::Select {
-                multi: true,
+                typ: SelectType::Many,
                 source: Source::Static(SMTP_STAGES),
             })
             .default("data")
@@ -1725,7 +1725,7 @@ impl Builder<Schemas, ()> {
             .new_schema("smtp-in-mta-sts")
             .new_field("session.mta-sts.mode")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(&[
                     ("enforce", "Enforce"),
                     ("testing", "Testing"),

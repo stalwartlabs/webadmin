@@ -29,7 +29,7 @@ use crate::{
         form::FormData,
         http::{self, HttpRequest},
         oauth::use_authorization,
-        schema::{Builder, Schemas, Source, Transformer, Type, Validator},
+        schema::{Builder, Schemas, SelectType, Source, Transformer, Type, Validator},
     },
     pages::directory::{Principal, PrincipalType},
 };
@@ -581,7 +581,7 @@ impl Builder<Schemas, ()> {
             .new_field("type")
             .typ(Type::Select {
                 source: Source::Static(IDS),
-                multi: false,
+                typ: SelectType::Single,
             })
             .default(PrincipalType::Individual.id())
             .build()

@@ -27,6 +27,7 @@ pub enum Response<T> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "error")]
+#[serde(rename_all = "camelCase")]
 pub enum ManagementApiError {
     FieldAlreadyExists { field: String, value: String },
     FieldMissing { field: String },
@@ -34,7 +35,6 @@ pub enum ManagementApiError {
     Unsupported { details: String },
     AssertFailed,
     Other { details: String },
-    UnsupportedDirectoryOperation { class: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

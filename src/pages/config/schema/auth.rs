@@ -27,7 +27,7 @@ impl Builder<Schemas, ()> {
             .help(concat!("Encryption algorithm used for the DKIM signature"))
             .default("ed25519-sha256")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(&[
                     ("ed25519-sha256", "Ed25519 SHA-256"),
                     ("rsa-sha256", "RSA SHA-256"),
@@ -75,7 +75,7 @@ impl Builder<Schemas, ()> {
             ))
             .default("relaxed/relaxed")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(&[
                     ("relaxed/relaxed", "Relaxed/Relaxed"),
                     ("simple/simple", "Simple/Simple"),
@@ -105,7 +105,7 @@ impl Builder<Schemas, ()> {
             ))
             .default("")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(&[
                     ("", "Disabled"),
                     ("sha256", "SHA-256"),

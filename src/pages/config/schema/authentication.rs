@@ -19,7 +19,7 @@ impl Builder<Schemas, ()> {
                     field: "type",
                     filter: Default::default(),
                 },
-                multi: false,
+                typ: SelectType::Single,
             })
             .input_check([], [Validator::Required])
             .build()

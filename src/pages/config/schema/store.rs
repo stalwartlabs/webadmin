@@ -65,7 +65,7 @@ impl Builder<Schemas, ()> {
                     ("elasticsearch", "ElasticSearch"),
                     ("fs", "Filesystem"),
                 ]),
-                multi: false,
+                typ: SelectType::Single,
             })
             .build()
             // Compression
@@ -76,7 +76,7 @@ impl Builder<Schemas, ()> {
             .default("lz4")
             .typ(Type::Select {
                 source: Source::Static(&[("none", "None"), ("lz4", "LZ4")]),
-                multi: false,
+                typ: SelectType::Single,
             })
             .display_if_ne("type", ["redis", "memory", "elasticsearch", "s3"])
             .build()
@@ -132,7 +132,7 @@ impl Builder<Schemas, ()> {
                     ("single", "Redis single node"),
                     ("cluster", "Redis Cluster"),
                 ]),
-                multi: false,
+                typ: SelectType::Single,
             })
             .build()
             // Username

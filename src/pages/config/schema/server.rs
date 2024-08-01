@@ -6,7 +6,7 @@
 
 use crate::core::schema::*;
 
-use super::CONNECTION_VARS;
+use super::{tracing::EVENT_NAMES, CONNECTION_VARS};
 
 impl Builder<Schemas, ()> {
     pub fn build_server(self) -> Self {
@@ -139,11 +139,12 @@ impl Builder<Schemas, ()> {
                     "store.*",
                     "directory.*",
                     "tracer.*",
-                    "server.*",
                     "!server.blocked-ip.*",
                     "!server.allowed-ip.*",
+                    "server.*",
                     "certificate.*",
-                    "cluster.node-id",
+                    "!cluster.key",
+                    "cluster.*",
                     "storage.data",
                     "storage.blob",
                     "storage.lookup",
@@ -460,8 +461,8 @@ impl Builder<Schemas, ()> {
             .label("Events")
             .help("Which events should trigger this webhook")
             .typ(Type::Select {
-                multi: true,
-                source: Source::Static(WEBHOOK_EVENTS),
+                typ: SelectType::ManyWithSearch,
+                source: Source::StaticId(EVENT_NAMES),
             })
             .build()
             .new_form_section()
@@ -486,23 +487,6 @@ impl Builder<Schemas, ()> {
             .build()
     }
 }
-
-pub static WEBHOOK_EVENTS: &[(&str, &str)] = &[
-    ("auth.success", "Authentication success"),
-    ("auth.failure", "Authentication failure"),
-    ("auth.banned", "Authentication ban"),
-    ("auth.error", "Authentication error"),
-    ("message.accepted", "Message accepted"),
-    ("message.rejected", "Message rejected"),
-    ("message.appended", "Message appended"),
-    ("account.over-quota", "Account over quota"),
-    ("dsn", "Delivery status notification"),
-    ("double-bounce", "Double bounce"),
-    ("report.incoming.dmarc", "Incoming DMARC report"),
-    ("report.incoming.tls", "Incoming TLS report"),
-    ("report.incoming.arf", "Incoming ARF report"),
-    ("report.outgoing", "Outgoing report"),
-];
 
 impl Builder<Schemas, Schema> {
     pub fn add_network_fields(self, is_listener: bool) -> Self {

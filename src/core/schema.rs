@@ -29,7 +29,7 @@ pub enum Type<S, F> {
     #[default]
     Expression,
     Select {
-        multi: bool,
+        typ: SelectType,
         source: Source<S, F>,
     },
     Boolean,
@@ -37,6 +37,14 @@ pub enum Type<S, F> {
     Rate,
     Size,
     Cron,
+}
+
+#[derive(Clone, Copy, Default, Debug)]
+pub enum SelectType {
+    #[default]
+    Single,
+    Many,
+    ManyWithSearch,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -131,6 +139,7 @@ pub struct Section {
 #[derive(Clone, Debug)]
 pub enum Source<S, F> {
     Static(&'static [(&'static str, &'static str)]),
+    StaticId(&'static [&'static str]),
     Dynamic {
         schema: S,
         field: F,
@@ -319,7 +328,12 @@ impl Field {
     pub fn is_multivalue(&self) -> bool {
         matches!(
             self.typ_,
-            Type::Array | Type::Expression | Type::Select { multi: true, .. }
+            Type::Array
+                | Type::Expression
+                | Type::Select {
+                    typ: SelectType::Many | SelectType::ManyWithSearch,
+                    ..
+                }
         )
     }
 }
@@ -612,7 +626,7 @@ impl Builder<(Schemas, Schema), Field> {
                         field,
                         filter,
                     },
-                multi,
+                typ,
             } => {
                 let schema = self.schema(schema);
 
@@ -628,7 +642,7 @@ impl Builder<(Schemas, Schema), Field> {
                         schema,
                         filter,
                     },
-                    multi,
+                    typ,
                 }
             }
             typ_ => typ_.into(),
@@ -944,10 +958,17 @@ impl From<Type<&'static str, &'static str>> for Type<Arc<Schema>, Arc<Field>> {
             Type::Rate => Type::Rate,
             Type::Select {
                 source: Source::Static(items),
-                multi,
+                typ,
             } => Type::Select {
                 source: Source::Static(items),
-                multi,
+                typ,
+            },
+            Type::Select {
+                source: Source::StaticId(items),
+                typ,
+            } => Type::Select {
+                source: Source::StaticId(items),
+                typ,
             },
             Type::Select { .. } => unreachable!(),
         }

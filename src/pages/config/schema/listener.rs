@@ -20,7 +20,7 @@ impl Builder<Schemas, ()> {
             // Type
             .new_field("protocol")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(&[
                     ("smtp", "SMTP"),
                     ("lmtp", "LMTP"),

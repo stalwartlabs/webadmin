@@ -360,53 +360,69 @@ pub fn SelectCron(
 }
 
 impl FormData {
-    fn select_sources(&self, id: &str) -> Vec<(String, String)> {
-        match &self.schema.fields.get(id).unwrap().typ_ {
-            Type::Select {
-                source: Source::Static(options),
-                ..
-            } => options
-                .iter()
-                .map(|(value, label)| (value.to_string(), label.to_string()))
-                .collect::<Vec<_>>(),
-            Type::Select {
-                source:
-                    Source::Dynamic {
-                        schema,
-                        field,
-                        filter,
-                    },
-                ..
-            } => {
-                let filter = filter.eval(self);
+    pub fn select_sources(&self, id: &str) -> Vec<(String, String)> {
+        self.schema
+            .fields
+            .get(id)
+            .map(|t| match &t.typ_ {
+                Type::Select {
+                    source: Source::Static(options),
+                    ..
+                } => options
+                    .iter()
+                    .map(|(value, label)| (value.to_string(), label.to_string()))
+                    .collect::<Vec<_>>(),
+                Type::Select {
+                    source: Source::StaticId(options),
+                    ..
+                } => options
+                    .iter()
+                    .map(|id| (id.to_string(), id.to_string()))
+                    .collect::<Vec<_>>(),
+                Type::Select {
+                    source:
+                        Source::Dynamic {
+                            schema,
+                            field,
+                            filter,
+                        },
+                    ..
+                } => {
+                    let filter = filter.eval(self);
 
-                self.external_sources
-                    .get(&format!("{}_{}", schema.id, field.id))
-                    .map(|source| {
-                        source
-                            .iter()
-                            .filter_map(|(id, value)| {
-                                if filter.map_or(true, |values| values.contains(&value.as_str())) {
-                                    (
-                                        id.to_string(),
-                                        if !value.is_empty() {
-                                            format!("{} ({})", field.typ_.label(value), id)
-                                        } else {
-                                            id.to_string()
-                                        },
-                                    )
-                                        .into()
-                                } else {
-                                    None
-                                }
-                            })
-                            .chain([(String::new(), "-- None --".to_string())])
-                            .collect::<Vec<_>>()
-                    })
-                    .unwrap_or_default()
-            }
-            _ => panic!("Invalid schema type for select"),
-        }
+                    self.external_sources
+                        .get(&format!("{}_{}", schema.id, field.id))
+                        .map(|source| {
+                            source
+                                .iter()
+                                .filter_map(|(id, value)| {
+                                    if filter
+                                        .map_or(true, |values| values.contains(&value.as_str()))
+                                    {
+                                        (
+                                            id.to_string(),
+                                            if !value.is_empty() {
+                                                format!("{} ({})", field.typ_.label(value), id)
+                                            } else {
+                                                id.to_string()
+                                            },
+                                        )
+                                            .into()
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .chain([(String::new(), "-- None --".to_string())])
+                                .collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default()
+                }
+                _ => {
+                    log::warn!("Invalid schema type for select");
+                    Vec::new()
+                }
+            })
+            .unwrap_or_default()
     }
 }
 

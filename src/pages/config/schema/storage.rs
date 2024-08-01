@@ -22,7 +22,7 @@ impl Builder<Schemas, ()> {
                     field: "type",
                     filter: Default::default(),
                 },
-                multi: false,
+                typ: SelectType::Single,
             })
             .source_filter(&["foundationdb", "mysql", "postgresql", "sqlite", "rocksdb"])
             .input_check([], [Validator::Required])
@@ -39,7 +39,7 @@ impl Builder<Schemas, ()> {
                     field: "type",
                     filter: Default::default(),
                 },
-                multi: false,
+                typ: SelectType::Single,
             })
             .source_filter(&[
                 "foundationdb",
@@ -64,7 +64,7 @@ impl Builder<Schemas, ()> {
                     field: "type",
                     filter: Default::default(),
                 },
-                multi: false,
+                typ: SelectType::Single,
             })
             .source_filter(&[
                 "foundationdb",
@@ -88,7 +88,7 @@ impl Builder<Schemas, ()> {
                     field: "type",
                     filter: Default::default(),
                 },
-                multi: false,
+                typ: SelectType::Single,
             })
             .source_filter(&[
                 "foundationdb",

@@ -70,7 +70,7 @@ impl Builder<Schemas, ()> {
                     ("dns-01", "DNS-01"),
                     ("http-01", "HTTP-01"),
                 ]),
-                multi: false,
+                typ: SelectType::Single,
             })
             .label("Challenge type")
             .help("The ACME challenge type used to validate domain ownership")
@@ -103,7 +103,7 @@ impl Builder<Schemas, ()> {
                     ("rfc2136-tsig", "RFC2136"),
                     ("cloudflare", "Cloudflare"),
                 ]),
-                multi: false,
+                typ: SelectType::Single,
             })
             .label("DNS Provider")
             .help("The DNS provider used to manage DNS records for the DNS-01 challenge")
@@ -143,7 +143,7 @@ impl Builder<Schemas, ()> {
                     ("hmac-sha512", "HMAC-SHA512"),
                     ("hmac-sha512-256", "HMAC-SHA512-256"),
                 ]),
-                multi: false,
+                typ: SelectType::Single,
             })
             .label("TSIG Algorithm")
             .help("The TSIG algorithm used to authenticate with the DNS provider")
@@ -154,7 +154,7 @@ impl Builder<Schemas, ()> {
             .new_field("protocol")
             .typ(Type::Select {
                 source: Source::Static(&[("udp", "UDP"), ("tcp", "TCP")]),
-                multi: false,
+                typ: SelectType::Single,
             })
             .label("Protocol")
             .help("The protocol used to communicate with the DNS server")
@@ -345,7 +345,7 @@ impl Builder<Schemas, Schema> {
         .label("Disabled Protocols")
         .help("Which TLS protocols to disable")
         .typ(Type::Select {
-            multi: true,
+            typ: SelectType::Many,
             source: Source::Static(TLS_PROTOCOLS),
         })
         .display_if_eq("tls.override", do_override.iter().copied())
@@ -359,7 +359,7 @@ impl Builder<Schemas, Schema> {
         .label("Disabled Ciphersuites")
         .help("Which ciphersuites to disable")
         .typ(Type::Select {
-            multi: true,
+            typ: SelectType::Many,
             source: Source::Static(TLS_CIPHERSUITES),
         })
         .display_if_eq("tls.override", do_override.iter().copied())

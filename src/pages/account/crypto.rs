@@ -26,7 +26,7 @@ use crate::{
         form::FormData,
         http::{self, Error, HttpRequest},
         oauth::use_authorization,
-        schema::{Builder, Schemas, Source, Transformer, Type, Validator},
+        schema::{Builder, Schemas, SelectType, Source, Transformer, Type, Validator},
     },
 };
 
@@ -292,14 +292,14 @@ impl Builder<Schemas, ()> {
             .new_field("type")
             .typ(Type::Select {
                 source: Source::Static(METHODS),
-                multi: false,
+                typ: SelectType::Single,
             })
             .default("")
             .build()
             .new_field("algo")
             .typ(Type::Select {
                 source: Source::Static(ALGOS),
-                multi: false,
+                typ: SelectType::Single,
             })
             .default(Algorithm::Aes256.as_str())
             .display_if_eq(

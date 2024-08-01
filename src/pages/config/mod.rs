@@ -213,7 +213,7 @@ impl SettingsValues for Settings {
         match &field.typ_ {
             Type::Select {
                 source: Source::Static(items),
-                multi: false,
+                typ: SelectType::Single,
             } => {
                 let value = self
                     .get(field.id)
@@ -296,13 +296,17 @@ impl LayoutBuilder {
             .create("Cluster")
             .route("/cluster/edit")
             .insert()
-            // Logging
+            // Telemetry
+            .create("Telemetry")
             .create("Logging & Tracing")
             .route("/tracing")
             .insert()
-            // Logging
             .create("Webhooks")
             .route("/web-hooks")
+            .insert()
+            .create("Custom levels")
+            .route("/custom-levels")
+            .insert()
             .insert()
             // Cache
             .create("Cache")

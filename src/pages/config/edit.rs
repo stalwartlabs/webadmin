@@ -14,15 +14,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     components::{
         form::{
-            button::Button,
-            expression::InputExpression,
-            input::{
+            button::Button, expression::InputExpression, input::{
                 InputDuration, InputPassword, InputRate, InputSize, InputSwitch, InputText,
                 TextArea,
-            },
-            select::{CheckboxGroup, Select, SelectCron},
-            stacked_input::StackedInput,
-            Form, FormButtonBar, FormElement, FormItem, FormSection,
+            }, select::{CheckboxGroup, Select, SelectCron}, stacked_badge::StackedBadge, stacked_input::StackedInput, Form, FormButtonBar, FormElement, FormItem, FormSection
         },
         icon::IconRefresh,
         messages::{
@@ -35,7 +30,7 @@ use crate::{
     core::{
         form::{ExternalSources, FormData},
         http::{self, HttpRequest},
-        oauth::use_authorization,
+        oauth::use_authorization, schema::SelectType,
     },
     pages::{
         config::{ReloadSettings, Schema, SchemaType, Schemas, Settings, Type, UpdateSettings},
@@ -410,7 +405,7 @@ pub fn SettingsEdit() -> impl IntoView {
                                                     }
                                                         .into_view()
                                                 }
-                                                Type::Select { multi: false, .. } => {
+                                                Type::Select { typ: SelectType::Single, .. } => {
                                                     view! {
                                                         <Select
                                                             element=FormElement::new(field.id, data)
@@ -419,11 +414,21 @@ pub fn SettingsEdit() -> impl IntoView {
                                                     }
                                                         .into_view()
                                                 }
-                                                Type::Select { multi: true, .. } => {
+                                                Type::Select { typ: SelectType::Many, .. } => {
                                                     view! {
                                                         <CheckboxGroup
                                                             element=FormElement::new(field.id, data)
                                                             disabled=is_disabled
+                                                        />
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Select { typ: SelectType::ManyWithSearch, .. } => {
+                                                    view! {
+                                                        <StackedBadge
+                                                            element=FormElement::new(field.id, data)
+                                                            add_button_text="Add Event"
+                                                            color=Color::Green
                                                         />
                                                     }
                                                         .into_view()

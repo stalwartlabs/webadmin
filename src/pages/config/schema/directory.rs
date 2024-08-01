@@ -32,7 +32,7 @@ impl Builder<Schemas, ()> {
                     ("smtp", "SMTP Server"),
                     ("imap", "IMAP4 Server"),
                 ]),
-                multi: false,
+                typ: SelectType::Single,
             })
             .build()
             // Internal store
@@ -46,7 +46,7 @@ impl Builder<Schemas, ()> {
                     field: "type",
                     filter: Default::default(),
                 },
-                multi: false,
+                typ: SelectType::Single,
             })
             .source_filter_if_eq(
                 "type",

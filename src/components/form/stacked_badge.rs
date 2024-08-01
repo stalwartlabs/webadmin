@@ -19,9 +19,10 @@ pub fn StackedBadge(
     #[prop(into, optional)] validate_item: Option<Callback<(String, ValidateCb), ()>>,
 ) -> impl IntoView {
     let show_tooltip = create_rw_signal(false);
-    let add_value = create_rw_signal(String::new());
     let validation_error = create_rw_signal(None::<String>);
-
+    let select_options =
+        create_memo(move |_| element.data.get_untracked().select_sources(element.id));
+    let add_value = create_rw_signal(String::new());
     let value = create_memo(move |_| {
         element
             .data
@@ -35,11 +36,12 @@ pub fn StackedBadge(
 
     let validate_value = move || {
         let add_value = add_value.get().trim().to_string();
-        if !element
-            .data
-            .get()
-            .array_value(element.id)
-            .any(|v| v == add_value)
+        if !add_value.is_empty()
+            && !element
+                .data
+                .get()
+                .array_value(element.id)
+                .any(|v| v == add_value)
         {
             if let Some(cb) = validate_item.as_ref() {
                 cb.call((
@@ -138,29 +140,67 @@ pub fn StackedBadge(
         >
             <div>
                 <div class="flex rounded-lg shadow-sm">
-                    <input
-                        type="text"
-                        class=move || {
-                            if validation_error.get().is_none() {
-                                "py-2 px-3 block w-full border-gray-200 shadow-sm rounded-s-md text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
-                            } else {
-                                "py-2 px-3 block w-full border-red-500 shadow-sm rounded-s-md text-sm focus:z-10 focus:border-red-500 focus:ring-red-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
+
+                    {move || {
+                        if select_options.get().is_empty() {
+                            view! {
+                                <input
+                                    type="text"
+                                    class=move || {
+                                        if validation_error.get().is_none() {
+                                            "py-2 px-3 block w-full border-gray-200 shadow-sm rounded-s-md text-sm focus:z-10 focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
+                                        } else {
+                                            "py-2 px-3 block w-full border-red-500 shadow-sm rounded-s-md text-sm focus:z-10 focus:border-red-500 focus:ring-red-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
+                                        }
+                                    }
+
+                                    prop:value=add_value
+                                    on:change=move |ev| {
+                                        add_value.set(event_target_value(&ev));
+                                    }
+
+                                    on:keyup=move |ev| {
+                                        if ev.unchecked_ref::<web_sys::KeyboardEvent>().key_code()
+                                            == 13
+                                        {
+                                            add_value.set(event_target_value(&ev));
+                                            validate_value();
+                                        }
+                                    }
+                                />
                             }
-                        }
+                                .into_view()
+                        } else {
+                            view! {
+                                <select
+                                    class=move || {
+                                        if validation_error.get().is_none() {
+                                            "py-2 px-3 pe-9 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
+                                        } else {
+                                            "py-2 px-3 pe-9 block w-full border-red-500 rounded-lg text-sm focus:border-red-500 focus:ring-red-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
+                                        }
+                                    }
 
-                        prop:value=add_value
-                        on:change=move |ev| {
-                            add_value.set(event_target_value(&ev));
-                        }
+                                    on:change=move |ev| {
+                                        add_value.set(event_target_value(&ev));
+                                    }
+                                >
 
-                        on:keyup=move |ev| {
-                            if ev.unchecked_ref::<web_sys::KeyboardEvent>().key_code() == 13 {
-                                add_value.set(event_target_value(&ev));
-                                validate_value();
+                                    <option value="">-- Select an option --</option>
+                                    <For
+                                        each=move || select_options.get()
+                                        key=move |(id, _)| id.clone()
+                                        children=move |(id, label)| {
+                                            let id_ = id.clone();
+                                            view! { <option value=id_>{label}</option> }
+                                        }
+                                    />
+
+                                </select>
                             }
+                                .into_view()
                         }
-                    />
-
+                    }}
                     <button
                         type="button"
                         class="-ms-px py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-semibold border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
@@ -171,7 +211,6 @@ pub fn StackedBadge(
 
                         Add
                     </button>
-
                     <button
                         type="button"
                         class="-ms-px py-2 px-3 inline-flex justify-center items-center gap-2 border font-medium bg-white text-gray-700 rounded-e-md shadow-sm align-middle hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all text-sm dark:bg-gray-800 dark:hover:bg-slate-800 dark:border-gray-700 dark:text-gray-400 dark:hover:text-white"

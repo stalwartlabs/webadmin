@@ -27,7 +27,7 @@ use crate::{
         form::FormValue,
         http::{Error, HttpRequest},
         oauth::use_authorization,
-        schema::{Builder, Schemas, Source, Transformer, Type, Validator},
+        schema::{Builder, Schemas, SelectType, Source, Transformer, Type, Validator},
     },
 };
 
@@ -416,56 +416,56 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("iprev.result")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(IPREV_RESULT),
             })
             .default("none")
             .build()
             .new_field("spf.result")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(SPF_RESULT),
             })
             .default("none")
             .build()
             .new_field("spf_ehlo.result")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(SPF_RESULT),
             })
             .default("none")
             .build()
             .new_field("arc.result")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(DKIM_RESULT),
             })
             .default("none")
             .build()
             .new_field("dkim.result")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(DKIM_RESULT),
             })
             .default("none")
             .build()
             .new_field("dmarc.result")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(DMARC_RESULT),
             })
             .default("none")
             .build()
             .new_field("dmarc.policy")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(DMARC_POLICY),
             })
             .default("none")
             .build()
             .new_field("param.body")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(MAIL_BODY),
             })
             .default("")
@@ -480,7 +480,7 @@ impl Builder<Schemas, ()> {
             .new_field("train")
             .default("spam")
             .typ(Type::Select {
-                multi: false,
+                typ: SelectType::Single,
                 source: Source::Static(&[("spam", "SPAM"), ("ham", "HAM")]),
             })
             .build()

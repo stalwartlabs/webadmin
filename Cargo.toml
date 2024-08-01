@@ -7,7 +7,7 @@ homepage = "https://stalw.art"
 keywords = ["web", "admin", "email", "mail", "server"]
 categories = ["email"]
 license = "AGPL-3.0-only OR LicenseRef-SEL"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 resolver = "2"
 
@@ -16,8 +16,8 @@ console_error_panic_hook = "0.1.7"
 leptos = { version = "0.6.9", features = ["csr"] }
 leptos_meta = { version = "0.6.9", features = ["csr"] }
 leptos_router = { version = "0.6.9", features = ["csr"] }
-leptos-use = "0.10.2"
-gloo-net = { version = "0.5", features = ["http"] }
+leptos-use = "0.11"
+gloo-net = { version = "0.6", features = ["http"] }
 gloo-storage = "0.3.0"
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1.0.113"
