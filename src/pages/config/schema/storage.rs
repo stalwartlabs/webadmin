@@ -24,7 +24,7 @@ impl Builder<Schemas, ()> {
                 },
                 typ: SelectType::Single,
             })
-            .source_filter(&["foundationdb", "mysql", "postgresql", "sqlite", "rocksdb"])
+            .source_filter(&["foundationdb", "mysql", "postgresql", "sqlite", "rocksdb", "tikv"])
             .input_check([], [Validator::Required])
             .build()
             .new_field("storage.blob")
@@ -47,6 +47,7 @@ impl Builder<Schemas, ()> {
                 "postgresql",
                 "sqlite",
                 "rocksdb",
+                "tikv",
                 "s3",
                 "fs",
             ])
@@ -72,6 +73,7 @@ impl Builder<Schemas, ()> {
                 "postgresql",
                 "sqlite",
                 "rocksdb",
+                "tikv",
                 "elasticsearch",
             ])
             .input_check([], [Validator::Required])
@@ -96,6 +98,7 @@ impl Builder<Schemas, ()> {
                 "postgresql",
                 "sqlite",
                 "rocksdb",
+                "tikv",
                 "redis",
             ])
             .input_check([], [Validator::Required])
