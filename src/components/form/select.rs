@@ -24,7 +24,7 @@ pub fn Select(
     element: FormElement,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
 ) -> impl IntoView {
-    let options = create_memo(move |_| element.data.get_untracked().select_sources(element.id));
+    let options = create_memo(move |_| element.data.get().select_sources(element.id));
     let value = create_memo(move |_| {
         element
             .data
@@ -91,7 +91,7 @@ pub fn CheckboxGroup(
     element: FormElement,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
 ) -> impl IntoView {
-    let options = create_memo(move |_| element.data.get_untracked().select_sources(element.id));
+    let options = create_memo(move |_| element.data.get().select_sources(element.id));
     let values = create_memo(move |_| {
         element
             .data
