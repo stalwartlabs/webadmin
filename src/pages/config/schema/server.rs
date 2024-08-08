@@ -6,11 +6,11 @@
 
 use crate::core::schema::*;
 
-use super::{tracing::EVENT_NAMES, CONNECTION_VARS};
+use super::{tracing::EVENT_NAMES, HTTP_VARS};
 
 impl Builder<Schemas, ()> {
     pub fn build_server(self) -> Self {
-        let connect_expr = ExpressionValidator::new(CONNECTION_VARS, &[]);
+        let http_expr = ExpressionValidator::new(HTTP_VARS, &[]);
 
         self.new_schema("network")
             // Default hostname
@@ -34,6 +34,34 @@ impl Builder<Schemas, ()> {
             )
             .default("8192")
             .build()
+            // Network fields
+            .add_network_fields(false)
+            // Forms
+            .new_form_section()
+            .title("Network settings")
+            .fields([
+                "lookup.default.hostname",
+                "server.max-connections",
+                "server.proxy.trusted-networks",
+            ])
+            .build()
+            .new_form_section()
+            .title("Socket options")
+            .fields([
+                "server.socket.backlog",
+                "server.socket.ttl",
+                "server.socket.linger",
+                "server.socket.tos",
+                "server.socket.send-buffer-size",
+                "server.socket.recv-buffer-size",
+                "server.socket.nodelay",
+                "server.socket.reuse-addr",
+                "server.socket.reuse-port",
+            ])
+            .build()
+            .build()
+            // HTTP settings
+            .new_schema("http")
             // HTTP base URL
             .new_field("server.http.url")
             .label("Base URL")
@@ -41,12 +69,23 @@ impl Builder<Schemas, ()> {
             .typ(Type::Expression)
             .input_check(
                 [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(connect_expr),
-                ],
+                [Validator::Required, Validator::IsValidExpression(http_expr)],
             )
             .default("protocol + '://' + key_get('default', 'hostname') + ':' + local_port")
+            .build()
+            // HTTP endpoint security
+            .new_field("server.http.allowed-endpoint")
+            .label("Allowed endpoints")
+            .help(concat!(
+                "An expression that determines whether access to an endpoint is allowed. ",
+                "The expression should an HTTP status code (200, 403, etc.)"
+            ))
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [Validator::Required, Validator::IsValidExpression(http_expr)],
+            )
+            .default("200")
             .build()
             // Use X-Forwarded-For
             .new_field("server.http.use-x-forwarded")
@@ -85,39 +124,20 @@ impl Builder<Schemas, ()> {
             .typ(Type::Array)
             .input_check([Transformer::Trim], [])
             .build()
-            // Network fields
-            .add_network_fields(false)
-            // Forms
-            .new_form_section()
-            .title("Network settings")
-            .fields([
-                "lookup.default.hostname",
-                "server.max-connections",
-                "server.proxy.trusted-networks",
-            ])
-            .build()
             .new_form_section()
             .title("HTTP Settings")
             .fields([
                 "server.http.url",
                 "server.http.headers",
-                "server.http.hsts",
                 "server.http.use-x-forwarded",
-                "server.http.permissive-cors",
             ])
             .build()
             .new_form_section()
-            .title("Socket options")
+            .title("HTTP Security")
             .fields([
-                "server.socket.backlog",
-                "server.socket.ttl",
-                "server.socket.linger",
-                "server.socket.tos",
-                "server.socket.send-buffer-size",
-                "server.socket.recv-buffer-size",
-                "server.socket.nodelay",
-                "server.socket.reuse-addr",
-                "server.socket.reuse-port",
+                "server.http.allowed-endpoint",
+                "server.http.hsts",
+                "server.http.permissive-cors",
             ])
             .build()
             .build()

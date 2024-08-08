@@ -7,7 +7,7 @@
 use crate::core::schema::*;
 
 impl Builder<Schemas, ()> {
-    pub fn build_tracing(self) -> Self {
+    pub fn build_telemetry(self) -> Self {
         self.new_schema("tracing")
             .names("tracer", "tracers")
             .prefix("tracer")
@@ -276,6 +276,117 @@ impl Builder<Schemas, ()> {
             .list_title("Custom event levels")
             .list_subtitle("Manage custom event logging levels")
             .list_fields(["_id", "_value"])
+            .build()
+            // Metrics
+            .new_schema("metrics")
+            // OT Transport
+            .new_field("metrics.open-telemetry.transport")
+            .typ(Type::Select {
+                typ: SelectType::Single,
+                source: Source::Static(&[
+                    ("disabled", "Disabled"),
+                    ("http", "HTTP"),
+                    ("grpc", "gRPC"),
+                ]),
+            })
+            .label("Transport")
+            .help("The transport protocol for Open Telemetry")
+            .input_check([], [Validator::Required])
+            .default("disabled")
+            .build()
+            // OT Endpoint
+            .new_field("metrics.open-telemetry.endpoint")
+            .typ(Type::Input)
+            .label("Endpoint")
+            .help("The endpoint for Open Telemetry")
+            .placeholder("https://tracing.example.com/v1/otel")
+            .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
+            .display_if_eq("metrics.open-telemetry.transport", ["http", "grpc"])
+            .build()
+            // OT Headers
+            .new_field("metrics.open-telemetry.headers")
+            .typ(Type::Array)
+            .label("HTTP Headers")
+            .help("The headers to be sent with OpenTelemetry requests")
+            .display_if_eq("metrics.open-telemetry.transport", ["http"])
+            .build()
+            // OT Timeout
+            .new_field("metrics.open-telemetry.timeout")
+            .label("Timeout")
+            .help(concat!(
+                "Maximum amount of time that Stalwart will wait for a response ",
+                "from the OpenTelemetry endpoint"
+            ))
+            .default("10s")
+            .typ(Type::Duration)
+            .display_if_eq("metrics.open-telemetry.transport", ["http", "grpc"])
+            .input_check([], [Validator::Required])
+            .build()
+            // OT Throttle
+            .new_field("metrics.open-telemetry.interval")
+            .label("Push interval")
+            .help(concat!(
+                "The minimum amount of time that must pass between ",
+                "each push request to the OpenTelemetry endpoint"
+            ))
+            .default("1m")
+            .display_if_eq("metrics.open-telemetry.transport", ["http", "grpc"])
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            // Prometheus auth
+            .new_field("metrics.prometheus.enable")
+            .typ(Type::Boolean)
+            .label("Enable endpoint")
+            .help("Enable the Prometheus metrics endpoint")
+            .default("false")
+            .build()
+            .new_field("metrics.prometheus.auth.username")
+            .label("Username")
+            .help(concat!(
+                "The Prometheus endpoint's username for Basic authentication"
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("metrics.prometheus.auth.secret")
+            .label("Secret")
+            .help(concat!(
+                "The Prometheus endpoint's secret for Basic authentication"
+            ))
+            .typ(Type::Secret)
+            .build()
+            // Disabled events
+            .new_field("metrics.disabled-events")
+            .label("Disabled Metrics")
+            .help("Which events to disable for metrics")
+            .typ(Type::Select {
+                typ: SelectType::ManyWithSearch,
+                source: Source::StaticId(EVENT_NAMES),
+            })
+            .build()
+            .new_form_section()
+            .title("OpenTelemetry Push Metrics")
+            .fields([
+                "metrics.open-telemetry.transport",
+                "metrics.open-telemetry.endpoint",
+                "metrics.open-telemetry.timeout",
+                "metrics.open-telemetry.interval",
+                "metrics.open-telemetry.headers",
+            ])
+            .build()
+            .new_form_section()
+            .title("Prometheus Pull Metrics")
+            .fields([
+                "metrics.prometheus.auth.username",
+                "metrics.prometheus.auth.secret",
+                "metrics.prometheus.enable",
+            ])
+            .build()
+            .new_form_section()
+            .title("Override metrics")
+            .fields(["metrics.disabled-events"])
+            .build()
             .build()
     }
 }
@@ -556,6 +667,12 @@ pub static EVENT_NAMES: &[&str] = &[
     "manage.missing-parameter",
     "manage.not-found",
     "manage.not-supported",
+    "message-ingest.duplicate",
+    "message-ingest.error",
+    "message-ingest.ham",
+    "message-ingest.imap-append",
+    "message-ingest.jmap-append",
+    "message-ingest.spam",
     "milter.action-accept",
     "milter.action-connection-failure",
     "milter.action-discard",
@@ -647,10 +764,14 @@ pub static EVENT_NAMES: &[&str] = &[
     "queue.concurrency-limit-exceeded",
     "queue.lock-busy",
     "queue.locked",
+    "queue.queue-autogenerated",
+    "queue.queue-dsn",
+    "queue.queue-message",
+    "queue.queue-message-submission",
+    "queue.queue-report",
     "queue.quota-exceeded",
     "queue.rate-limit-exceeded",
     "queue.rescheduled",
-    "queue.scheduled",
     "resource.bad-parameters",
     "resource.download-external",
     "resource.error",
@@ -769,17 +890,19 @@ pub static EVENT_NAMES: &[&str] = &[
     "spf.soft-fail",
     "spf.temp-error",
     "store.assert-value-failed",
+    "store.blob-delete",
     "store.blob-missing-marker",
+    "store.blob-read",
+    "store.blob-write",
     "store.crypto-error",
     "store.data-corruption",
+    "store.data-iterate",
+    "store.data-write",
     "store.decompress-error",
     "store.deserialize-error",
     "store.elasticsearch-error",
     "store.filesystem-error",
     "store.foundationdb-error",
-    "store.ingest",
-    "store.ingest-duplicate",
-    "store.ingest-error",
     "store.ldap-bind",
     "store.ldap-error",
     "store.ldap-query",
@@ -795,6 +918,13 @@ pub static EVENT_NAMES: &[&str] = &[
     "store.sql-query",
     "store.sqlite-error",
     "store.unexpected-error",
+    "telemetry.journal-error",
+    "telemetry.log-error",
+    "telemetry.otel-expoter-error",
+    "telemetry.otel-metrics-exporter-error",
+    "telemetry.prometheus-exporter-error",
+    "telemetry.update",
+    "telemetry.webhook-error",
     "tls-rpt.record-fetch",
     "tls-rpt.record-fetch-error",
     "tls.certificate-not-found",
@@ -803,9 +933,4 @@ pub static EVENT_NAMES: &[&str] = &[
     "tls.multiple-certificates-available",
     "tls.no-certificates-available",
     "tls.not-configured",
-    "tracing.journal-error",
-    "tracing.log-error",
-    "tracing.otel-error",
-    "tracing.update",
-    "tracing.webhook-error",
 ];

@@ -272,6 +272,10 @@ impl LayoutBuilder {
             .create("Network")
             .route("/network/edit")
             .insert()
+            // HTTP
+            .create("HTTP")
+            .route("/http/edit")
+            .insert()
             // System
             .create("System")
             .route("/system/edit")
@@ -300,6 +304,9 @@ impl LayoutBuilder {
             .create("Telemetry")
             .create("Logging & Tracing")
             .route("/tracing")
+            .insert()
+            .create("Metrics")
+            .route("/metrics/edit")
             .insert()
             .create("Webhooks")
             .route("/web-hooks")

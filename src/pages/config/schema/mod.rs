@@ -42,6 +42,10 @@ pub const V_QUEUE_NOTIFY_NUM: &str = "notify_num";
 pub const V_QUEUE_EXPIRES_IN: &str = "expires_in";
 pub const V_QUEUE_LAST_STATUS: &str = "last_status";
 pub const V_QUEUE_LAST_ERROR: &str = "last_error";
+pub const V_URL: &str = "url";
+pub const V_URL_PATH: &str = "url_path";
+pub const V_HEADERS: &str = "headers";
+pub const V_METHOD: &str = "method";
 
 pub const CONNECTION_VARS: &[&str] = &[
     V_LISTENER,
@@ -51,6 +55,19 @@ pub const CONNECTION_VARS: &[&str] = &[
     V_LOCAL_PORT,
     V_PROTOCOL,
     V_TLS,
+];
+pub const HTTP_VARS: &[&str] = &[
+    V_LISTENER,
+    V_REMOTE_IP,
+    V_REMOTE_PORT,
+    V_LOCAL_IP,
+    V_LOCAL_PORT,
+    V_PROTOCOL,
+    V_TLS,
+    V_URL,
+    V_URL_PATH,
+    V_HEADERS,
+    V_METHOD,
 ];
 pub const RCPT_DOMAIN_VARS: &[&str] = &[V_RECIPIENT_DOMAIN];
 pub const SMTP_EHLO_VARS: &[&str] = &[

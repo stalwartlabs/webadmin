@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.10] - 2024-08-08
+
+## Added
+- Metrics configuration.
+- HTTP endpoint access controls.
+
+### Changed
+
+### Fixed
+- Unfiltered data store select options on SQL directory creation (fixes #17).
+
 ## [0.1.9] - 2024-08-01
 
 ## Added

@@ -427,7 +427,7 @@ pub fn build_schemas() -> Arc<Schemas> {
         .build_tls()
         .build_server()
         .build_listener()
-        .build_tracing()
+        .build_telemetry()
         .build_smtp_inbound()
         .build_smtp_outbound()
         .build_mail_auth()
