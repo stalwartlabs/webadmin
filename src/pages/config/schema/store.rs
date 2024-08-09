@@ -60,6 +60,7 @@ impl Builder<Schemas, ()> {
                     ("postgresql", "PostgreSQL"),
                     ("mysql", "mySQL"),
                     ("sqlite", "SQLite"),
+                    ("tikv", "TiKV"),
                     ("s3", "S3-compatible"),
                     ("redis", "Redis/Memcached"),
                     ("elasticsearch", "ElasticSearch"),
@@ -218,7 +219,7 @@ impl Builder<Schemas, ()> {
             .new_field("tls.enable")
             .label("Enable TLS")
             .help("Use TLS to connect to the store")
-            .display_if_eq("type", ["postgresql", "mysql"])
+            .display_if_eq("type", ["postgresql", "mysql", "tikv"])
             .default("false")
             .typ(Type::Boolean)
             .build()
@@ -228,6 +229,24 @@ impl Builder<Schemas, ()> {
             .display_if_eq("type", ["postgresql", "mysql", "elasticsearch"])
             .default("false")
             .typ(Type::Boolean)
+            .build()
+            .new_field("tls.root-ca-path")
+            .label("Root Certificate Path")
+            .help("Path to the root certificate file in PEM format")
+            .display_if_eq("tls.enable", ["true"])
+            .input_check([Transformer::Trim], [Validator::Required])
+            .build()
+            .new_field("tls.pub-cert-path")
+            .label("Public Certificate Path")
+            .help("Path to the public certificate file in PEM format")
+            .display_if_eq("tls.enable", ["true"])
+            .input_check([Transformer::Trim], [Validator::Required])
+            .build()
+            .new_field("tls.priv-key-path")
+            .label("Private Key Path")
+            .help("Path to the private key file in PEM format")
+            .display_if_eq("tls.enable", ["true"])
+            .input_check([Transformer::Trim], [Validator::Required])
             .build()
             // URL
             .new_field("url")
@@ -334,7 +353,7 @@ impl Builder<Schemas, ()> {
             .placeholder("1s")
             .typ(Type::Duration)
             .new_field("transaction.retry-limit")
-            .label("Retry limit")
+            .label("Retry Limit")
             .help("Transaction retry limit")
             .placeholder("10")
             .typ(Type::Input)
@@ -368,6 +387,72 @@ impl Builder<Schemas, ()> {
                 [
                     Validator::MinValue(1024.into()),
                     Validator::MaxValue((1024 * 1024 * 1024).into()),
+                ],
+            )
+            .build()
+            // TiKV specific
+            .new_field("pd-endpoints")
+            .label("PD Endpoints")
+            .help("Socket addresses of Placement Drivers (not the TiKV nodes)")
+            .display_if_eq("type", ["tikv"])
+            .typ(Type::Array)
+            .input_check_if_eq("tls.enable", ["true"], [Transformer::Trim], [Validator::Required, Validator::IsUrl])
+            .input_check([Transformer::Trim], [Validator::Required, Validator::IsSocketAddr])
+            .build()
+            .new_field("transaction.timeout")
+            .display_if_eq("type", ["tikv"])
+            .label("Timeout")
+            .help("Transaction timeout with the default being 2 seconds")
+            .placeholder("2s")
+            .default("2s")
+            .typ(Type::Duration)
+            .new_field("transaction.backoff-type")
+            .label("Backoff type")
+            .help("Type of backoff and the delay jitter algorithm if enabled")
+            .default_if_eq("type", ["tikv"],"full-jitter")
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("none", "None"),
+                    ("expo-jitter", "With exponential jitter"),
+                    ("full-jitter", "With full jitter"),
+                    ("equal-jitter", "With equal jitter"),
+                    ("decor-jitter", "With decorrelated jitter")
+                ]),
+                typ: SelectType::Single,
+            })
+            .build()
+            .new_field("transaction.backoff-min-delay")
+            .label("Max Retry Delay")
+            .help("Transaction backoff base retry delay")
+            .display_if_eq("transaction.backoff-type",
+                           ["expo-jitter", "full-jitter", "equal-jitter", "decor-jitter"])
+            .default("2ms")
+            .typ(Type::Duration)
+            .input_check(
+                [],
+                [Validator::Required],
+            )
+            .new_field("transaction.backoff-max-delay")
+            .label("Max Retry Delay")
+            .help("Transaction backoff maximum retry delay")
+            .default("2ms")
+            .typ(Type::Duration)
+            .input_check(
+                [],
+                [Validator::Required],
+            )
+            .new_field("transaction.backoff-retry-limit")
+            .label("Retry Limit")
+            .help("Maximum backoff retry retry limit")
+            .placeholder("10")
+            .default("10")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue(1000.into()),
                 ],
             )
             .build()
@@ -515,6 +600,7 @@ impl Builder<Schemas, ()> {
                 "cloud-id",
                 "profile",
                 "timeout",
+                "pd-endpoints",
             ])
             .build()
             .new_form_section()
@@ -544,6 +630,7 @@ impl Builder<Schemas, ()> {
                     "sqlite",
                     "rocksdb",
                     "foundationdb",
+                    "tikv",
                     "fs",
                     "s3",
                 ],
@@ -559,7 +646,13 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("TLS")
             .display_if_eq("type", ["postgresql", "mysql", "elasticsearch"])
-            .fields(["tls.enable", "tls.allow-invalid-certs"])
+            .fields(["tls.enable", "tls.allow-invalid-certs", "tls.root-ca-path", "tls.pub-cert-path", "tls.priv-key-path"])
+            .build()
+            // TiKV specific
+            .new_form_section()
+            .title("TLS")
+            .display_if_eq("type", ["tikv"])
+            .fields(["tls.enable", "tls.root-ca-path", "tls.pub-cert-path", "tls.priv-key-path"])
             .build()
             .new_form_section()
             .title("Pools")
@@ -587,11 +680,15 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Transaction Settings")
-            .display_if_eq("type", ["foundationdb"])
+            .display_if_eq("type", ["foundationdb", "tikv"])
             .fields([
                 "transaction.timeout",
                 "transaction.max-retry-delay",
                 "transaction.retry-limit",
+                "transaction.backoff-type",
+                "transaction.backoff-min-delay",
+                "transaction.backoff-max-delay",
+                "transaction.backoff-retry-limit",
             ])
             .build()
             .new_form_section()

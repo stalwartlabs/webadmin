@@ -51,7 +51,7 @@ impl Builder<Schemas, ()> {
             .source_filter_if_eq(
                 "type",
                 ["internal"],
-                &["foundationdb", "mysql", "postgresql", "sqlite", "rocksdb"],
+                &["foundationdb", "mysql", "postgresql", "sqlite", "rocksdb", "tikv"],
             )
             .source_filter_if_eq("type", ["sql"], &["mysql", "postgresql", "sqlite"])
             .input_check([], [Validator::Required])
