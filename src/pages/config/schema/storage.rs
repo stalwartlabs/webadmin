@@ -24,7 +24,14 @@ impl Builder<Schemas, ()> {
                 },
                 typ: SelectType::Single,
             })
-            .source_filter(&["foundationdb", "mysql", "postgresql", "sqlite", "rocksdb"])
+            .source_filter(&[
+                "foundationdb",
+                "mysql",
+                "postgresql",
+                "sqlite",
+                "rocksdb",
+                "sql-read-replica",
+            ])
             .input_check([], [Validator::Required])
             .build()
             .new_field("storage.blob")
@@ -49,6 +56,8 @@ impl Builder<Schemas, ()> {
                 "rocksdb",
                 "s3",
                 "fs",
+                "sql-read-replica",
+                "distributed-blob",
             ])
             .input_check([], [Validator::Required])
             .build()
@@ -73,6 +82,7 @@ impl Builder<Schemas, ()> {
                 "sqlite",
                 "rocksdb",
                 "elasticsearch",
+                "sql-read-replica",
             ])
             .input_check([], [Validator::Required])
             .build()
@@ -97,6 +107,7 @@ impl Builder<Schemas, ()> {
                 "sqlite",
                 "rocksdb",
                 "redis",
+                "sql-read-replica",
             ])
             .input_check([], [Validator::Required])
             .build()
@@ -154,7 +165,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Duration)
             .build()
             .new_field("enterprise.undelete-period")
-            .label("Un-delete period 💎")
+            .label("Un-delete period ⭐")
             .help(concat!(
                 "How long to keep deleted emails before they are permanently ",
                 "removed from the system. (Enterprise feature)"

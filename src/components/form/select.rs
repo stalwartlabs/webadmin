@@ -14,7 +14,7 @@ use leptos::*;
 
 use crate::core::{
     form::FormData,
-    schema::{Source, Type},
+    schema::{Field, Schema, Source, Type, Value},
 };
 
 use super::FormElement;
@@ -387,40 +387,48 @@ impl FormData {
                             filter,
                         },
                     ..
-                } => {
-                    let filter = filter.eval(self);
-
-                    self.external_sources
-                        .get(&format!("{}_{}", schema.id, field.id))
-                        .map(|source| {
-                            source
-                                .iter()
-                                .filter_map(|(id, value)| {
-                                    if filter
-                                        .map_or(true, |values| values.contains(&value.as_str()))
-                                    {
-                                        (
-                                            id.to_string(),
-                                            if !value.is_empty() {
-                                                format!("{} ({})", field.typ_.label(value), id)
-                                            } else {
-                                                id.to_string()
-                                            },
-                                        )
-                                            .into()
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .chain([(String::new(), "-- None --".to_string())])
-                                .collect::<Vec<_>>()
-                        })
-                        .unwrap_or_default()
-                }
+                } => self.build_sources(schema, field, filter),
+                Type::Select {
+                    source: Source::DynamicSelf { field, filter },
+                    ..
+                } => self.build_sources(&self.schema, field, filter),
                 _ => {
                     log::warn!("Invalid schema type for select");
                     Vec::new()
                 }
+            })
+            .unwrap_or_default()
+    }
+
+    fn build_sources(
+        &self,
+        schema: &Schema,
+        field: &Field,
+        filter: &Value<&'static [&'static str]>,
+    ) -> Vec<(String, String)> {
+        let filter = filter.eval(self);
+
+        self.external_sources
+            .get(&format!("{}_{}", schema.id, field.id))
+            .map(|source| {
+                [(String::new(), "-- None --".to_string())]
+                    .into_iter()
+                    .chain(source.iter().filter_map(|(id, value)| {
+                        if filter.map_or(true, |values| values.contains(&value.as_str())) {
+                            (
+                                id.to_string(),
+                                if !value.is_empty() {
+                                    format!("{} ({})", field.typ_.label(value), id)
+                                } else {
+                                    id.to_string()
+                                },
+                            )
+                                .into()
+                        } else {
+                            None
+                        }
+                    }))
+                    .collect::<Vec<_>>()
             })
             .unwrap_or_default()
     }

@@ -53,7 +53,11 @@ impl Builder<Schemas, ()> {
                 ["internal"],
                 &["foundationdb", "mysql", "postgresql", "sqlite", "rocksdb"],
             )
-            .source_filter_if_eq("type", ["sql"], &["mysql", "postgresql", "sqlite"])
+            .source_filter_if_eq(
+                "type",
+                ["sql"],
+                &["mysql", "postgresql", "sqlite", "sql-read-replica"],
+            )
             .input_check([], [Validator::Required])
             .build()
             // Caches

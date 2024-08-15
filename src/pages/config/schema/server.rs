@@ -172,6 +172,7 @@ impl Builder<Schemas, ()> {
                     "storage.directory",
                     "authentication.fallback-admin.*",
                     "lookup.default.hostname",
+                    "enterprise.license-key",
                 ][..],
             )
             .build()

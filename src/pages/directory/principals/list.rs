@@ -587,10 +587,11 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                 href=undelete_url
                             >
                                 {if !params.is_enterprise {
-                                    "Undelete emails 💎"
+                                    "Undelete emails ⭐"
                                 } else {
                                     "Undelete emails"
                                 }}
+
                             </a>
                         </div>
                         <div class="py-2 first:pt-0 last:pb-0">

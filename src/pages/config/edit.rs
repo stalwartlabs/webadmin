@@ -83,13 +83,14 @@ pub fn SettingsEdit() -> impl IntoView {
         move || params.get().get("id").cloned().unwrap_or_default(),
         move |name| {
             let auth = auth.get_untracked();
-            let schema = current_schema.get();
+            let current_schema = current_schema.get();
             let is_create = name.is_empty();
 
             async move {
                 // Fetch external sources
                 let mut external_sources = ExternalSources::new();
-                for (schema, field) in schema.external_sources() {
+                for (schema, field) in current_schema.external_sources() {
+                    let schema = schema.unwrap_or_else(|| current_schema.clone());
                     let source_key = format!("{}_{}", schema.id, field.id);
                     if !external_sources.contains_key(&source_key) {
                         let items = HttpRequest::get("/api/settings/group")
@@ -121,7 +122,7 @@ pub fn SettingsEdit() -> impl IntoView {
                 }
 
                 // Fetch settings
-                match schema.typ {
+                match current_schema.typ {
                     SchemaType::Record { prefix, .. } => {
                         if !is_create {
                             HttpRequest::get("/api/settings/list")
@@ -172,7 +173,7 @@ pub fn SettingsEdit() -> impl IntoView {
                         let mut keys = Vec::new();
                         let mut prefixes = Vec::new();
 
-                        for field in schema.fields.values() {
+                        for field in current_schema.fields.values() {
                             if field.is_multivalue() {
                                 prefixes.push(field.id);
                                 keys.push(field.id);
@@ -427,7 +428,7 @@ pub fn SettingsEdit() -> impl IntoView {
                                                     view! {
                                                         <StackedBadge
                                                             element=FormElement::new(field.id, data)
-                                                            add_button_text="Add Event"
+                                                            add_button_text="Add Item"
                                                             color=Color::Green
                                                         />
                                                     }

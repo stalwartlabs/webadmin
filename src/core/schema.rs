@@ -145,6 +145,10 @@ pub enum Source<S, F> {
         field: F,
         filter: Value<&'static [&'static str]>,
     },
+    DynamicSelf {
+        field: F,
+        filter: Value<&'static [&'static str]>,
+    },
 }
 
 #[derive(Clone, Default, Debug)]
@@ -280,14 +284,18 @@ impl Schema {
         }
     }
 
-    pub fn external_sources(&self) -> impl Iterator<Item = (Arc<Schema>, Arc<Field>)> + '_ {
+    pub fn external_sources(&self) -> impl Iterator<Item = (Option<Arc<Schema>>, Arc<Field>)> + '_ {
         self.fields
             .values()
             .filter_map(|field_| match &field_.typ_ {
                 Type::Select {
                     source: Source::Dynamic { schema, field, .. },
                     ..
-                } => Some((schema.clone(), field.clone())),
+                } => Some((schema.clone().into(), field.clone())),
+                Type::Select {
+                    source: Source::DynamicSelf { field, .. },
+                    ..
+                } => Some((None, field.clone())),
                 _ => None,
             })
     }
@@ -645,6 +653,16 @@ impl Builder<(Schemas, Schema), Field> {
                     typ,
                 }
             }
+            Type::Select {
+                source: Source::DynamicSelf { field, filter },
+                typ,
+            } => Type::Select {
+                source: Source::DynamicSelf {
+                    field: self.field(field),
+                    filter,
+                },
+                typ,
+            },
             typ_ => typ_.into(),
         };
         self
@@ -659,7 +677,7 @@ impl Builder<(Schemas, Schema), Field> {
         let field = self.field(field);
         match &mut self.item.typ_ {
             Type::Select {
-                source: Source::Dynamic { filter, .. },
+                source: Source::Dynamic { filter, .. } | Source::DynamicSelf { filter, .. },
                 ..
             } => {
                 filter.push_if_matches_eq(field, conditions, filters);
@@ -672,7 +690,7 @@ impl Builder<(Schemas, Schema), Field> {
     pub fn source_filter(mut self, filters: &'static [&'static str]) -> Self {
         match &mut self.item.typ_ {
             Type::Select {
-                source: Source::Dynamic { filter, .. },
+                source: Source::Dynamic { filter, .. } | Source::DynamicSelf { filter, .. },
                 ..
             } => {
                 filter.push_else(filters);

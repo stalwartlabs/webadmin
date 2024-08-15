@@ -64,6 +64,8 @@ impl Builder<Schemas, ()> {
                     ("redis", "Redis/Memcached"),
                     ("elasticsearch", "ElasticSearch"),
                     ("fs", "Filesystem"),
+                    ("sql-read-replica", "SQL with Replicas ⭐"),
+                    ("distributed-blob", "Distributed Blob ⭐"),
                 ]),
                 typ: SelectType::Single,
             })
@@ -78,7 +80,7 @@ impl Builder<Schemas, ()> {
                 source: Source::Static(&[("none", "None"), ("lz4", "LZ4")]),
                 typ: SelectType::Single,
             })
-            .display_if_ne("type", ["redis", "memory", "elasticsearch", "s3"])
+            .display_if_ne("type", ["redis", "memory", "elasticsearch"])
             .build()
             // Path
             .new_field("path")
@@ -495,6 +497,50 @@ impl Builder<Schemas, ()> {
                 [Validator::MinValue(0.into()), Validator::MaxValue(5.into())],
             )
             .build()
+            // SQL read replicas
+            .new_field("primary")
+            .label("Primary SQL")
+            .help("Primary SQL store where the data is written")
+            .display_if_eq("type", ["sql-read-replica"])
+            .typ(Type::Select {
+                source: Source::DynamicSelf {
+                    field: "type",
+                    filter: Default::default(),
+                },
+                typ: SelectType::Single,
+            })
+            .source_filter(&["mysql", "postgresql"])
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("replicas")
+            .label("Read replicas")
+            .help("The read replicas where the data is read from")
+            .display_if_eq("type", ["sql-read-replica"])
+            .typ(Type::Select {
+                source: Source::DynamicSelf {
+                    field: "type",
+                    filter: Default::default(),
+                },
+                typ: SelectType::ManyWithSearch,
+            })
+            .source_filter(&["mysql", "postgresql"])
+            .input_check([], [Validator::Required])
+            .build()
+            // Distributed blobs
+            .new_field("stores")
+            .label("Blob stores")
+            .help("Blob stores to use for the distributed blob store")
+            .display_if_eq("type", ["distributed-blob"])
+            .typ(Type::Select {
+                source: Source::DynamicSelf {
+                    field: "type",
+                    filter: Default::default(),
+                },
+                typ: SelectType::ManyWithSearch,
+            })
+            .source_filter(&["s3", "fs"])
+            .input_check([], [Validator::Required])
+            .build()
             // Form layouts
             .new_form_section()
             .title("Configuration")
@@ -515,6 +561,9 @@ impl Builder<Schemas, ()> {
                 "cloud-id",
                 "profile",
                 "timeout",
+                "primary",
+                "replicas",
+                "stores",
             ])
             .build()
             .new_form_section()
@@ -546,6 +595,8 @@ impl Builder<Schemas, ()> {
                     "foundationdb",
                     "fs",
                     "s3",
+                    "sql-read-replica",
+                    "distributed-blob",
                 ],
             )
             .fields([
