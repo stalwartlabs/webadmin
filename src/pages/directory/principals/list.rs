@@ -158,23 +158,20 @@ pub fn PrincipalList() -> impl IntoView {
         let auth = auth.get();
 
         async move {
-
-            match  HttpRequest::get(("/api/store/purge/account", &item))
-            .with_authorization(&auth)
-            .send::<()>()
-            .await {
+            match HttpRequest::get(("/api/store/purge/account", &item))
+                .with_authorization(&auth)
+                .send::<()>()
+                .await
+            {
                 Ok(_) => {
                     alert.set(Alert::success(format!(
                         "Account purge requested for {item}.",
-                        
                     )));
-        
-                },
+                }
                 Err(err) => {
                     alert.set(Alert::from(err));
-                },
+                }
             }
-
         }
     });
 
@@ -197,6 +194,7 @@ pub fn PrincipalList() -> impl IntoView {
         }
         .to_string()
     });
+    let show_dropdown = RwSignal::new(String::new());
 
     view! {
         <ListSection>
@@ -355,6 +353,7 @@ pub fn PrincipalList() -> impl IntoView {
                                                     delete_action,
                                                     purge_action,
                                                     modal,
+                                                    show_dropdown,
                                                 }
                                             />
 
@@ -428,11 +427,13 @@ struct Parameters {
     delete_action: Action<Arc<HashSet<String>>, ()>,
     purge_action: Action<String, ()>,
     modal: RwSignal<Modal>,
+    show_dropdown: RwSignal<String>,
 }
 
 #[component]
 fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
     let selected_type = params.selected_type;
+    let show_dropdown = params.show_dropdown;
     let name = principal.name.as_deref().unwrap_or("unknown").to_string();
     let display_name = principal
         .description
@@ -448,6 +449,8 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
     let principal_id = principal.name.as_deref().unwrap_or_default().to_string();
     let principal_id_2 = principal_id.clone();
     let principal_id_3 = principal_id.clone();
+    let principal_id_4 = principal_id.clone();
+    let principal_id_5 = principal_id.clone();
     let manage_url = format!(
         "/manage/directory/{}/{}/edit",
         params.selected_type.resource_name(),
@@ -456,7 +459,6 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
     let undelete_url = format!("/manage/undelete/{principal_id}",);
     let num_members = principal.members.len();
     let num_member_of = principal.member_of.len();
-    let show_dropdown = RwSignal::new(false);
 
     view! {
         <tr>
@@ -532,13 +534,20 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                 <ListTextItem>{maybe_plural(num_member_of, "group", "groups")}</ListTextItem>
             </Show>
             <ListItem subclass="px-6 py-1.5">
-                <div class="hs-dropdown [--placement:bottom-right] relative inline-block">
+                <div class="hs-dropdown relative inline-block">
                     <button
                         id="hs-table-dropdown-1"
                         type="button"
                         class="hs-dropdown-toggle py-1.5 px-2 inline-flex justify-center items-center gap-2 rounded-lg text-gray-700 align-middle disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-blue-600 transition-all text-sm dark:text-neutral-400 dark:hover:text-white dark:focus:ring-offset-gray-800"
                         on:click=move |_| {
-                            show_dropdown.update(|v| *v = !*v);
+                            show_dropdown
+                                .update(|v| {
+                                    if *v != principal_id_4 {
+                                        *v = principal_id_4.clone();
+                                    } else {
+                                        v.clear();
+                                    }
+                                });
                         }
                     >
 
@@ -546,8 +555,8 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                     </button>
                     <div
                         class=move || {
-                            if show_dropdown.get() {
-                                "hs-dropdown-menu transition-[opacity,margin] fixed right-0 duration opacity-100 open block divide-y divide-gray-200 min-w-40 z-20 bg-white shadow-2xl rounded-lg p-2 mt-2 dark:divide-neutral-700 dark:bg-neutral-800 dark:border dark:border-neutral-700"
+                            if show_dropdown.get() == principal_id_5 {
+                                "hs-dropdown-menu transition-[opacity,margin] absolute top-full right-0 duration opacity-100 open block divide-y divide-gray-200 min-w-40 z-50 bg-white shadow-2xl rounded-lg p-2 mt-2 dark:divide-neutral-700 dark:bg-neutral-800 dark:border dark:border-neutral-700"
                             } else {
                                 "hs-dropdown-menu transition-[opacity,margin] duration hs-dropdown-open:opacity-100 opacity-0 hidden divide-y divide-gray-200 min-w-40 z-20 bg-white shadow-2xl rounded-lg p-2 mt-2 dark:divide-neutral-700 dark:bg-neutral-800 dark:border dark:border-neutral-700"
                             }
@@ -568,7 +577,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                             <a
                                 class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
                                 on:click=move |_| {
-                                    show_dropdown.set(false);
+                                    show_dropdown.set(String::new());
                                     params.purge_action.dispatch(principal_id_3.clone());
                                 }
                             >
@@ -599,7 +608,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                 class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-red-600 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-red-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
                                 on:click=move |_| {
                                     let principal_id_2 = principal_id_2.clone();
-                                    show_dropdown.set(false);
+                                    show_dropdown.set(String::new());
                                     params
                                         .modal
                                         .set(

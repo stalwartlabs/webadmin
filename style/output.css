@@ -813,6 +813,10 @@ select {
   top: 0px;
 }
 
+.top-full {
+  top: 100%;
+}
+
 .z-10 {
   z-index: 10;
 }
@@ -2007,10 +2011,6 @@ select {
 
 .ease-out {
   transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
-}
-
-.\[--placement\:bottom-right\] {
-  --placement: bottom-right;
 }
 
 .\[--trigger\:hover\] {

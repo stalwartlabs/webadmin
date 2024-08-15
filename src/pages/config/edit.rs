@@ -14,10 +14,16 @@ use serde::{Deserialize, Serialize};
 use crate::{
     components::{
         form::{
-            button::Button, expression::InputExpression, input::{
+            button::Button,
+            expression::InputExpression,
+            input::{
                 InputDuration, InputPassword, InputRate, InputSize, InputSwitch, InputText,
                 TextArea,
-            }, select::{CheckboxGroup, Select, SelectCron}, stacked_badge::StackedBadge, stacked_input::StackedInput, Form, FormButtonBar, FormElement, FormItem, FormSection
+            },
+            select::{CheckboxGroup, Select, SelectCron},
+            stacked_badge::StackedBadge,
+            stacked_input::StackedInput,
+            Form, FormButtonBar, FormElement, FormItem, FormSection,
         },
         icon::IconRefresh,
         messages::{
@@ -30,7 +36,8 @@ use crate::{
     core::{
         form::{ExternalSources, FormData},
         http::{self, HttpRequest},
-        oauth::use_authorization, schema::SelectType,
+        oauth::use_authorization,
+        schema::SelectType,
     },
     pages::{
         config::{ReloadSettings, Schema, SchemaType, Schemas, Settings, Type, UpdateSettings},
