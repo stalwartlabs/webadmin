@@ -102,7 +102,7 @@ pub fn UndeleteList() -> impl IntoView {
             let auth = auth.get_untracked();
 
             async move {
-                HttpRequest::get(("/api/pro/undelete", account))
+                HttpRequest::get(("/api/store/undelete", account))
                     .with_authorization(&auth)
                     .with_parameter("page", page.to_string())
                     .with_parameter("limit", PAGE_SIZE.to_string())
@@ -185,7 +185,7 @@ pub fn UndeleteList() -> impl IntoView {
                 }
             }
 
-            match HttpRequest::post(("/api/pro/undelete", account))
+            match HttpRequest::post(("/api/store/undelete", account))
                 .with_authorization(&auth)
                 .with_body(request)
                 .unwrap()

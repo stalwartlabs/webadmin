@@ -61,6 +61,7 @@ pub enum ConfigWarning {
     AppliedDefault { default: String },
     Unread { value: String },
     Build { error: String },
+    Parse { error: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

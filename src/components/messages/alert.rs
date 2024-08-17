@@ -325,6 +325,9 @@ impl From<ReloadSettings> for Alert {
                                 ConfigWarning::Build { error } => {
                                     format!("Error for {key:?}: {error}")
                                 }
+                                ConfigWarning::Parse { error } => {
+                                    format!("Warning: Parse error for {key:?}: {error}")
+                                }
                             }}
 
                         </li>
