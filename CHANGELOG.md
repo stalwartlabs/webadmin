@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.11] - 2024-08-20
+
+## Added
+- SQL Read replicas (Enterprise edition only).
+- Distributed blob store (Enterprise edition only).
+- Message delivery history (Enterprise edition only).
+- Live tracing (Enterprise edition only).
+
+### Changed
+
+### Fixed
+- Manage account dropdown displayed on the wrong part of the page.
+
 ## [0.1.10] - 2024-08-08
 
 ## Added
