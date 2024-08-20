@@ -204,8 +204,7 @@ impl Alert {
         self
     }
 
-    pub fn with_details(mut self, details: impl Into<String>) -> Self {
-        let details = details.into();
+    pub fn with_details(mut self, details: impl IntoView) -> Self {
         self.details = Some(details.into_view());
         self
     }
@@ -252,31 +251,62 @@ impl From<http::Error> for Alert {
                 Alert::error("Failed to deserialize response").with_details(error)
             }
             http::Error::Server(error) => {
-                let (title, details) = match error {
+                let (alert, title, details) = match error {
                     ManagementApiError::FieldAlreadyExists { field, value } => (
+                        AlertType::Error,
                         "Field already exists".to_string(),
-                        format!("Another record exists with value {value:?} in field {field:?}."),
+                        format!("Another record exists with value {value:?} in field {field:?}.")
+                            .into_view(),
                     ),
                     ManagementApiError::FieldMissing { field } => (
+                        AlertType::Error,
                         "Missing required field".to_string(),
-                        format!("Field {} is missing", field),
+                        format!("Field {} is missing", field).into_view(),
                     ),
-                    ManagementApiError::NotFound { item } => {
-                        ("Not found".to_string(), format!("{item} was not found"))
-                    }
+                    ManagementApiError::NotFound { item } => (
+                        AlertType::Error,
+                        "Not found".to_string(),
+                        format!("{item} was not found").into_view(),
+                    ),
                     ManagementApiError::Unsupported { details } => {
-                        ("Operation not allowed".to_string(), details)
+                        if !details.starts_with("Enterprise") {
+                            (
+                                AlertType::Error,
+                                "Operation not allowed".to_string(),
+                                details.into_view(),
+                            )
+                        } else {
+                            (
+                                AlertType::Warning,
+                                "Enterprise feature".to_string(),
+                                view! {
+                                    <div>
+                                        {"This feature is only available in the enterprise version of the software. "}
+                                        <a
+                                            href="https://stalw.art/contact/"
+                                            class="text-yellow-800 underline decoration-yellow-800 hover:opacity-80 focus:outline-none focus:opacity-80"
+                                            target="_blank"
+                                        >
+                                            Request trial.
+                                        </a>
+                                    </div>
+                                }.into_view(),
+                            )
+                        }
                     }
                     ManagementApiError::AssertFailed => (
+                        AlertType::Error,
                         "Record already exists".to_string(),
-                        "Another record with the same ID already exists".to_string(),
+                        "Another record with the same ID already exists".into_view(),
                     ),
-                    ManagementApiError::Other { details } => {
-                        ("Operation failed".to_string(), details)
-                    }
+                    ManagementApiError::Other { details } => (
+                        AlertType::Error,
+                        "Operation failed".to_string(),
+                        details.into_view(),
+                    ),
                 };
 
-                Alert::error(title).with_details(details)
+                Alert::new(alert, title).with_details(details)
             }
             http::Error::NotFound => Alert::error("Not found"),
             http::Error::Forbidden => Alert::error("Forbidden"),

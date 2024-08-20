@@ -36,9 +36,10 @@ use crate::{
         oauth::use_authorization,
     },
     pages::{
+        enterprise::tracing::event::{Event, Key},
         maybe_plural,
         queue::messages::{Message, Status},
-        FormatDateTime,
+        FormatDateTime, List,
     },
 };
 
@@ -64,6 +65,26 @@ pub fn QueueManage() -> impl IntoView {
             }
         },
     );
+    // SPDX-SnippetBegin
+    // SPDX-FileCopyrightText: 2020 Stalwart Labs Ltd <hello@stalw.art>
+    // SPDX-License-Identifier: LicenseRef-SEL
+    let fetch_attempts = create_resource(
+        move || params.get().get("id").cloned().unwrap_or_default(),
+        move |id| {
+            let auth = auth.get_untracked();
+            let id = id.clone();
+
+            async move {
+                HttpRequest::get("/api/tracing/spans")
+                    .with_authorization(&auth)
+                    .with_parameter("queue_id", id)
+                    .with_parameter("values", "1")
+                    .send::<List<Event>>()
+                    .await
+            }
+        },
+    );
+    // SPDX-SnippetEnd
     let fetch_contents = create_resource(
         move || (blob_hash.get(), fetch_headers.get()),
         move |(blob_hash, fetch_headers)| {
@@ -517,6 +538,82 @@ pub fn QueueManage() -> impl IntoView {
             }}
 
         </Transition>
+
+        // SPDX-SnippetBegin
+        // SPDX-FileCopyrightText: 2020 Stalwart Labs Ltd <hello@stalw.art>
+        // SPDX-License-Identifier: LicenseRef-SEL
+        <Transition>
+            {move || match fetch_attempts.get() {
+                Some(Err(http::Error::Unauthorized)) => {
+                    use_navigate()("/login", Default::default());
+                    Some(view! { <div></div> }.into_view())
+                }
+                Some(Ok(spans)) if !spans.items.is_empty() => {
+                    Some(
+                        view! {
+                            <div class="max-w-[85rem] px-4 sm:px-6 pb-5 lg:px-8 mx-auto">
+                                <ListTable
+                                    title="History"
+                                    subtitle="View previous delivery attempts and message history"
+                                >
+                                    <Toolbar slot>
+                                        <div></div>
+                                    </Toolbar>
+                                    <ColumnList headers=vec![
+                                        "Date".to_string(),
+                                        "Event".to_string(),
+                                        "".to_string(),
+                                    ]>
+
+                                        {spans
+                                            .items
+                                            .into_iter()
+                                            .map(|span| {
+                                                let title = if span.typ.starts_with("delivery.") {
+                                                    "Delivery Attempt"
+                                                } else {
+                                                    "Message Received"
+                                                }
+                                                    .to_string();
+                                                view! {
+                                                    <tr>
+                                                        <ListTextItem>
+                                                            {span.created_at.format_date_time()}
+                                                        </ListTextItem>
+                                                        <ListTextItem>{title}</ListTextItem>
+                                                        <ListTextItem>
+                                                            <a
+                                                                class="inline-flex items-center gap-x-1 text-sm text-blue-600 decoration-2 hover:underline font-medium dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                                                                href=format!(
+                                                                    "/manage/tracing/span/{}",
+                                                                    span.get_as_int(Key::SpanId).unwrap_or_default(),
+                                                                )
+                                                            >
+
+                                                                View
+                                                            </a>
+                                                        </ListTextItem>
+
+                                                    </tr>
+                                                }
+                                            })
+                                            .collect_view()}
+
+                                    </ColumnList>
+                                    <Footer slot>
+                                        <div></div>
+                                    </Footer>
+                                </ListTable>
+                            </div>
+                        }
+                            .into_view(),
+                    )
+                }
+                _ => None,
+            }}
+
+        </Transition>
+        // SPDX-SnippetEnd
 
         <Transition>
 

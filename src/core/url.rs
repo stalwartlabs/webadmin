@@ -35,14 +35,18 @@ impl UrlBuilder {
         self
     }
 
-    pub fn with_parameter(mut self, key: &'static str, value: impl Into<String>) -> Self {
+    pub fn with_parameter(
+        mut self,
+        key: impl Into<Cow<'static, str>>,
+        value: impl Into<String>,
+    ) -> Self {
         self.params.insert(key.into(), value.into());
         self
     }
 
     pub fn with_optional_parameter(
         mut self,
-        key: &'static str,
+        key: impl Into<Cow<'static, str>>,
         value: Option<impl Into<String>>,
     ) -> Self {
         if let Some(value) = value {

@@ -10,11 +10,12 @@ use std::{sync::Arc, time::Duration};
 
 use components::{
     icon::{
-        IconAdjustmentsHorizontal, IconDocumentChartBar, IconDocumentText, IconKey, IconLockClosed,
-        IconQueueList, IconShieldCheck, IconSquare2x2, IconUserGroup, IconWrench,
+        IconAdjustmentsHorizontal, IconClock, IconDocumentChartBar, IconDocumentText, IconKey,
+        IconLockClosed, IconQueueList, IconShieldCheck, IconSquare2x2, IconUserGroup, IconWrench,
     },
     layout::MenuItem,
 };
+
 use gloo_storage::{SessionStorage, Storage};
 use leptos::*;
 use leptos_meta::*;
@@ -25,7 +26,10 @@ use pages::{
         mfa::ManageMfa,
     },
     config::edit::DEFAULT_SETTINGS_URL,
-    enterprise::undelete::UndeleteList,
+    enterprise::{
+        tracing::{display::SpanDisplay, list::SpanList, live::LiveTracing},
+        undelete::UndeleteList,
+    },
     manage::spam::{SpamTest, SpamTrain},
 };
 
@@ -138,7 +142,6 @@ pub fn App() -> impl IntoView {
 
     let is_logged_in = create_memo(move |_| auth_token.get().is_logged_in());
     let is_admin = create_memo(move |_| auth_token.get().is_admin());
-    let is_enterprise = create_memo(move |_| auth_token.get().is_enterprise());
 
     view! {
         <Router>
@@ -247,7 +250,25 @@ pub fn App() -> impl IntoView {
                         path="/undelete/:id"
                         view=UndeleteList
                         redirect_path="/login"
-                        condition=move || is_admin.get() && is_enterprise.get()
+                        condition=move || is_admin.get()
+                    />
+                    <ProtectedRoute
+                        path="/tracing/span/:id"
+                        view=SpanDisplay
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
+                    <ProtectedRoute
+                        path="/tracing/live"
+                        view=LiveTracing
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
+                    <ProtectedRoute
+                        path="/tracing/:object"
+                        view=SpanList
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
                     />
                 </ProtectedRoute>
                 <ProtectedRoute
@@ -369,7 +390,25 @@ impl LayoutBuilder {
             .route("/reports/arf")
             .insert()
             .insert()
-            .create("SPAM Filter")
+            .create("History")
+            .icon(view! { <IconClock/> })
+            .create("Received Messages")
+            .route("/tracing/received")
+            .insert()
+            .create("Delivery Attempts")
+            .route("/tracing/delivery")
+            .insert()
+            .insert()
+            .create("Tracing")
+            .icon(view! { <IconDocumentText/> })
+            .create("Logs")
+            .route("/logs")
+            .insert()
+            .create("Live tracing")
+            .route("/tracing/live")
+            .insert()
+            .insert()
+            .create("Antispam")
             .icon(view! { <IconShieldCheck/> })
             .create("Train")
             .route("/spam/train")
@@ -377,10 +416,6 @@ impl LayoutBuilder {
             .create("Test")
             .route("/spam/test")
             .insert()
-            .insert()
-            .create("Logs")
-            .icon(view! { <IconDocumentText/> })
-            .route("/logs")
             .insert()
             .create("Settings")
             .icon(view! { <IconAdjustmentsHorizontal/> })
@@ -441,6 +476,7 @@ pub fn build_schemas() -> Arc<Schemas> {
         .build_authorize()
         .build_mfa()
         .build_app_passwords()
+        .build_live_tracing()
         .build()
         .into()
 }

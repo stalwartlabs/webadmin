@@ -341,6 +341,9 @@ impl LayoutBuilder {
             .create("Stores")
             .route("/store")
             .insert()
+            .create("History")
+            .route("/history/edit")
+            .insert()
             .insert()
             // Authentication
             .create("Authentication")

@@ -453,6 +453,7 @@ pub fn SettingsEdit() -> impl IntoView {
                                                             label=field_label
                                                             tooltip=help.unwrap_or_default()
                                                             element=FormElement::new(field.id, data)
+                                                            disabled=is_disabled
                                                         />
                                                     }
                                                         .into_view()

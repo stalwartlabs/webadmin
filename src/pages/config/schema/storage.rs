@@ -164,7 +164,7 @@ impl Builder<Schemas, ()> {
             .default("30d")
             .typ(Type::Duration)
             .build()
-            .new_field("storage.undelete.hold-for")
+            .new_field("storage.undelete.retention")
             .label("Un-delete period ⭐")
             .help(concat!(
                 "How long to keep deleted emails before they are permanently ",
@@ -184,7 +184,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Blob Store")
-            .fields(["storage.blob", "storage.undelete.hold-for"])
+            .fields(["storage.blob", "storage.undelete.retention"])
             .build()
             .new_form_section()
             .title("Full Text Index Store")

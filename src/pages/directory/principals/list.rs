@@ -349,7 +349,6 @@ pub fn PrincipalList() -> impl IntoView {
                                                 principal
                                                 params=Parameters {
                                                     selected_type: selected_type.get(),
-                                                    is_enterprise: auth.get().is_enterprise(),
                                                     delete_action,
                                                     purge_action,
                                                     modal,
@@ -423,7 +422,6 @@ pub fn PrincipalList() -> impl IntoView {
 
 struct Parameters {
     selected_type: PrincipalType,
-    is_enterprise: bool,
     delete_action: Action<Arc<HashSet<String>>, ()>,
     purge_action: Action<String, ()>,
     modal: RwSignal<Modal>,
@@ -585,22 +583,10 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                 Purge deleted
                             </a>
                             <a
-                                class=move || {
-                                    if params.is_enterprise {
-                                        "flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-                                    } else {
-                                        "flex items-center pointer-events-none opacity-50 cursor-not-allowed gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-                                    }
-                                }
-
+                                class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
                                 href=undelete_url
                             >
-                                {if !params.is_enterprise {
-                                    "Undelete emails ⭐"
-                                } else {
-                                    "Undelete emails"
-                                }}
-
+                                Undelete emails
                             </a>
                         </div>
                         <div class="py-2 first:pt-0 last:pb-0">
