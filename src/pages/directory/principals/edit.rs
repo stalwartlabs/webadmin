@@ -376,9 +376,13 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                             value,
                                                             cb,
                                                             if selected_type.get() == PrincipalType::Group {
-                                                                vec![PrincipalType::Individual, PrincipalType::Group]
+                                                                vec![
+                                                                    PrincipalType::Individual,
+                                                                    PrincipalType::Superuser,
+                                                                    PrincipalType::Group,
+                                                                ]
                                                             } else {
-                                                                vec![PrincipalType::Individual]
+                                                                vec![PrincipalType::Individual, PrincipalType::Superuser]
                                                             },
                                                         ));
                                                 })
