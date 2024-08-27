@@ -46,11 +46,11 @@ pub fn LiveTracing() -> impl IntoView {
     let data = expect_context::<Arc<Schemas>>()
         .build_form("live-tracing")
         .into_signal();
-    let start_live_tracing = create_action(move |_| {
+    let start_live_telemetry = create_action(move |_| {
         let auth = auth.get();
 
         async move {
-            match HttpRequest::get("/api/tracing/live/token")
+            match HttpRequest::get("/api/telemetry/live/token")
                 .with_authorization(&auth)
                 .send::<String>()
                 .await
@@ -71,7 +71,7 @@ pub fn LiveTracing() -> impl IntoView {
                 let auth = auth.get_untracked();
                 let filter = data.get().value::<String>("filter").unwrap_or_default();
                 let mut url_builer = UrlBuilder::new(
-                    format!("{}/api/tracing/live/{}", auth.base_url, auth_token),
+                    format!("{}/api/telemetry/traces/live/{}", auth.base_url, auth_token),
                 );
                 if !filter.is_empty() {
                     for keyword in filter.split_ascii_whitespace() {
@@ -91,7 +91,7 @@ pub fn LiveTracing() -> impl IntoView {
                     UseEventSourceOptions::default()
                         .reconnect_limit(ReconnectLimit::Limited(5))
                         .reconnect_interval(2000)
-                        .named_events(vec!["state".to_string()]),
+                        .named_events(vec!["trace".to_string()]),
                 );
                 let span_history = RwSignal::new(Vec::new());
                 create_effect(move |_| {
@@ -179,7 +179,7 @@ pub fn LiveTracing() -> impl IntoView {
                                 on_click=Callback::new(move |_| {
                                     data.update(|data| {
                                         if data.validate_form() {
-                                            start_live_tracing.dispatch(());
+                                            start_live_telemetry.dispatch(());
                                         }
                                     });
                                 })

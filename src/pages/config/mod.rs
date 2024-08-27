@@ -315,6 +315,9 @@ impl LayoutBuilder {
             .create("Custom levels")
             .route("/custom-levels")
             .insert()
+            .create("History")
+            .route("/telemetry-history/edit")
+            .insert()
             .insert()
             // Cache
             .create("Cache")
@@ -340,9 +343,6 @@ impl LayoutBuilder {
             .insert()
             .create("Stores")
             .route("/store")
-            .insert()
-            .create("History")
-            .route("/history/edit")
             .insert()
             .insert()
             // Authentication

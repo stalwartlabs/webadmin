@@ -388,9 +388,9 @@ impl Builder<Schemas, ()> {
             .fields(["metrics.disabled-events"])
             .build()
             .build()
-            .new_schema("history")
+            .new_schema("telemetry-history")
             .new_field("tracing.history.store")
-            .label("History Store")
+            .label("Tracing Store")
             .help(concat!(
                 "Which database to use for storing the message delivery history. (Enterprise feature)"
             ))
@@ -423,7 +423,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Duration)
             .enterprise_feature()
             .new_field("tracing.history.enable")
-            .label("Keep message delivery history ⭐")
+            .label("Enable tracing history ⭐")
             .help(concat!(
                 "Whether to keep a history of message delivery events.",
             ))
@@ -431,12 +431,73 @@ impl Builder<Schemas, ()> {
             .typ(Type::Boolean)
             .enterprise_feature()
             .build()
+            .new_field("metrics.history.store")
+            .label("Metrics Store")
+            .help(concat!(
+                "Which database to use for storing metrics history. (Enterprise feature)"
+            ))
+            .typ(Type::Select {
+                source: Source::Dynamic {
+                    schema: "store",
+                    field: "type",
+                    filter: Default::default(),
+                },
+                typ: SelectType::Single,
+            })
+            .source_filter(&[
+                "foundationdb",
+                "mysql",
+                "postgresql",
+                "sqlite",
+                "rocksdb",
+                "sql-read-replica",
+            ])
+            .input_check([], [Validator::Required])
+            .enterprise_feature()
+            .build()
+            .new_field("metrics.history.retention")
+            .label("Retention period")
+            .help(concat!(
+                "How long to keep metrics history before it is permanently deleted.",
+                "(Enterprise feature)"
+            ))
+            .default("90d")
+            .typ(Type::Duration)
+            .enterprise_feature()
+            .new_field("metrics.history.enable")
+            .label("Enable metrics history ⭐")
+            .help(concat!(
+                "Whether to keep a metrics history.",
+            ))
+            .default("false")
+            .typ(Type::Boolean)
+            .enterprise_feature()
+            .build()
+            .new_field("metrics.history.interval")
+            .label("Collect frequency")
+            .help(concat!(
+                "Specifies how often to collect metrics history.",
+            ))
+            .default("0 * *")
+            .typ(Type::Cron)
+            .input_check([], [Validator::Required])
+            .enterprise_feature()
+            .build()
             .new_form_section()
-            .title("Message Delivery History")
+            .title("Tracing History")
             .fields([
                 "tracing.history.store",
                 "tracing.history.retention",
                 "tracing.history.enable",
+            ])
+            .build()
+            .new_form_section()
+            .title("Metrics History")
+            .fields([
+                "metrics.history.store",
+                "metrics.history.interval",
+                "metrics.history.retention",
+                "metrics.history.enable",
             ])
             .build()
             .build()

@@ -51,7 +51,7 @@ pub fn SpanDisplay() -> impl IntoView {
             let id = id.clone();
 
             async move {
-                HttpRequest::get(("/api/tracing/span", &id))
+                HttpRequest::get(("/api/telemetry/trace", &id))
                     .with_authorization(&auth)
                     .send::<Vec<Event>>()
                     .await

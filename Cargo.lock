@@ -951,6 +951,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "leptos-chartistry"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ede17b10c1c637841760f3737c3bc7299db48298b6195cfabcf02280e076f7e"
+dependencies = [
+ "chrono",
+ "leptos",
+ "leptos-use",
+ "log",
+ "web-sys",
+]
+
+[[package]]
 name = "leptos-use"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2325,6 +2338,7 @@ dependencies = [
  "gloo-storage",
  "humansize",
  "leptos",
+ "leptos-chartistry",
  "leptos-use",
  "leptos_meta",
  "leptos_router",

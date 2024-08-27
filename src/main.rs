@@ -10,8 +10,9 @@ use std::{sync::Arc, time::Duration};
 
 use components::{
     icon::{
-        IconAdjustmentsHorizontal, IconClock, IconDocumentChartBar, IconDocumentText, IconKey,
-        IconLockClosed, IconQueueList, IconShieldCheck, IconSquare2x2, IconUserGroup, IconWrench,
+        IconAdjustmentsHorizontal, IconChartBarSquare, IconClock, IconDocumentChartBar,
+        IconDocumentText, IconKey, IconLockClosed, IconQueueList, IconShieldCheck, IconSquare2x2,
+        IconUserGroup, IconWrench,
     },
     layout::MenuItem,
 };
@@ -27,6 +28,7 @@ use pages::{
     },
     config::edit::DEFAULT_SETTINGS_URL,
     enterprise::{
+        dashboard::Dashboard,
         tracing::{display::SpanDisplay, list::SpanList, live::LiveTracing},
         undelete::UndeleteList,
     },
@@ -155,6 +157,12 @@ pub fn App() -> impl IntoView {
                     redirect_path="/login"
                     condition=move || is_logged_in.get()
                 >
+                    <ProtectedRoute
+                        path="/dashboard/:object?"
+                        view=Dashboard
+                        redirect_path="/login"
+                        condition=move || is_admin.get()
+                    />
                     <ProtectedRoute
                         path="/directory/domains"
                         view=DomainList
@@ -354,6 +362,24 @@ pub fn App() -> impl IntoView {
 impl LayoutBuilder {
     pub fn manage() -> Vec<MenuItem> {
         LayoutBuilder::new("/manage")
+            .create("Dashboard")
+            .icon(view! { <IconChartBarSquare/> })
+            .create("Overview")
+            .route("/dashboard/overview")
+            .insert()
+            .create("Network")
+            .route("/dashboard/network")
+            .insert()
+            .create("Security")
+            .route("/dashboard/security")
+            .insert()
+            .create("Delivery")
+            .route("/dashboard/delivery")
+            .insert()
+            .create("Performance")
+            .route("/dashboard/performance")
+            .insert()
+            .insert()
             .create("Directory")
             .icon(view! { <IconUserGroup/> })
             .create("Accounts")

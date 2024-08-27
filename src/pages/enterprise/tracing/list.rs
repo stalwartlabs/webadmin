@@ -97,7 +97,7 @@ pub fn SpanList() -> impl IntoView {
             let params = selected_type.get();
 
             async move {
-                HttpRequest::get("/api/tracing/spans")
+                HttpRequest::get("/api/telemetry/traces")
                     .with_authorization(&auth)
                     .with_parameter("type", params.event_type)
                     .with_parameter("page", page.to_string())

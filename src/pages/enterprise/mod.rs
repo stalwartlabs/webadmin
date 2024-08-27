@@ -9,5 +9,6 @@
  * Unauthorized use, modification, or distribution is strictly prohibited.
  */
 
+pub mod dashboard;
 pub mod tracing;
 pub mod undelete;

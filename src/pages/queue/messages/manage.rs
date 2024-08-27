@@ -75,7 +75,7 @@ pub fn QueueManage() -> impl IntoView {
             let id = id.clone();
 
             async move {
-                HttpRequest::get("/api/tracing/spans")
+                HttpRequest::get("/api/telemetry/traces")
                     .with_authorization(&auth)
                     .with_parameter("queue_id", id)
                     .with_parameter("values", "1")
