@@ -15,8 +15,8 @@ use crate::{
     components::{
         form::input::{Duration, Rate},
         icon::{
-            IconCircleStack, IconCodeBracket, IconInbox, IconInboxArrowDown, IconInboxStack,
-            IconKey, IconServer, IconServerStack, IconShieldCheck,
+            IconCircleStack, IconCodeBracket, IconHandRaised, IconInbox, IconInboxArrowDown,
+            IconInboxStack, IconKey, IconServer, IconServerStack, IconShieldCheck, IconSignal,
         },
         layout::{LayoutBuilder, MenuItem},
     },
@@ -301,38 +301,9 @@ impl LayoutBuilder {
             .create("Cluster")
             .route("/cluster/edit")
             .insert()
-            // Telemetry
-            .create("Telemetry")
-            .create("Logging & Tracing")
-            .route("/tracing")
-            .insert()
-            .create("Metrics")
-            .route("/metrics/edit")
-            .insert()
-            .create("Webhooks")
-            .route("/web-hooks")
-            .insert()
-            .create("Custom levels")
-            .route("/custom-levels")
-            .insert()
-            .create("History")
-            .route("/telemetry-history/edit")
-            .insert()
-            .insert()
             // Cache
             .create("Cache")
             .route("/cache/edit")
-            .insert()
-            // Security
-            .create("Security")
-            // Blocked IPs
-            .create("Blocked IPs")
-            .route("/blocked-ip")
-            .insert()
-            // Blocked IPs
-            .create("Allowed IPs")
-            .route("/allowed-ip")
-            .insert()
             .insert()
             .insert()
             // Storage
@@ -484,8 +455,46 @@ impl LayoutBuilder {
             .route("/imap-rate-limit/edit")
             .insert()
             .insert()
+            // Security
+            .create("Security")
+            .icon(view! { <IconHandRaised/> })
+            // Fail2ban
+            .create("Fail2ban")
+            .route("/fail2ban/edit")
+            .insert()
+            // Blocked IPs
+            .create("Blocked IPs")
+            .route("/blocked-ip")
+            .insert()
+            // Blocked IPs
+            .create("Allowed IPs")
+            .route("/allowed-ip")
+            .insert()
+            .insert()
+            // Telemetry
+            .create("Telemetry")
+            .icon(view! { <IconSignal/> })
+            .create("Logging & Tracing")
+            .route("/tracing")
+            .insert()
+            .create("Metrics")
+            .route("/metrics/edit")
+            .insert()
+            .create("Alerts")
+            .route("/alerts")
+            .insert()
+            .create("Webhooks")
+            .route("/web-hooks")
+            .insert()
+            .create("Custom levels")
+            .route("/custom-levels")
+            .insert()
+            .create("History")
+            .route("/telemetry-history/edit")
+            .insert()
+            .insert()
             // SPAM Filter
-            .create("SPAM Filter")
+            .create("Antispam")
             .icon(view! { <IconShieldCheck/> })
             .create("Settings")
             .route("/spam-settings/edit")
@@ -505,6 +514,9 @@ impl LayoutBuilder {
             .create("Trusted domains")
             .route("/spam-allow")
             .insert()
+            .create("Blocked domains")
+            .route("/spam-block")
+            .insert()
             .create("DMARC domains")
             .route("/spam-dmarc")
             .insert()
@@ -519,7 +531,7 @@ impl LayoutBuilder {
             .insert()
             .insert()
             // Sieve Scripting
-            .create("Sieve Scripting")
+            .create("Scripting")
             .icon(view! { <IconCodeBracket/> })
             .create("Settings")
             .route("/sieve-settings/edit")

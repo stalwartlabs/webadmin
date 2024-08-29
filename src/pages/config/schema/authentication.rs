@@ -23,12 +23,6 @@ impl Builder<Schemas, ()> {
             })
             .input_check([], [Validator::Required])
             .build()
-            .new_field("authentication.fail2ban")
-            .label("Ban rate")
-            .help("The maximum number of failed login attempts before the IP is banned")
-            .typ(Type::Rate)
-            .default("100/1d")
-            .build()
             .new_field("authentication.rate-limit")
             .label("Limit rate")
             .help(concat!(
@@ -93,7 +87,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Security")
-            .fields(["authentication.rate-limit", "authentication.fail2ban"])
+            .fields(["authentication.rate-limit"])
             .build()
             .build()
             // OAuth

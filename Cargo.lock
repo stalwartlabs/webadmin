@@ -286,6 +286,15 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af40247be877a1e3353fb406aa27ab3ef4bd3ff18cef91e75e667bfa3fde701d"
 dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "codee"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d3ad3122b0001c7f140cf4d605ef9a9e2c24d96ab0b4fb4347b76de2425f445"
+dependencies = [
  "serde",
  "serde_json",
  "thiserror",
@@ -958,7 +967,7 @@ checksum = "8ede17b10c1c637841760f3737c3bc7299db48298b6195cfabcf02280e076f7e"
 dependencies = [
  "chrono",
  "leptos",
- "leptos-use",
+ "leptos-use 0.12.0",
  "log",
  "web-sys",
 ]
@@ -971,12 +980,35 @@ checksum = "268b9df23d8c68ed0518c39d6f0d3b99fcbe30190a6dce4a7e5f342027ab0033"
 dependencies = [
  "async-trait",
  "cfg-if",
- "codee",
+ "codee 0.1.2",
  "cookie",
  "default-struct-builder",
  "futures-util",
  "gloo-timers",
  "gloo-utils",
+ "js-sys",
+ "lazy_static",
+ "leptos",
+ "paste",
+ "thiserror",
+ "unic-langid",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "leptos-use"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fbd7025172d634eed266a57bd45c7bf872562e97e5768c543d69b6e907c4b86"
+dependencies = [
+ "cfg-if",
+ "codee 0.2.0",
+ "cookie",
+ "default-struct-builder",
+ "futures-util",
+ "gloo-timers",
  "js-sys",
  "lazy_static",
  "leptos",
@@ -2324,13 +2356,13 @@ dependencies = [
 
 [[package]]
 name = "webadmin"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "ahash",
  "base64",
  "chrono",
  "chrono-humanize",
- "codee",
+ "codee 0.2.0",
  "console_error_panic_hook",
  "console_log",
  "form_urlencoded",
@@ -2339,7 +2371,7 @@ dependencies = [
  "humansize",
  "leptos",
  "leptos-chartistry",
- "leptos-use",
+ "leptos-use 0.13.0",
  "leptos_meta",
  "leptos_router",
  "log",

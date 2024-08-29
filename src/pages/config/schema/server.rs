@@ -319,6 +319,35 @@ impl Builder<Schemas, ()> {
             .list_fields(["_id"])
             .no_list_action(Action::Modify)
             .build()
+            // Fail2ban settings
+            .new_schema("fail2ban")
+            .new_field("server.fail2ban.authentication")
+            .label("Auth failures")
+            .help("The maximum number of failed login attempts before the IP is banned")
+            .typ(Type::Rate)
+            .default("100/1d")
+            .build()
+            .new_field("server.fail2ban.invalid-rcpt")
+            .label("Brute force")
+            .help("The maximum number of brute force attempts before the IP is banned")
+            .typ(Type::Rate)
+            .default("35/1d")
+            .build()
+            .new_field("server.fail2ban.loitering")
+            .label("Loitering")
+            .help("The maximum number of loitering disconnections before the IP is banned")
+            .typ(Type::Rate)
+            .default("150/1d")
+            .build()
+            .new_form_section()
+            .title("Fail2ban settings")
+            .fields([
+                "server.fail2ban.authentication",
+                "server.fail2ban.invalid-rcpt",
+                "server.fail2ban.loitering",
+            ])
+            .build()
+            .build()
             // Clustering
             .new_schema("cluster")
             // Cluster node ID

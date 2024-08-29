@@ -1152,10 +1152,22 @@ impl Builder<Schemas, ()> {
             .label("Run Script")
             .help("Which Sieve script to run after the client sends a MAIL command")
             .input_check([], [Validator::IsValidExpression(has_sender_vars)])
+            .new_field("session.mail.is-allowed")
+            .label("Sender is allowed")
+            .help("Expression that returns true when the sender is allowed to send")
+            .input_check([], [Validator::IsValidExpression(has_sender_vars)])
+            .default(Expression::new(
+                [],
+                "!is_empty(authenticated_as) || !key_exists('spam-block', sender_domain)",
+            ))
             .build()
             .new_form_section()
             .title("MAIL FROM Stage")
-            .fields(["session.mail.rewrite", "session.mail.script"])
+            .fields([
+                "session.mail.rewrite",
+                "session.mail.is-allowed",
+                "session.mail.script",
+            ])
             .build()
             .build()
             // RCPT stage

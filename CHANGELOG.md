@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.12] - 2024-08-29
+
+## Added
+- Dashboard (Enterprise edition only).
+- Alerts (Enterprise edition only).
+- Fail2ban on failed RCPT and loitering events.
+- Blocked domains list.
+- Is allowed to sender setting.
+
+### Changed
+
+### Fixed
+- Super users can't be added to groups.
+
 ## [0.1.11] - 2024-08-20
 
 ## Added

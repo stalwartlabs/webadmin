@@ -10,9 +10,9 @@ use std::{sync::Arc, time::Duration};
 
 use components::{
     icon::{
-        IconAdjustmentsHorizontal, IconChartBarSquare, IconClock, IconDocumentChartBar,
-        IconDocumentText, IconKey, IconLockClosed, IconQueueList, IconShieldCheck, IconSquare2x2,
-        IconUserGroup, IconWrench,
+        IconAdjustmentsHorizontal, IconChartBarSquare, IconClock, IconDocumentChartBar, IconKey,
+        IconLockClosed, IconQueueList, IconShieldCheck, IconSignal, IconSquare2x2, IconUserGroup,
+        IconWrench,
     },
     layout::MenuItem,
 };
@@ -425,8 +425,8 @@ impl LayoutBuilder {
             .route("/tracing/delivery")
             .insert()
             .insert()
-            .create("Tracing")
-            .icon(view! { <IconDocumentText/> })
+            .create("Telemetry")
+            .icon(view! { <IconSignal/> })
             .create("Logs")
             .route("/logs")
             .insert()

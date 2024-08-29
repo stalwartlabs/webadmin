@@ -487,7 +487,15 @@ pub fn SettingsEdit() -> impl IntoView {
                                                 }
                                                 Type::Text => {
                                                     view! {
-                                                        <TextArea element=FormElement::new(field.id, data)/>
+                                                        <TextArea
+                                                            element=FormElement::new(field.id, data)
+                                                            placeholder=create_memo(move |_| {
+                                                                field
+                                                                    .placeholder(&data.get())
+                                                                    .unwrap_or_default()
+                                                                    .to_string()
+                                                            })
+                                                        />
                                                     }
                                                         .into_view()
                                                 }

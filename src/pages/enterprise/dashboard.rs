@@ -27,7 +27,10 @@ use crate::{
     components::{
         card::{CardSimple, CardSimpleItem},
         icon::{
-            IconBuildingOffice, IconClock, IconDocumentChartBar, IconDocumentText, IconExclamationCircle, IconExclamationTriangle, IconInboxArrowDown, IconNoSymbol, IconPaperAirplane, IconPhone, IconPhoneArrowDown, IconQueueList, IconServer, IconShieldExclamation, IconThreeDots, IconTrash, IconUserGroup, IconWifi
+            IconBuildingOffice, IconClock, IconDocumentChartBar, IconDocumentText,
+            IconExclamationCircle, IconExclamationTriangle, IconInboxArrowDown, IconNoSymbol,
+            IconPaperAirplane, IconPhone, IconPhoneArrowDown, IconQueueList, IconServer,
+            IconShieldExclamation, IconSignal, IconThreeDots, IconTrash, IconUserGroup,
         },
         messages::alert::{use_alerts, Alert, Alerts},
         report::ReportView,
@@ -42,7 +45,7 @@ use crate::{
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct DataPoint {
     x: u64,
-    y: [u64; 3],
+    y: [u64; 4],
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -308,7 +311,15 @@ pub fn Dashboard() -> impl IntoView {
             // Fail-to-ban
             fail_to_ban.set(
                 Bucket::create(period)
-                    .add_readings(&metrics, &[&["auth.banned"], &["network.drop-blocked"]])
+                    .add_readings(
+                        &metrics,
+                        &[
+                            &["security.authentication-ban"],
+                            &["security.brute-force-ban"],
+                            &["security.loiter-ban"],
+                            &["security.ip-blocked"],
+                        ],
+                    )
                     .finish(),
             );
 
@@ -650,7 +661,7 @@ pub fn Dashboard() -> impl IntoView {
                 <CardSimpleItem
                     title="Threats blocked"
                     contents=Signal::derive(move || {
-                        summary.get().sum(&["network.drop-blocked"]).to_string()
+                        summary.get().sum(&["security.ip-blocked"]).to_string()
                     })
                 >
 
@@ -659,7 +670,16 @@ pub fn Dashboard() -> impl IntoView {
                 <CardSimpleItem
                     title="IPs banned"
                     contents=Signal::derive(move || {
-                        summary.get().sum(&["auth.banned"]).to_string()
+                        summary
+                            .get()
+                            .sum(
+                                &[
+                                    "security.authentication-ban",
+                                    "security.brute-force-ban",
+                                    "security.loiter-ban",
+                                ],
+                            )
+                            .to_string()
                     })
                 >
 
@@ -708,7 +728,11 @@ pub fn Dashboard() -> impl IntoView {
                 </CardSimpleItem>
             </CardSimple>
 
-            <DashboardChart title="Fail-to-ban" labels=&["bans", "blocked"] data=fail_to_ban/>
+            <DashboardChart
+                title="Fail-to-ban"
+                labels=&["auth bans", "brute bans", "loiter bans", "blocked"]
+                data=fail_to_ban
+            />
             <DashboardChart title="Warnings" labels=&["DMARC", "TLS"] data=warnings_dmarc_tls/>
         </Show>
 
@@ -730,7 +754,7 @@ pub fn Dashboard() -> impl IntoView {
                     })
                 >
 
-                    <IconWifi attr:class="shrink-0 size-5 text-gray-600 dark:text-neutral-400"/>
+                    <IconSignal attr:class="shrink-0 size-5 text-gray-600 dark:text-neutral-400"/>
                 </CardSimpleItem>
                 <CardSimpleItem
                     title="Session Time"

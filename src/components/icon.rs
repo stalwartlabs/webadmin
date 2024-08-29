@@ -735,3 +735,35 @@ pub fn IconNoSymbol(
         </SvgWrapper>
     }
 }
+
+#[component]
+pub fn IconSignal(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+            ></path>
+        </SvgWrapper>
+    }
+}
+
+#[component]
+pub fn IconHandRaised(
+    #[prop(optional)] size: Option<usize>,
+    #[prop(attrs)] attrs: Vec<(&'static str, Attribute)>,
+) -> impl IntoView {
+    view! {
+        <SvgWrapper size attrs>
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15m.002 0h-.002"
+            ></path>
+        </SvgWrapper>
+    }
+}

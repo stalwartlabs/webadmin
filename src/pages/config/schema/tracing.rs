@@ -501,6 +501,133 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
+            // Alerts
+            .new_schema("alerts")
+            .names("alert", "alerts")
+            .prefix("metrics.alerts")
+            .suffix("condition")
+            // Id
+            .new_id_field()
+            .label("Alert Id")
+            .help("Unique identifier for the alert")
+            .build()
+            // Enable
+            .new_field("enable")
+            .typ(Type::Boolean)
+            .label("Enable ⭐")
+            .help("Enable or disable the alert (Enterprise feature)")
+            .default("true")
+            .enterprise_feature()
+            .build()
+            // Condition
+            .new_field("condition")
+            .label("Alert condition")
+            .help(concat!(
+                "The condition that triggers the alert.",
+            ))
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [
+                    Validator::MaxItems(1),
+                    Validator::Required
+                ],
+            )
+            .enterprise_feature()
+            .build()
+            // Event enable
+            .new_field("notify.event.enable")
+            .typ(Type::Boolean)
+            .label("Trigger an event")
+            .help("Whether to trigger an event when the alert is triggered")
+            .default("false")
+            .enterprise_feature()
+            .build()
+            // Event message
+            .new_field("notify.event.message")
+            .typ(Type::Text)
+            .label("Message")
+            .placeholder("The value of 'metric_name' is %{metric_name}%")
+            .input_check([], [Validator::Required])
+            .enterprise_feature()
+            .build()
+            // Message enable
+            .new_field("notify.email.enable")
+            .typ(Type::Boolean)
+            .label("Send an email")
+            .help("Whether to send an email when the alert is triggered")
+            .default("false")
+            .enterprise_feature()
+            .build()
+            // From name
+            .new_field("notify.email.from-name")
+            .typ(Type::Input)
+            .label("From Name")
+            .placeholder("Alert subsystem")
+            .help("The name of the sender")
+            .input_check_if_eq("notify.email.enable", ["true"], [], [Validator::IsEmail])
+            .enterprise_feature()
+            .build()
+            // From address
+            .new_field("notify.email.from-addr")
+            .typ(Type::Input)
+            .label("From")
+            .help("The email address of the sender")
+            .placeholder("alert@example.com")
+            .input_check_if_eq("notify.email.enable", ["true"], [], [Validator::Required, Validator::IsEmail])
+            .enterprise_feature()
+            .build()
+            // To
+            .new_field("notify.email.to")
+            .typ(Type::Array)
+            .label("To")
+            .help("The email address of the recipient(s)")
+            .placeholder("recipient@example.com")
+            .input_check_if_eq("notify.email.enable", ["true"], [], [Validator::Required, Validator::IsEmail])
+            .enterprise_feature()
+            .build()
+            // Message subject
+            .new_field("notify.email.subject")
+            .typ(Type::Input)
+            .label("Subject")
+            .help("The subject of the email")
+            .placeholder("Warning: metric has a value of %{metric_name}%")
+            .input_check_if_eq("notify.email.enable", ["true"], [], [Validator::Required])
+            .enterprise_feature()
+            .build()
+            // Message body
+            .new_field("notify.email.body")
+            .typ(Type::Text)
+            .label("Body")
+            .help("The body of the email")
+            .placeholder("The value of 'metric_name' is %{metric_name}%")
+            .input_check_if_eq("notify.email.enable", ["true"], [], [Validator::Required])
+            .enterprise_feature()
+            .build()
+            // Forms
+            .new_form_section()
+            .title("Alert configuration")
+            .fields(["_id", "enable", "condition"])
+            .build()
+            .new_form_section()
+            .title("E-mail notification")
+            .fields([
+                "notify.email.from-name",
+                "notify.email.from-addr",
+                "notify.email.to",
+                "notify.email.subject",
+                "notify.email.body",
+                "notify.email.enable",
+            ])
+            .build()
+            .new_form_section()
+            .title("Event notification")
+            .fields(["notify.event.message", "notify.event.enable"])
+            .build()
+            .list_title("Alerts")
+            .list_subtitle("Manage alerts")
+            .list_fields(["_id", "enable", "condition"])
+            .build()
     }
 }
 
@@ -538,7 +665,6 @@ pub static EVENT_NAMES: &[&str] = &[
     "arc.invalid-cv",
     "arc.invalid-instance",
     "arc.sealer-not-found",
-    "auth.banned",
     "auth.error",
     "auth.failed",
     "auth.missing-totp",
@@ -823,7 +949,6 @@ pub static EVENT_NAMES: &[&str] = &[
     "network.accept-error",
     "network.bind-error",
     "network.closed",
-    "network.drop-blocked",
     "network.flush-error",
     "network.listen-error",
     "network.listen-start",
@@ -896,6 +1021,10 @@ pub static EVENT_NAMES: &[&str] = &[
     "resource.error",
     "resource.not-found",
     "resource.webadmin-unpacked",
+    "security.authentication-ban",
+    "security.brute-force-ban",
+    "security.ip-blocked",
+    "security.loiter-ban",
     "server.licensing",
     "server.shutdown",
     "server.startup",
@@ -951,6 +1080,7 @@ pub static EVENT_NAMES: &[&str] = &[
     "smtp.loop-detected",
     "smtp.mail-from",
     "smtp.mail-from-missing",
+    "smtp.mail-from-not-allowed",
     "smtp.mail-from-rewritten",
     "smtp.mail-from-unauthenticated",
     "smtp.mail-from-unauthorized",
@@ -1039,6 +1169,7 @@ pub static EVENT_NAMES: &[&str] = &[
     "store.sql-query",
     "store.sqlite-error",
     "store.unexpected-error",
+    "telemetry.alert",
     "telemetry.journal-error",
     "telemetry.log-error",
     "telemetry.otel-exporter-error",
