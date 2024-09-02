@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.13] - 2024-09-02
+
+## Added
+- Untrusted Sieve script management.
+
+### Changed
+
+### Fixed
+
 ## [0.1.12] - 2024-08-29
 
 ## Added
