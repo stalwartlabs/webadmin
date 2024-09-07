@@ -61,18 +61,24 @@ pub fn Select(
             disabled=move || disabled.get()
         >
 
-            <For
-                each=move || options.get()
-                key=move |(id, _)| id.clone()
-                children=move |(id, label)| {
-                    let id_ = id.clone();
-                    view! {
-                        <option selected=move || value.get() == id value=id_>
-                            {label}
-                        </option>
-                    }
+            {move || {
+                let selected_id = value.get();
+                view! {
+                    <For
+                        each=move || options.get()
+                        key=move |(id, _)| id.clone()
+                        children=move |(id, label)| {
+                            let id_ = id.clone();
+                            let selected_id = selected_id.clone();
+                            view! {
+                                <option selected=move || selected_id == id value=id_>
+                                    {label}
+                                </option>
+                            }
+                        }
+                    />
                 }
-            />
+            }}
 
         </select>
 
