@@ -261,7 +261,7 @@ pub fn Dashboard() -> impl IntoView {
             memory_usage.set(
                 Bucket::create(period)
                     .add_readings(&metrics, &[&["server.memory"]])
-                    .finish(),
+                    .finish_avg(),
             );
 
             // Messages sent and received
@@ -278,7 +278,7 @@ pub fn Dashboard() -> impl IntoView {
                             ],
                         ],
                     )
-                    .finish(),
+                    .finish_sum(),
             );
 
             // SMTP connections
@@ -288,7 +288,7 @@ pub fn Dashboard() -> impl IntoView {
                         &metrics,
                         &[&["smtp.connection-start"], &["delivery.attempt-start"]],
                     )
-                    .finish(),
+                    .finish_sum(),
             );
 
             // IMAP & POP3 connections
@@ -298,14 +298,14 @@ pub fn Dashboard() -> impl IntoView {
                         &metrics,
                         &[&["imap.connection-start"], &["pop3.connection-start"]],
                     )
-                    .finish(),
+                    .finish_sum(),
             );
 
             // HTTP connections
             http_connections.set(
                 Bucket::create(period)
                     .add_readings(&metrics, &[&["http.connection-start"]])
-                    .finish(),
+                    .finish_sum(),
             );
 
             // Fail-to-ban
@@ -320,7 +320,7 @@ pub fn Dashboard() -> impl IntoView {
                             &["security.ip-blocked"],
                         ],
                     )
-                    .finish(),
+                    .finish_sum(),
             );
 
             // DMARC & TLS warnings
@@ -333,7 +333,7 @@ pub fn Dashboard() -> impl IntoView {
                             &["incoming-report.tls-report-with-warnings"],
                         ],
                     )
-                    .finish(),
+                    .finish_sum(),
             );
 
             // Messages received
@@ -343,7 +343,7 @@ pub fn Dashboard() -> impl IntoView {
                         &metrics,
                         &[&["message-ingest.ham"], &["message-ingest.spam"]],
                     )
-                    .finish(),
+                    .finish_sum(),
             );
 
             // Messages sent
@@ -357,21 +357,21 @@ pub fn Dashboard() -> impl IntoView {
                             &["queue.queue-report"],
                         ],
                     )
-                    .finish(),
+                    .finish_sum(),
             );
 
             // Delivery time
             delivery_time.set(
                 Bucket::create(period)
                     .add_readings(&metrics, &[&["delivery.total-time"]])
-                    .finish(),
+                    .finish_avg(),
             );
 
             // Queue size
             queue_size.set(
                 Bucket::create(period)
                     .add_readings(&metrics, &[&["queue.count"]])
-                    .finish(),
+                    .finish_avg(),
             );
 
             // Database performance
@@ -381,7 +381,7 @@ pub fn Dashboard() -> impl IntoView {
                         &metrics,
                         &[&["message-ingest.time"], &["message-ingest.index-time"]],
                     )
-                    .finish(),
+                    .finish_avg(),
             );
         }
         Some(Err(http::Error::Unauthorized)) => {
@@ -949,10 +949,11 @@ impl Bucket {
 
     fn add_readings(mut self, metrics: &[Metric], ids: &[&[&str]]) -> Self {
         for metric in metrics {
-            for (idx, ids) in ids.iter().enumerate() {
+            'outer: for (idx, ids) in ids.iter().enumerate() {
                 for id in ids.iter() {
                     if metric.id() == *id {
                         self.add_reading(metric, idx);
+                        break 'outer;
                     }
                 }
             }
@@ -992,7 +993,11 @@ impl Bucket {
         self.count[index].y[y_num] += count;
     }
 
-    fn finish(mut self) -> Vec<DataPoint> {
+    fn finish_sum( self) -> Vec<DataPoint> {
+        self.value
+    }
+
+    fn finish_avg(mut self) -> Vec<DataPoint> {
         for (value, count) in self.value.iter_mut().zip(self.count.iter()) {
             if count.y[0] > 0 {
                 value.y[0] /= count.y[0];
@@ -1001,7 +1006,6 @@ impl Bucket {
                 value.y[1] /= count.y[1];
             }
         }
-
         self.value
     }
 }
