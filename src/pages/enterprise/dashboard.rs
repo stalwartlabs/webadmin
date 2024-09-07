@@ -993,7 +993,7 @@ impl Bucket {
         self.count[index].y[y_num] += count;
     }
 
-    fn finish_sum( self) -> Vec<DataPoint> {
+    fn finish_sum(self) -> Vec<DataPoint> {
         self.value
     }
 
