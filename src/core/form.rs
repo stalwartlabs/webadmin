@@ -767,6 +767,10 @@ impl FormData {
         data
     }
 
+    pub fn is_required(&self, id: &str) -> bool {
+        self.schema.fields.get(id).unwrap().is_required(self)
+    }
+
     pub fn into_signal(self) -> RwSignal<Self> {
         RwSignal::new(self)
     }

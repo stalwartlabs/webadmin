@@ -389,8 +389,10 @@ pub fn InputDuration(
                                     }
                                     value.unit = unit;
                                     data.update(element.id, value.to_string());
-                                } else {
+                                } else if data.is_required(element.id) {
                                     data.remove(element.id);
+                                } else {
+                                    data.update(element.id, "false");
                                 }
                             });
                     }
@@ -533,8 +535,10 @@ pub fn InputRate(
                                         }
                                         value.period.unit = unit;
                                         data.update(element.id, value.to_string());
-                                    } else {
+                                    } else if data.is_required(element.id) {
                                         data.remove(element.id);
+                                    } else {
+                                        data.update(element.id, "false");
                                     }
                                 });
                         }
