@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.14] - 2024-09-09
+
+## Added
+
+### Changed
+- Add `config.local-keys.*` to default local keys.
+
+### Fixed
+- Fix: Unable to disable optional duration and rate settings.
+- Fix: Externally update selected values.
+- Fix: Dashboard averages all chart values.
+
 ## [0.1.13] - 2024-09-02
 
 ## Added
