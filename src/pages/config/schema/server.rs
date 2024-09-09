@@ -162,6 +162,7 @@ impl Builder<Schemas, ()> {
                     "!server.blocked-ip.*",
                     "!server.allowed-ip.*",
                     "server.*",
+                    "config.local-keys.*",
                     "certificate.*",
                     "!cluster.key",
                     "cluster.*",
