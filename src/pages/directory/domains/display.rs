@@ -3,10 +3,10 @@
  *
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
-
 use leptos::*;
 use leptos_router::{use_navigate, use_params_map};
 use serde::{Deserialize, Serialize};
+use std::ops::Add;
 
 use crate::{
     components::{
@@ -53,15 +53,24 @@ fn format_zonefile(records: &Vec<DnsRecord>, domain: &str) -> String {
     });
 
     formatted_records.iter().fold(String::new(), |acc, x| {
-        format!(
-            "{}{: <width1$} IN {: <width2$} {}\n",
+        let key = format!(
+            "{}{: <width1$} IN {: <width2$}",
             acc,
             x[0],
             x[1],
-            x[2],
             width1 = max_len[0],
             width2 = max_len[1]
-        )
+        );
+        if x[1] == "TXT" {
+            x[2].as_bytes()
+                .chunks(255)
+                .fold(key, |acc, x| {
+                    format!("{} \"{}\"", acc, String::from_utf8_lossy(x))
+                })
+                .add("\n")
+        } else {
+            format!("{} {}\n", key, x[2])
+        }
     })
 }
 
