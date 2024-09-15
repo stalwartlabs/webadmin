@@ -9,7 +9,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use gloo_net::http::{Headers, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use super::{oauth::AuthToken, url::UrlBuilder};
+use super::{url::UrlBuilder, AccessToken};
 
 pub struct HttpRequest {
     method: Method,
@@ -102,7 +102,7 @@ impl<'x> HttpRequest {
         self
     }
 
-    pub fn with_authorization(self, auth_token: impl AsRef<AuthToken>) -> Self {
+    pub fn with_authorization(self, auth_token: impl AsRef<AccessToken>) -> Self {
         let auth_token = auth_token.as_ref();
         let mut result = self.with_header(
             "Authorization",
@@ -114,7 +114,7 @@ impl<'x> HttpRequest {
         result
     }
 
-    pub fn with_base_url(mut self, auth_token: impl AsRef<AuthToken>) -> Self {
+    pub fn with_base_url(mut self, auth_token: impl AsRef<AccessToken>) -> Self {
         let auth_token = auth_token.as_ref();
         if !auth_token.base_url.is_empty() {
             self.url.prepend_path(auth_token.base_url.as_str());

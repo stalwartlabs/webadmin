@@ -27,7 +27,6 @@ use crate::{
     },
 };
 
-//const BASE_URL: &str = "https://127.0.0.1";
 const BASE_URL: &str = "";
 
 #[component]

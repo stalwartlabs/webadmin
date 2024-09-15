@@ -18,11 +18,12 @@ use crate::{
             input::{InputPassword, InputText},
             FormElement,
         },
-        messages::alert::{use_alerts, Alerts},
+        messages::alert::{use_alerts, Alert, Alerts},
     },
     core::{
-        oauth::{oauth_authenticate, AuthToken, AuthenticationResult},
+        oauth::{oauth_authenticate, AuthenticationResult},
         schema::{Builder, Schemas, Transformer, Type, Validator},
+        AccessToken, Permissions,
     },
     STATE_LOGIN_NAME_KEY, STATE_STORAGE_KEY,
 };
@@ -39,7 +40,7 @@ pub fn Login() -> impl IntoView {
     let remember_me = create_rw_signal(stored_data.is_some());
     let show_totp = create_rw_signal(false);
     let alert = use_alerts();
-    let auth_token = use_context::<RwSignal<AuthToken>>().unwrap();
+    let auth_token = use_context::<RwSignal<AccessToken>>().unwrap();
     let query = use_query_map();
 
     let login_action = create_action(
@@ -51,6 +52,16 @@ pub fn Login() -> impl IntoView {
             async move {
                 match oauth_authenticate(&base_url, &username, &password).await {
                     AuthenticationResult::Success(response) => {
+                        let permissions = Permissions::new(response.permissions);
+                        let default_url = permissions.default_url(response.is_enterprise);
+
+                        if default_url.is_empty() {
+                            alert.set(Alert::error(
+                                "You are not authorized to access this service.",
+                            ));
+                            return;
+                        }
+
                         let refresh_token = response.grant.refresh_token.unwrap_or_default();
                         auth_token.update(|auth_token| {
                             auth_token.access_token = response.grant.access_token.into();
@@ -58,7 +69,7 @@ pub fn Login() -> impl IntoView {
                             auth_token.base_url = base_url.clone().into();
                             auth_token.username = username.into();
                             auth_token.is_valid = true;
-                            auth_token.is_admin = response.is_admin;
+                            auth_token.permissions = permissions;
                             auth_token.is_enterprise = response.is_enterprise;
 
                             if let Err(err) =
@@ -85,12 +96,7 @@ pub fn Login() -> impl IntoView {
                             );
                         }
 
-                        let url = if response.is_admin {
-                            "/manage/directory/accounts"
-                        } else {
-                            "/account/crypto"
-                        };
-                        use_navigate()(url, Default::default());
+                        use_navigate()(default_url, Default::default());
                     }
                     AuthenticationResult::TotpRequired => {
                         show_totp.set(true);

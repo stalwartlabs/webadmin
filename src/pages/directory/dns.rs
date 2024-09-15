@@ -34,7 +34,7 @@ struct DnsRecord {
     content: String,
 }
 
-fn format_zonefile(records: &Vec<DnsRecord>, domain: &str) -> String {
+fn format_zonefile(records: &[DnsRecord], domain: &str) -> String {
     let formatted_records: Vec<[&str; 3]> = records
         .iter()
         .filter_map(|record| {
@@ -75,7 +75,7 @@ fn format_zonefile(records: &Vec<DnsRecord>, domain: &str) -> String {
 }
 
 #[component]
-pub fn DomainDisplay() -> impl IntoView {
+pub fn DnsDisplay() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
 
@@ -114,7 +114,7 @@ pub fn DomainDisplay() -> impl IntoView {
                     Some(view! { <div></div> }.into_view())
                 }
                 Some(Err(http::Error::NotFound)) => {
-                    use_navigate()("/manage/directory/domains", Default::default());
+                    use_navigate()("/manage/directory/domain", Default::default());
                     Some(view! { <div></div> }.into_view())
                 }
                 Some(Err(err)) => {
@@ -127,7 +127,10 @@ pub fn DomainDisplay() -> impl IntoView {
                         .filter(|r| r.typ == "TXT" && r.content.contains("DKIM"))
                         .count()
                         .to_string();
-                    let zonefile = format_zonefile(&records, &params.get().get("id").cloned().unwrap_or_default());
+                    let zonefile = format_zonefile(
+                        &records,
+                        &params.get().get("id").cloned().unwrap_or_default(),
+                    );
                     Some(
                         view! {
                             <Card>

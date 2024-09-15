@@ -6,11 +6,11 @@
 
 use std::str::FromStr;
 
-use principals::SpecialSecrets;
 use serde::{Deserialize, Serialize};
 
-pub mod domains;
-pub mod principals;
+pub mod dns;
+pub mod edit;
+pub mod list;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Principal {
@@ -30,6 +30,12 @@ pub struct Principal {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tenant: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub picture: Option<String>,
+
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub secrets: Vec<String>,
 
@@ -41,50 +47,62 @@ pub struct Principal {
     pub member_of: Vec<String>,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(rename = "roles")]
+    pub roles: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(rename = "lists")]
+    pub lists: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[serde(rename = "members")]
     pub members: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(rename = "enabledPermissions")]
+    pub enabled_permissions: Vec<Permission>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(rename = "disabledPermissions")]
+    pub disabled_permissions: Vec<Permission>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum PrincipalType {
-    #[serde(rename = "individual")]
     #[default]
     Individual = 0,
-    #[serde(rename = "group")]
     Group = 1,
-    #[serde(rename = "resource")]
     Resource = 2,
-    #[serde(rename = "location")]
     Location = 3,
-    #[serde(rename = "superuser")]
-    Superuser = 4,
-    #[serde(rename = "list")]
     List = 5,
-    #[serde(rename = "other")]
     Other = 6,
+    Domain = 7,
+    Tenant = 8,
+    Role = 9,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum PrincipalField {
-    #[serde(rename = "name")]
     Name,
-    #[serde(rename = "type")]
     Type,
-    #[serde(rename = "quota")]
     Quota,
-    #[serde(rename = "description")]
+    UsedQuota,
     Description,
-    #[serde(rename = "secrets")]
     Secrets,
-    #[serde(rename = "emails")]
     Emails,
-    #[serde(rename = "memberOf")]
     MemberOf,
-    #[serde(rename = "members")]
     Members,
+    Tenant,
+    Roles,
+    Lists,
+    EnabledPermissions,
+    DisabledPermissions,
+    Picture,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -255,9 +273,11 @@ impl PrincipalType {
             PrincipalType::Group => "group",
             PrincipalType::Resource => "resource",
             PrincipalType::Location => "location",
-            PrincipalType::Superuser => "superuser",
             PrincipalType::List => "list",
             PrincipalType::Other => "other",
+            PrincipalType::Domain => "domain",
+            PrincipalType::Tenant => "tenant",
+            PrincipalType::Role => "role",
         }
     }
 
@@ -267,9 +287,11 @@ impl PrincipalType {
             PrincipalType::Group => "Group",
             PrincipalType::Resource => "Resource",
             PrincipalType::Location => "Location",
-            PrincipalType::Superuser => "Superuser",
             PrincipalType::List => "Mailing List",
             PrincipalType::Other => "Other",
+            PrincipalType::Domain => "Domain",
+            PrincipalType::Tenant => "Tenant",
+            PrincipalType::Role => "Role",
         }
     }
 
@@ -283,12 +305,16 @@ impl PrincipalType {
             (PrincipalType::Resource, true) => "resources",
             (PrincipalType::Location, false) => "location",
             (PrincipalType::Location, true) => "locations",
-            (PrincipalType::Superuser, false) => "superuser",
-            (PrincipalType::Superuser, true) => "superusers",
             (PrincipalType::List, false) => "mailing list",
             (PrincipalType::List, true) => "mailing lists",
             (PrincipalType::Other, false) => "other",
             (PrincipalType::Other, true) => "other",
+            (PrincipalType::Domain, false) => "domain",
+            (PrincipalType::Domain, true) => "domains",
+            (PrincipalType::Tenant, false) => "tenant",
+            (PrincipalType::Tenant, true) => "tenants",
+            (PrincipalType::Role, false) => "role",
+            (PrincipalType::Role, true) => "roles",
         }
     }
 
@@ -297,6 +323,8 @@ impl PrincipalType {
             PrincipalType::Individual => "accounts",
             PrincipalType::Group => "groups",
             PrincipalType::List => "lists",
+            PrincipalType::Role => "roles",
+            PrincipalType::Tenant => "tenants",
             _ => unimplemented!("resource_name for {:?}", self),
         }
     }
@@ -311,10 +339,56 @@ impl FromStr for PrincipalType {
             "group" => Ok(PrincipalType::Group),
             "resource" => Ok(PrincipalType::Resource),
             "location" => Ok(PrincipalType::Location),
-            "superuser" => Ok(PrincipalType::Superuser),
             "list" => Ok(PrincipalType::List),
             "other" => Ok(PrincipalType::Other),
+            "domain" => Ok(PrincipalType::Domain),
+            "tenant" => Ok(PrincipalType::Tenant),
+            "role" => Ok(PrincipalType::Role),
             _ => Err(format!("Invalid PrincipalType: {}", s)),
         }
+    }
+}
+
+use base64::{engine::general_purpose::STANDARD, Engine};
+
+use crate::core::Permission;
+
+pub fn parse_app_password(secret: &str) -> Option<(String, &str)> {
+    secret
+        .strip_prefix("$app$")
+        .and_then(|s| s.split_once('$'))
+        .and_then(|(app, password)| {
+            STANDARD
+                .decode(app)
+                .ok()
+                .and_then(|app| String::from_utf8(app).ok())
+                .map(|app| (app, password))
+        })
+}
+
+pub fn build_app_password(app: &str, password: &str) -> String {
+    format!("$app${}${}", STANDARD.encode(app), password)
+}
+
+pub trait SpecialSecrets {
+    fn is_otp_auth(&self) -> bool;
+    fn is_app_password(&self) -> bool;
+    fn is_password(&self) -> bool;
+}
+
+impl<T> SpecialSecrets for T
+where
+    T: AsRef<str>,
+{
+    fn is_otp_auth(&self) -> bool {
+        self.as_ref().starts_with("otpauth://")
+    }
+
+    fn is_app_password(&self) -> bool {
+        self.as_ref().starts_with("$app$")
+    }
+
+    fn is_password(&self) -> bool {
+        !self.is_otp_auth() && !self.is_app_password()
     }
 }

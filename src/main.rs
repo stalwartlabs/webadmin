@@ -5,7 +5,7 @@
  */
 
 #![allow(unstable_name_collisions)]
-use core::schema::Schemas;
+use core::{schema::Schemas, AccessToken, Permission, Permissions};
 use std::{sync::Arc, time::Duration};
 
 use components::{
@@ -27,6 +27,7 @@ use pages::{
         mfa::ManageMfa,
     },
     config::edit::DEFAULT_SETTINGS_URL,
+    directory::{dns::DnsDisplay, edit::PrincipalEdit, list::PrincipalList},
     enterprise::{
         dashboard::Dashboard,
         tracing::{display::SpanDisplay, list::SpanList, live::LiveTracing},
@@ -42,15 +43,11 @@ use crate::{
         layout::{Layout, LayoutBuilder},
         messages::{alert::init_alerts, modal::init_modals},
     },
-    core::oauth::{oauth_refresh_token, AuthToken},
+    core::oauth::oauth_refresh_token,
     pages::{
         account::{crypto::ManageCrypto, password::ChangePassword},
         authorize::Authorize,
         config::{edit::SettingsEdit, list::SettingsList, search::SettingsSearch},
-        directory::{
-            domains::{display::DomainDisplay, edit::DomainCreate, list::DomainList},
-            principals::{edit::PrincipalEdit, list::PrincipalList},
-        },
         login::Login,
         manage::{logs::Logs, maintenance::Maintenance},
         notfound::NotFound,
@@ -78,7 +75,7 @@ fn main() {
 #[component]
 pub fn App() -> impl IntoView {
     let auth_token = create_rw_signal(
-        SessionStorage::get::<AuthToken>(STATE_STORAGE_KEY)
+        SessionStorage::get::<AccessToken>(STATE_STORAGE_KEY)
             .map(|mut t| {
                 // Force token refresh on reload
                 t.is_valid = false;
@@ -142,8 +139,14 @@ pub fn App() -> impl IntoView {
         },
     );
 
-    let is_logged_in = create_memo(move |_| auth_token.get().is_logged_in());
-    let is_admin = create_memo(move |_| auth_token.get().is_admin());
+    let permissions = create_memo(move |_| {
+        let auth_token = auth_token.get();
+        if auth_token.is_logged_in() {
+            Some(auth_token.permissions().clone())
+        } else {
+            None
+        }
+    });
 
     view! {
         <Router>
@@ -151,200 +154,377 @@ pub fn App() -> impl IntoView {
                 <ProtectedRoute
                     path="/manage"
                     view=move || {
-                        view! { <Layout menu_items=LayoutBuilder::manage() is_admin=is_admin/> }
+                        let menu_items = LayoutBuilder::manage(
+                            &permissions.get().unwrap_or_default(),
+                        );
+                        view! { <Layout menu_items=menu_items permissions=permissions/> }
                     }
 
                     redirect_path="/login"
-                    condition=move || is_logged_in.get()
+                    condition=move || permissions.get().is_some()
                 >
                     <ProtectedRoute
                         path="/dashboard/:object?"
                         view=Dashboard
                         redirect_path="/login"
-                        condition=move || is_admin.get()
-                    />
-                    <ProtectedRoute
-                        path="/directory/domains"
-                        view=DomainList
-                        redirect_path="/login"
-                        condition=move || is_admin.get()
-                    />
-                    <ProtectedRoute
-                        path="/directory/domains/edit"
-                        view=DomainCreate
-                        redirect_path="/login"
-                        condition=move || is_admin.get()
-                    />
-                    <ProtectedRoute
-                        path="/directory/domains/:id/view"
-                        view=DomainDisplay
-                        redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(
+                                    false,
+                                    |p| {
+                                        p.has_access_all(
+                                            &[Permission::MetricsList, Permission::MetricsLive],
+                                        )
+                                    },
+                                )
+                        }
                     />
 
                     <ProtectedRoute
                         path="/directory/:object"
                         view=PrincipalList
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(
+                                    false,
+                                    |p| {
+                                        p.has_access_any(
+                                            &[
+                                                Permission::IndividualList,
+                                                Permission::GroupList,
+                                                Permission::RoleList,
+                                                Permission::TenantList,
+                                                Permission::DomainList,
+                                                Permission::MailingListList,
+                                            ],
+                                        )
+                                    },
+                                )
+                        }
                     />
+
                     <ProtectedRoute
                         path="/directory/:object/:id?/edit"
                         view=PrincipalEdit
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(
+                                    false,
+                                    |p| {
+                                        p.has_access_any(
+                                            &[
+                                                Permission::IndividualList,
+                                                Permission::GroupList,
+                                                Permission::RoleList,
+                                                Permission::TenantList,
+                                                Permission::DomainList,
+                                                Permission::MailingListList,
+                                            ],
+                                        )
+                                    },
+                                )
+                        }
                     />
+
+                    <ProtectedRoute
+                        path="/dns/:id/view"
+                        view=DnsDisplay
+                        redirect_path="/login"
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(
+                                    false,
+                                    |p| {
+                                        p.has_access_all(
+                                            &[Permission::DkimSignatureGet, Permission::DomainGet],
+                                        )
+                                    },
+                                )
+                        }
+                    />
+
                     <ProtectedRoute
                         path="/queue/messages"
                         view=QueueList
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::MessageQueueList) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/queue/message/:id"
                         view=QueueManage
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::MessageQueueGet) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/queue/reports"
                         view=ReportList
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::OutgoingReportList) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/queue/report/:id"
                         view=ReportDisplay
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::OutgoingReportGet) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/reports/:object"
                         view=IncomingReportList
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::IncomingReportList) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/reports/:object/:id"
                         view=IncomingReportDisplay
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::IncomingReportGet) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/logs"
                         view=Logs
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::LogsView) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/spam/train"
                         view=SpamTrain
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::SieveRun) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/spam/test"
                         view=SpamTest
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::SieveRun) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/maintenance"
                         view=Maintenance
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(
+                                    false,
+                                    |p| {
+                                        p.has_access_any(
+                                            &[
+                                                Permission::SettingsReload,
+                                                Permission::Restart,
+                                                Permission::UpdateSpamFilter,
+                                                Permission::UpdateWebadmin,
+                                            ],
+                                        )
+                                    },
+                                )
+                        }
                     />
+
                     <ProtectedRoute
                         path="/undelete/:id"
                         view=UndeleteList
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::Undelete) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/tracing/span/:id"
                         view=SpanDisplay
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::TracingGet) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/tracing/live"
                         view=LiveTracing
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::TracingLive) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/tracing/:object"
                         view=SpanList
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::TracingList) })
+                        }
                     />
+
                 </ProtectedRoute>
                 <ProtectedRoute
                     path="/settings"
                     view=move || {
-                        view! { <Layout menu_items=LayoutBuilder::settings() is_admin=is_admin/> }
+                        let menu_items = LayoutBuilder::settings(auth_token.get().default_url());
+                        view! { <Layout menu_items=menu_items permissions=permissions/> }
                     }
 
                     redirect_path="/login"
-                    condition=move || is_admin.get()
+                    condition=move || permissions.get().is_some()
                 >
                     <ProtectedRoute
                         path="/:object"
                         view=SettingsList
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::SettingsList) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/:object/:id?/edit"
                         view=SettingsEdit
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::SettingsUpdate) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/search"
                         view=SettingsSearch
                         redirect_path="/login"
-                        condition=move || is_admin.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::SettingsList) })
+                        }
                     />
+
                 </ProtectedRoute>
                 <ProtectedRoute
                     path="/account"
                     view=move || {
-                        view! { <Layout menu_items=LayoutBuilder::account() is_admin=is_admin/> }
+                        let menu_items = LayoutBuilder::account(
+                            &permissions.get().unwrap_or_default(),
+                        );
+                        view! { <Layout menu_items=menu_items permissions=permissions/> }
                     }
 
                     redirect_path="/login"
-                    condition=move || is_logged_in.get()
+                    condition=move || permissions.get().is_some()
                 >
                     <ProtectedRoute
                         path="/crypto"
                         view=ManageCrypto
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::ManageEncryption) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/password"
                         view=ChangePassword
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::ManagePasswords) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/mfa"
                         view=ManageMfa
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::ManagePasswords) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/app-passwords"
                         view=AppPasswords
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::ManagePasswords) })
+                        }
                     />
+
                     <ProtectedRoute
                         path="/app-passwords/edit"
                         view=AppPasswordCreate
                         redirect_path="/login"
-                        condition=move || is_logged_in.get()
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::ManagePasswords) })
+                        }
                     />
 
                 </ProtectedRoute>
@@ -360,118 +540,141 @@ pub fn App() -> impl IntoView {
 }
 
 impl LayoutBuilder {
-    pub fn manage() -> Vec<MenuItem> {
+    pub fn manage(permissions: &Permissions) -> Vec<MenuItem> {
         LayoutBuilder::new("/manage")
             .create("Dashboard")
             .icon(view! { <IconChartBarSquare/> })
             .create("Overview")
             .route("/dashboard/overview")
-            .insert()
+            .insert(true)
             .create("Network")
             .route("/dashboard/network")
-            .insert()
+            .insert(true)
             .create("Security")
             .route("/dashboard/security")
-            .insert()
+            .insert(true)
             .create("Delivery")
             .route("/dashboard/delivery")
-            .insert()
+            .insert(true)
             .create("Performance")
             .route("/dashboard/performance")
-            .insert()
-            .insert()
+            .insert(true)
+            .insert(permissions.has_access_all(&[Permission::MetricsList, Permission::MetricsLive]))
             .create("Directory")
             .icon(view! { <IconUserGroup/> })
             .create("Accounts")
             .route("/directory/accounts")
-            .insert()
+            .insert(permissions.has_access(Permission::IndividualList))
             .create("Groups")
             .route("/directory/groups")
-            .insert()
+            .insert(permissions.has_access(Permission::GroupList))
             .create("Lists")
             .route("/directory/lists")
-            .insert()
+            .insert(permissions.has_access(Permission::MailingListList))
             .create("Domains")
             .route("/directory/domains")
-            .insert()
-            .insert()
+            .insert(permissions.has_access(Permission::DomainList))
+            .create("Roles")
+            .route("/directory/roles")
+            .insert(permissions.has_access(Permission::RoleList))
+            .create("Tenants")
+            .route("/directory/tenants")
+            .insert(permissions.has_access(Permission::TenantList))
+            .insert(permissions.has_access_any(&[
+                Permission::IndividualList,
+                Permission::GroupList,
+                Permission::RoleList,
+                Permission::TenantList,
+                Permission::DomainList,
+                Permission::MailingListList,
+            ]))
             .create("Queues")
             .icon(view! { <IconQueueList/> })
             .create("Messages")
             .route("/queue/messages")
-            .insert()
+            .insert(permissions.has_access(Permission::MessageQueueList))
             .create("Reports")
             .route("/queue/reports")
-            .insert()
-            .insert()
+            .insert(permissions.has_access(Permission::OutgoingReportList))
+            .insert(
+                permissions.has_access_any(&[
+                    Permission::MessageQueueList,
+                    Permission::OutgoingReportList,
+                ]),
+            )
             .create("Reports")
             .icon(view! { <IconDocumentChartBar/> })
             .create("DMARC Aggregate")
             .route("/reports/dmarc")
-            .insert()
+            .insert(true)
             .create("TLS Aggregate")
             .route("/reports/tls")
-            .insert()
+            .insert(true)
             .create("Failures")
             .route("/reports/arf")
-            .insert()
-            .insert()
+            .insert(true)
+            .insert(permissions.has_access(Permission::IncomingReportList))
             .create("History")
             .icon(view! { <IconClock/> })
             .create("Received Messages")
             .route("/tracing/received")
-            .insert()
+            .insert(true)
             .create("Delivery Attempts")
             .route("/tracing/delivery")
-            .insert()
-            .insert()
+            .insert(true)
+            .insert(permissions.has_access(Permission::TracingList))
             .create("Telemetry")
             .icon(view! { <IconSignal/> })
             .create("Logs")
             .route("/logs")
-            .insert()
+            .insert(permissions.has_access(Permission::LogsView))
             .create("Live tracing")
             .route("/tracing/live")
-            .insert()
-            .insert()
+            .insert(permissions.has_access(Permission::TracingLive))
+            .insert(permissions.has_access_any(&[Permission::LogsView, Permission::TracingLive]))
             .create("Antispam")
             .icon(view! { <IconShieldCheck/> })
             .create("Train")
             .route("/spam/train")
-            .insert()
+            .insert(true)
             .create("Test")
             .route("/spam/test")
-            .insert()
-            .insert()
+            .insert(true)
+            .insert(permissions.has_access(Permission::SieveRun))
             .create("Settings")
             .icon(view! { <IconAdjustmentsHorizontal/> })
             .raw_route(DEFAULT_SETTINGS_URL)
-            .insert()
+            .insert(permissions.has_access(Permission::SettingsList))
             .create("Maintenance")
             .icon(view! { <IconWrench/> })
             .route("/maintenance")
-            .insert()
+            .insert(permissions.has_access_any(&[
+                Permission::SettingsReload,
+                Permission::Restart,
+                Permission::UpdateSpamFilter,
+                Permission::UpdateWebadmin,
+            ]))
             .menu_items
     }
 
-    pub fn account() -> Vec<MenuItem> {
+    pub fn account(permissions: &Permissions) -> Vec<MenuItem> {
         LayoutBuilder::new("/account")
             .create("Encryption-at-rest")
             .icon(view! { <IconLockClosed/> })
             .route("/crypto")
-            .insert()
+            .insert(permissions.has_access(Permission::ManageEncryption))
             .create("Change Password")
             .icon(view! { <IconKey/> })
             .route("/password")
-            .insert()
+            .insert(permissions.has_access(Permission::ManagePasswords))
             .create("Two-factor Auth")
             .icon(view! { <IconShieldCheck/> })
             .route("/mfa")
-            .insert()
+            .insert(permissions.has_access(Permission::ManagePasswords))
             .create("App Passwords")
             .icon(view! { <IconSquare2x2/> })
             .route("/app-passwords")
-            .insert()
+            .insert(permissions.has_access(Permission::ManagePasswords))
             .menu_items
     }
 }
@@ -480,7 +683,6 @@ pub fn build_schemas() -> Arc<Schemas> {
     Schemas::builder()
         .build_login()
         .build_principals()
-        .build_domains()
         .build_store()
         .build_directory()
         .build_authentication()

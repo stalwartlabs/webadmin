@@ -29,7 +29,7 @@ use crate::{
         form::FormData,
         http::{self, HttpRequest},
         oauth::use_authorization,
-        schema::{Builder, Schemas, SelectType, Source, Transformer, Type, Validator},
+        schema::{Builder, Schemas, Transformer, Type, Validator},
     },
     pages::directory::{Principal, PrincipalType},
 };
@@ -376,13 +376,9 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                             value,
                                                             cb,
                                                             if selected_type.get() == PrincipalType::Group {
-                                                                vec![
-                                                                    PrincipalType::Individual,
-                                                                    PrincipalType::Superuser,
-                                                                    PrincipalType::Group,
-                                                                ]
+                                                                vec![PrincipalType::Individual, PrincipalType::Group]
                                                             } else {
-                                                                vec![PrincipalType::Individual, PrincipalType::Superuser]
+                                                                vec![PrincipalType::Individual]
                                                             },
                                                         ));
                                                 })
@@ -489,8 +485,6 @@ impl FormData {
         for secret in &principal.secrets {
             if let Some((app, _)) = parse_app_password(secret) {
                 app_passwords.push(app);
-            } else if secret.is_disabled() {
-                self.set("disabled", "true");
             } else if secret.is_otp_auth() {
                 self.set("otpauth_url", secret);
             }
@@ -545,17 +539,6 @@ impl FormData {
 
 impl Builder<Schemas, ()> {
     pub fn build_principals(self) -> Self {
-        const IDS: &[(&str, &str)] = &[
-            (
-                PrincipalType::Individual.id(),
-                PrincipalType::Individual.name(),
-            ),
-            (
-                PrincipalType::Superuser.id(),
-                PrincipalType::Superuser.name(),
-            ),
-        ];
-
         self.new_schema("principals")
             .new_field("name")
             .typ(Type::Input)
@@ -581,13 +564,6 @@ impl Builder<Schemas, ()> {
             .new_field("description")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
-            .build()
-            .new_field("type")
-            .typ(Type::Select {
-                source: Source::Static(IDS),
-                typ: SelectType::Single,
-            })
-            .default(PrincipalType::Individual.id())
             .build()
             .new_field("otpauth_url")
             .typ(Type::Input)

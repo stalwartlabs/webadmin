@@ -19,7 +19,10 @@ use crate::{
         layout::{header::Header, sidebar::SideBar, toggle::ToggleNavigation},
         messages::modal::Modal,
     },
-    core::schema::{Schema, SchemaType},
+    core::{
+        schema::{Schema, SchemaType},
+        Permissions,
+    },
 };
 
 pub struct LayoutBuilder {
@@ -45,7 +48,7 @@ pub struct MenuItem {
 #[component]
 pub fn Layout(
     menu_items: Vec<MenuItem>,
-    #[prop(into)] is_admin: MaybeSignal<bool>,
+    #[prop(into)] permissions: Memo<Option<Permissions>>,
 ) -> impl IntoView {
     let menu_items_toggle = menu_items.clone();
     let show_sidebar = create_rw_signal(false);
@@ -53,7 +56,7 @@ pub fn Layout(
     view! {
         <Body class="bg-gray-50 dark:bg-slate-900"/>
         <Modal/>
-        <Header is_admin/>
+        <Header permissions/>
         <ToggleNavigation menu_items show_sidebar/>
         <SideBar menu_items=menu_items_toggle show_sidebar/>
         <div class="w-full pt-10 px-4 sm:px-6 md:px-8 lg:ps-72">
@@ -114,12 +117,14 @@ impl LayoutBuilder {
         self
     }
 
-    pub fn insert(mut self) -> Self {
+    pub fn insert(mut self, add: bool) -> Self {
         let menu_item = self.chain.pop().unwrap();
-        if let Some(parent_menu_item) = self.chain.last_mut() {
-            parent_menu_item.children.push(menu_item);
-        } else {
-            self.menu_items.push(menu_item);
+        if add {
+            if let Some(parent_menu_item) = self.chain.last_mut() {
+                parent_menu_item.children.push(menu_item);
+            } else {
+                self.menu_items.push(menu_item);
+            }
         }
         self
     }

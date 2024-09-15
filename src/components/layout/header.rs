@@ -12,17 +12,14 @@ use crate::{
     components::icon::{
         IconAdjustmentsHorizontal, IconHeart, IconPower, IconServer, IconUserCircle,
     },
-    core::{
-        oauth::{use_authorization, AuthToken},
-        url::UrlBuilder,
-    },
+    core::{oauth::use_authorization, url::UrlBuilder, AccessToken, Permission, Permissions},
     pages::config::edit::DEFAULT_SETTINGS_URL,
     STATE_STORAGE_KEY, VERSION_NAME,
 };
 use web_sys::wasm_bindgen::JsCast;
 
 #[component]
-pub fn Header(is_admin: MaybeSignal<bool>) -> impl IntoView {
+pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
     view! {
         <header class="sticky top-0 inset-x-0 flex flex-wrap sm:justify-start sm:flex-nowrap z-[48] w-full bg-white border-b text-sm py-2.5 sm:py-4 lg:ps-64 dark:bg-gray-800 dark:border-gray-700">
             <nav class="flex basis-full items-center w-full mx-auto px-4 sm:px-6 md:px-8">
@@ -33,7 +30,9 @@ pub fn Header(is_admin: MaybeSignal<bool>) -> impl IntoView {
 
                 <div class="w-full flex items-center justify-end ms-auto sm:justify-between sm:gap-x-3 sm:order-3">
 
-                    <Show when=move || is_admin.get()>
+                    <Show when=move || {
+                        permissions.get().map_or(false, |p| p.has_access(Permission::SettingsList))
+                    }>
                         <div class="sm:hidden">
                             <button
                                 type="button"
@@ -106,11 +105,15 @@ pub fn Header(is_admin: MaybeSignal<bool>) -> impl IntoView {
 
                     <div class="flex flex-row items-center justify-end gap-2">
                         <a
-                            href="/manage/directory/accounts"
+                            href=move || { permissions.get().map(|p| { p.default_url(false) }) }
+
                             class="w-[2.375rem] h-[2.375rem] inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                             title="Management"
-                            class:hidden=move || { !is_admin.get() }
+                            class:hidden=move || {
+                                permissions.get().map_or(true, |p| { !p.has_admin_access() })
+                            }
                         >
+
                             <IconServer/>
                         </a>
 
@@ -118,16 +121,46 @@ pub fn Header(is_admin: MaybeSignal<bool>) -> impl IntoView {
                             class="w-[2.375rem] h-[2.375rem] inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                             href=DEFAULT_SETTINGS_URL
                             title="Settings"
-                            class:hidden=move || { !is_admin.get() }
+                            class:hidden=move || {
+                                permissions
+                                    .get()
+                                    .map_or(true, |p| !p.has_access(Permission::SettingsList))
+                            }
                         >
+
                             <IconAdjustmentsHorizontal/>
 
                         </a>
                         <a
                             class="w-[2.375rem] h-[2.375rem] inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                            href="/account/crypto"
+                            href=move || {
+                                permissions
+                                    .get()
+                                    .map(|p| {
+                                        if p.has_access(Permission::ManageEncryption) {
+                                            "/account/crypto"
+                                        } else {
+                                            "/account/password"
+                                        }
+                                    })
+                            }
+
                             title="Account"
+                            class:hidden=move || {
+                                permissions
+                                    .get()
+                                    .map_or(
+                                        true,
+                                        |p| {
+                                            !p
+                                                .has_access_any(
+                                                    &[Permission::ManageEncryption, Permission::ManagePasswords],
+                                                )
+                                        },
+                                    )
+                            }
                         >
+
                             <IconUserCircle/>
 
                         </a>
@@ -145,7 +178,7 @@ pub fn Header(is_admin: MaybeSignal<bool>) -> impl IntoView {
                             title="Logout"
                             on:click=move |_| {
                                 SessionStorage::delete(STATE_STORAGE_KEY);
-                                use_authorization().set(AuthToken::default());
+                                use_authorization().set(AccessToken::default());
                                 use_navigate()("/login", Default::default());
                             }
                         >

@@ -26,8 +26,6 @@ pub enum AccountAuthRequest {
 pub struct AccountAuthResponse {
     #[serde(rename = "otpEnabled")]
     pub otp_auth: bool,
-    #[serde(rename = "isAdministrator")]
-    pub is_admin: bool,
     #[serde(rename = "appPasswords")]
     pub app_passwords: Vec<String>,
 }

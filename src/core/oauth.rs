@@ -4,25 +4,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
+use ahash::AHashSet;
 use leptos::{expect_context, RwSignal};
 use serde::{Deserialize, Serialize};
 
 use crate::components::messages::alert::Alert;
 
-use super::http::{self, HttpRequest};
-
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AuthToken {
-    pub base_url: Arc<String>,
-    pub access_token: Arc<String>,
-    pub refresh_token: Arc<String>,
-    pub username: Arc<String>,
-    pub is_valid: bool,
-    pub is_admin: bool,
-    pub is_enterprise: bool,
-}
+use super::{
+    http::{self, HttpRequest},
+    AccessToken, Permission,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -39,8 +32,9 @@ pub enum OAuthCodeRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OAuthCodeResponse {
     pub code: String,
-    pub is_admin: bool,
+    pub permissions: AHashSet<Permission>,
     #[serde(default)]
+    #[serde(rename = "isEnterprise")]
     pub is_enterprise: bool,
 }
 
@@ -92,7 +86,7 @@ pub enum AuthenticationResult<T> {
 
 pub struct AuthenticationResponse {
     pub grant: OAuthGrant,
-    pub is_admin: bool,
+    pub permissions: AHashSet<Permission>,
     pub is_enterprise: bool,
 }
 
@@ -107,7 +101,7 @@ pub async fn oauth_authenticate(
             AuthenticationResult::TotpRequired => return AuthenticationResult::TotpRequired,
             AuthenticationResult::Error(err) => return AuthenticationResult::Error(err),
         };
-    let is_admin = response.is_admin;
+    let permissions = response.permissions;
     let is_enterprise = response.is_enterprise;
     match HttpRequest::post(format!("{base_url}/auth/token"))
         .with_raw_body(
@@ -127,7 +121,7 @@ pub async fn oauth_authenticate(
         Ok(OAuthResponse::Granted(grant)) => {
             AuthenticationResult::Success(AuthenticationResponse {
                 grant,
-                is_admin,
+                permissions,
                 is_enterprise,
             })
         }
@@ -220,26 +214,6 @@ pub async fn oauth_refresh_token(base_url: &str, refresh_token: &str) -> Option<
     }
 }
 
-pub fn use_authorization() -> RwSignal<AuthToken> {
-    expect_context::<RwSignal<AuthToken>>()
-}
-
-impl AuthToken {
-    pub fn is_logged_in(&self) -> bool {
-        !self.access_token.is_empty()
-    }
-
-    pub fn is_admin(&self) -> bool {
-        self.is_admin && self.is_logged_in()
-    }
-
-    pub fn is_enterprise(&self) -> bool {
-        self.is_enterprise
-    }
-}
-
-impl AsRef<AuthToken> for AuthToken {
-    fn as_ref(&self) -> &AuthToken {
-        self
-    }
+pub fn use_authorization() -> RwSignal<AccessToken> {
+    expect_context::<RwSignal<AccessToken>>()
 }

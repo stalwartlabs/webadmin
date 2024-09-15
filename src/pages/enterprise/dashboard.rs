@@ -148,7 +148,7 @@ pub fn Dashboard() -> impl IntoView {
             let auth = auth.get();
 
             async move {
-                HttpRequest::get("/api/telemetry/live/token")
+                HttpRequest::get("/api/telemetry/live/metrics-token")
                     .with_authorization(&auth)
                     .send::<String>()
                     .await

@@ -50,7 +50,7 @@ pub fn LiveTracing() -> impl IntoView {
         let auth = auth.get();
 
         async move {
-            match HttpRequest::get("/api/telemetry/live/token")
+            match HttpRequest::get("/api/telemetry/live/tracing-token")
                 .with_authorization(&auth)
                 .send::<String>()
                 .await
