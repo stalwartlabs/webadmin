@@ -16,12 +16,15 @@ pub fn StackedBadge(
     #[prop(into)] add_button_text: String,
     color: Color,
     element: FormElement,
+    #[prop(optional)] options: Option<Memo<Vec<(String, String)>>>,
     #[prop(into, optional)] validate_item: Option<Callback<(String, ValidateCb), ()>>,
 ) -> impl IntoView {
     let show_tooltip = create_rw_signal(false);
     let validation_error = create_rw_signal(None::<String>);
-    let select_options =
-        create_memo(move |_| element.data.get_untracked().select_sources(element.id));
+    let is_select = options.is_some();
+    let select_options = options.unwrap_or_else(|| {
+        create_memo(move |_| element.data.get_untracked().select_sources(element.id))
+    });
     let add_value = create_rw_signal(String::new());
     let value = create_memo(move |_| {
         element
@@ -142,7 +145,7 @@ pub fn StackedBadge(
                 <div class="flex rounded-lg shadow-sm">
 
                     {move || {
-                        if select_options.get().is_empty() {
+                        if !is_select && select_options.get().is_empty() {
                             view! {
                                 <input
                                     type="text"

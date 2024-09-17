@@ -164,6 +164,7 @@ pub fn PrincipalList() -> impl IntoView {
             PrincipalType::List => "Mailing Lists",
             PrincipalType::Tenant => "Tenants",
             PrincipalType::Domain => "Domains",
+            PrincipalType::Role => "Roles",
             _ => unreachable!("Invalid type."),
         }
         .to_string()
@@ -175,6 +176,7 @@ pub fn PrincipalList() -> impl IntoView {
             PrincipalType::List => "Manage mailing lists",
             PrincipalType::Tenant => "Manage tenants",
             PrincipalType::Domain => "Manage domains",
+            PrincipalType::Role => "Manage roles",
             _ => unreachable!("Invalid type."),
         }
         .to_string()
@@ -323,7 +325,6 @@ pub fn PrincipalList() -> impl IntoView {
                                         "Name".to_string(),
                                         "Type".to_string(),
                                         "Usage".to_string(),
-                                        "Members".to_string(),
                                         "".to_string(),
                                     ]
                                 }
@@ -457,7 +458,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                     <span class="inline-flex items-center justify-center size-[38px] rounded-full bg-gray-300 dark:bg-gray-700">
                         <span class="font-medium text-gray-800 leading-none dark:text-gray-200">
                             {principal
-                                .get()
+                                .get_untracked()
                                 .description_or_name()
                                 .unwrap_or_default()
                                 .chars()
@@ -468,10 +469,14 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                     </span>
                     <div class="grow">
                         <span class="block text-sm font-semibold text-gray-800 dark:text-gray-200">
-                            {principal.get().description_or_name().unwrap_or_default().to_string()}
+                            {principal
+                                .get_untracked()
+                                .description_or_name()
+                                .unwrap_or_default()
+                                .to_string()}
                         </span>
                         <span class="block text-sm text-gray-500">
-                            {principal.get().name().unwrap_or("unknown").to_string()}
+                            {principal.get_untracked().name().unwrap_or("unknown").to_string()}
                         </span>
                     </div>
                 </div>
@@ -485,11 +490,11 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
             }>
                 <ListItem class="h-px w-72 whitespace-nowrap">
                     <span class="block text-sm font-semibold text-gray-800 dark:text-gray-200">
-                        {principal.get().email().unwrap_or_default().to_string()}
+                        {principal.get_untracked().email().unwrap_or_default().to_string()}
                     </span>
                     <span class="block text-sm text-gray-500">
                         {maybe_plural(
-                            principal.get().emails.len().saturating_sub(1),
+                            principal.get_untracked().emails.len().saturating_sub(1),
                             "alias",
                             "aliases",
                         )}
@@ -499,7 +504,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
             </Show>
 
             <ListItem>
-                <Badge color=match principal.get().typ.unwrap_or(selected_type) {
+                <Badge color=match principal.get_untracked().typ.unwrap_or(selected_type) {
                     PrincipalType::Individual => Color::Green,
                     PrincipalType::Group => Color::Red,
                     PrincipalType::List => Color::Blue,
@@ -507,19 +512,19 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                     _ => Color::Red,
                 }>
 
-                    {principal.get().typ.unwrap_or(selected_type).name()}
+                    {principal.get_untracked().typ.unwrap_or(selected_type).name()}
                 </Badge>
             </ListItem>
             <Show when=move || {
                 matches!(selected_type, PrincipalType::Individual | PrincipalType::Tenant)
             }>
                 <ListTextItem>
-                    {match (principal.get().quota, principal.get().used_quota) {
-                        (Some(quota), Some(used_quota)) if quota > 0 => {
+                    {match (principal.get_untracked().quota, principal.get_untracked().used_quota) {
+                        (Some(quota), Some(used_quota)) if quota.first() > 0 => {
                             format!(
                                 "{} ({}%)",
                                 format_size(used_quota, DECIMAL),
-                                (used_quota as f64 / quota as f64 * 100.0).round() as u8,
+                                (used_quota as f64 / quota.first() as f64 * 100.0).round() as u8,
                             )
                         }
                         (_, Some(used_quota)) => format_size(used_quota, DECIMAL).to_string(),
@@ -540,7 +545,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                 <ListTextItem>
 
                     {
-                        let num_members = principal.get().members.len();
+                        let num_members = principal.get_untracked().members.len();
                         match selected_type {
                             PrincipalType::Group => maybe_plural(num_members, "group", "groups"),
                             PrincipalType::List => maybe_plural(num_members, "member", "members"),
@@ -560,10 +565,14 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                 <ListTextItem>
                     {match selected_type {
                         PrincipalType::Individual | PrincipalType::Group => {
-                            maybe_plural(principal.get().member_of.len(), "group", "groups")
+                            maybe_plural(
+                                principal.get_untracked().member_of.len(),
+                                "group",
+                                "groups",
+                            )
                         }
                         PrincipalType::Role => {
-                            maybe_plural(principal.get().roles.len(), "role", "roles")
+                            maybe_plural(principal.get_untracked().roles.len(), "role", "roles")
                         }
                         _ => String::new(),
                     }}
@@ -579,7 +588,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                         on:click=move |_| {
                             show_dropdown
                                 .update(|v| {
-                                    let id = principal.get().name_or_empty();
+                                    let id = principal.get_untracked().name_or_empty();
                                     if *v != id {
                                         *v = id;
                                     } else {
@@ -612,7 +621,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                     format!(
                                         "/manage/directory/{}/{}/edit",
                                         params.selected_type.resource_name(),
-                                        principal.get().name().unwrap_or_default(),
+                                        principal.get_untracked().name().unwrap_or_default(),
                                     )
                                 }
                             >
@@ -624,7 +633,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                 href=move || {
                                     format!(
                                         "/manage/dns/{}/view",
-                                        principal.get().name().unwrap_or_default(),
+                                        principal.get_untracked().name().unwrap_or_default(),
                                     )
                                 }
 
@@ -639,7 +648,9 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                 class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
                                 on:click=move |_| {
                                     show_dropdown.set(String::new());
-                                    params.purge_action.dispatch(principal.get().name_or_empty());
+                                    params
+                                        .purge_action
+                                        .dispatch(principal.get_untracked().name_or_empty());
                                 }
 
                                 class:hidden=move || {
@@ -656,7 +667,9 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                 class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
                                 href=move || {
                                     UrlBuilder::new("/manage/undelete")
-                                        .with_subpath(principal.get().name().unwrap_or_default())
+                                        .with_subpath(
+                                            principal.get_untracked().name().unwrap_or_default(),
+                                        )
                                         .finish()
                                 }
 
@@ -675,7 +688,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                             <a
                                 class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-red-600 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-red-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
                                 on:click=move |_| {
-                                    let id = principal.get().name_or_empty();
+                                    let id = principal.get_untracked().name_or_empty();
                                     show_dropdown.set(String::new());
                                     params
                                         .modal

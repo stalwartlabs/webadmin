@@ -257,7 +257,7 @@ impl Permissions {
             && self.0.contains(&Permission::MetricsList)
             && self.0.contains(&Permission::MetricsLive)
         {
-            "/dashboard/overview"
+            "/manage/dashboard/overview"
         } else {
             for permission in [
                 Permission::IndividualList,
@@ -280,21 +280,21 @@ impl Permissions {
             {
                 if self.0.contains(permission) {
                     return match permission {
-                        Permission::IndividualList => "/directory/accounts",
-                        Permission::GroupList => "/directory/groups",
-                        Permission::DomainList => "/directory/domains",
-                        Permission::TenantList => "/directory/tenants",
-                        Permission::MailingListList => "/directory/lists",
-                        Permission::RoleList => "/directory/roles",
-                        Permission::MessageQueueList => "/queue/messages",
-                        Permission::OutgoingReportList => "/queue/reports",
-                        Permission::IncomingReportList => "/reports/dmarc",
+                        Permission::IndividualList => "/manage/directory/accounts",
+                        Permission::GroupList => "/manage/directory/groups",
+                        Permission::DomainList => "/manage/directory/domains",
+                        Permission::TenantList => "/manage/directory/tenants",
+                        Permission::MailingListList => "/manage/directory/lists",
+                        Permission::RoleList => "/manage/directory/roles",
+                        Permission::MessageQueueList => "/manage/queue/messages",
+                        Permission::OutgoingReportList => "/manage/queue/reports",
+                        Permission::IncomingReportList => "/manage/reports/dmarc",
                         Permission::ManageEncryption => "/account/crypto",
                         Permission::ManagePasswords => "/account/password",
-                        Permission::SieveRun => "/spam/train",
-                        Permission::LogsView => "/logs",
-                        Permission::TracingList => "/tracing/received",
-                        Permission::TracingLive => "/tracing/live",
+                        Permission::SieveRun => "/manage/spam/train",
+                        Permission::LogsView => "/manage/logs",
+                        Permission::TracingList => "/manage/tracing/received",
+                        Permission::TracingLive => "/manage/tracing/live",
                         _ => unreachable!(),
                     };
                 }

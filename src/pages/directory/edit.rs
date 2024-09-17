@@ -6,20 +6,23 @@
 
 use std::{sync::Arc, vec};
 
+use ahash::AHashMap;
 use humansize::{format_size, DECIMAL};
 use leptos::*;
 use leptos_router::{use_navigate, use_params_map};
 use pwhash::sha512_crypt;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     components::{
         form::{
             button::Button,
-            input::{InputPassword, InputSize, InputSwitch, InputText},
-            select::Select,
+            input::{InputPassword, InputSize, InputText},
+            select::{CheckboxGroup, Select},
             stacked_badge::StackedBadge,
             stacked_input::StackedInput,
-            Form, FormButtonBar, FormElement, FormItem, FormSection, ValidateCb,
+            tab::Tab,
+            Form, FormButtonBar, FormElement, FormItem, FormSection,
         },
         messages::alert::{use_alerts, Alert},
         skeleton::Skeleton,
@@ -30,23 +33,124 @@ use crate::{
         http::{self, HttpRequest},
         oauth::use_authorization,
         schema::{Builder, Schemas, Transformer, Type, Validator},
+        Permission,
     },
-    pages::directory::{Principal, PrincipalType},
+    pages::{
+        directory::{Principal, PrincipalType, PERMISSIONS},
+        List,
+    },
 };
 
-use super::{build_app_password, parse_app_password, SpecialSecrets};
+use super::{build_app_password, parse_app_password, IntOrMany, SpecialSecrets};
+
+type PrincipalMap = AHashMap<PrincipalType, Vec<(String, String)>>;
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+enum Algorithm {
+    #[default]
+    Rsa,
+    Ed25519,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+struct DkimSignature {
+    id: Option<String>,
+    algorithm: Algorithm,
+    domain: String,
+    selector: Option<String>,
+}
 
 #[component]
 pub fn PrincipalEdit() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let params = use_params_map();
+    let selected_type = create_memo(move |_| {
+        match params
+            .get()
+            .get("object")
+            .map(|id| id.as_str())
+            .unwrap_or_default()
+        {
+            "accounts" => PrincipalType::Individual,
+            "groups" => PrincipalType::Group,
+            "lists" => PrincipalType::List,
+            "tenants" => PrincipalType::Tenant,
+            "domains" => PrincipalType::Domain,
+            "roles" => PrincipalType::Role,
+            _ => PrincipalType::Individual,
+        }
+    });
+    let is_enterprise = auth.get_untracked().is_enterprise();
+    let principals: RwSignal<Arc<PrincipalMap>> = create_rw_signal(Arc::new(AHashMap::new()));
+    let permissions = create_memo(move |_| {
+        PERMISSIONS
+            .iter()
+            .map(|(id, name)| (id.to_string(), name.to_string()))
+            .collect::<Vec<_>>()
+    });
+
     let fetch_principal = create_resource(
         move || params.get().get("id").cloned().unwrap_or_default(),
         move |name| {
             let auth = auth.get_untracked();
+            let fetch_types = match (selected_type.get(), is_enterprise) {
+                (PrincipalType::Individual, true) => Some("role,group,tenant,list"),
+                (PrincipalType::Individual, false) => Some("role,group,list"),
+                (PrincipalType::Group, true) => Some("individual,group,tenant,list"),
+                (PrincipalType::Group, false) => Some("individual,group,list"),
+                (PrincipalType::Domain, true) => Some("tenant"),
+                (PrincipalType::Domain, false) => None,
+                (PrincipalType::Tenant, _) => Some("role"),
+                (PrincipalType::Role, true) => Some("role,tenant"),
+                (PrincipalType::Role, false) => Some("role"),
+                (PrincipalType::List, true) => Some("individual,group,tenant"),
+                (PrincipalType::List, false) => Some("individual,group"),
+                (PrincipalType::Resource | PrincipalType::Location | PrincipalType::Other, _) => {
+                    None
+                }
+            };
 
             async move {
+                let mut principals_: PrincipalMap = AHashMap::new();
+
+                // Add default roles
+                principals_.insert(
+                    PrincipalType::Role,
+                    vec![
+                        ("admin".to_string(), "Administrator".to_string()),
+                        (
+                            "tenant-admin".to_string(),
+                            "Tenant Administrator".to_string(),
+                        ),
+                        ("user".to_string(), "User".to_string()),
+                    ],
+                );
+
+                if let Some(fetch_types) = fetch_types {
+                    for principal in HttpRequest::get("/api/principal")
+                        .with_authorization(&auth)
+                        .with_parameter("types", fetch_types)
+                        .with_parameter("fields", "name,description")
+                        .send::<List<Principal>>()
+                        .await?
+                        .items
+                    {
+                        let id = principal.name.unwrap_or_default();
+                        if id != name {
+                            let description = principal
+                                .description
+                                .map(|d| format!("{d} ({id})"))
+                                .unwrap_or_else(|| id.clone());
+                            principals_
+                                .entry(principal.typ.unwrap())
+                                .or_default()
+                                .push((id, description));
+                        }
+                    }
+                }
+                principals.set(Arc::new(principals_));
+
                 if !name.is_empty() {
                     HttpRequest::get(("/api/principal", &name))
                         .with_authorization(&auth)
@@ -58,71 +162,12 @@ pub fn PrincipalEdit() -> impl IntoView {
             }
         },
     );
-    let selected_type = create_memo(move |_| {
-        match params
-            .get()
-            .get("object")
-            .map(|id| id.as_str())
-            .unwrap_or_default()
-        {
-            "accounts" => PrincipalType::Individual,
-            "groups" => PrincipalType::Group,
-            "lists" => PrincipalType::List,
-            _ => PrincipalType::Individual,
-        }
-    });
     let (pending, set_pending) = create_signal(false);
-
     let current_principal = create_rw_signal(Principal::default());
     let data = expect_context::<Arc<Schemas>>()
         .build_form("principals")
         .into_signal();
 
-    let principal_is_valid = create_action(
-        move |(name, cb, expected_types): &(String, ValidateCb, Vec<PrincipalType>)| {
-            let name = name.clone();
-            let login_name = data.get().value::<String>("name").unwrap_or_default();
-            let auth = auth.get();
-            let expected_types = expected_types.clone();
-            let cb = *cb;
-
-            async move {
-                if name == login_name {
-                    cb.call(Err(
-                        "Principal name cannot be the same as the current principal".to_string(),
-                    ));
-                    return;
-                }
-
-                let result = match HttpRequest::get(("/api/principal", &name))
-                    .with_authorization(&auth)
-                    .send::<Principal>()
-                    .await
-                {
-                    Ok(principal)
-                        if principal
-                            .typ
-                            .as_ref()
-                            .map_or(false, |t| expected_types.contains(t)) =>
-                    {
-                        Ok(name)
-                    }
-                    Ok(_) => Err(format!(
-                        "Principal is not a {}",
-                        expected_types.first().unwrap().item_name(false)
-                    )),
-                    Err(http::Error::NotFound) => Err("Principal does not exist".to_string()),
-                    Err(http::Error::Unauthorized) => {
-                        use_navigate()("/login", Default::default());
-                        Err("Unauthorized".to_string())
-                    }
-                    Err(err) => Err(format!("Request failed: {err:?}")),
-                };
-
-                cb.call(result);
-            }
-        },
-    );
     let save_changes = create_action(move |changes: &Principal| {
         let current = current_principal.get();
         let changes = changes.clone();
@@ -146,13 +191,36 @@ pub fn PrincipalEdit() -> impl IntoView {
                     Ok(())
                 }
             } else {
-                HttpRequest::post("/api/principal")
+                let result = HttpRequest::post("/api/principal")
                     .with_authorization(&auth)
-                    .with_body(changes)
+                    .with_body(&changes)
                     .unwrap()
                     .send::<u32>()
                     .await
-                    .map(|_| ())
+                    .map(|_| ());
+
+                // Create DKIM keys
+                if matches!(changes.typ, Some(PrincipalType::Domain))
+                    && result.is_ok()
+                    && auth
+                        .permissions()
+                        .has_access(Permission::DkimSignatureCreate)
+                {
+                    for algo in [Algorithm::Ed25519, Algorithm::Rsa] {
+                        let _ = HttpRequest::post("/api/dkim")
+                            .with_authorization(&auth)
+                            .with_body(DkimSignature {
+                                algorithm: algo,
+                                domain: changes.name.clone().unwrap(),
+                                ..Default::default()
+                            })
+                            .unwrap()
+                            .send::<()>()
+                            .await;
+                    }
+                }
+
+                result
             };
             set_pending.set(false);
 
@@ -170,15 +238,6 @@ pub fn PrincipalEdit() -> impl IntoView {
         }
     });
 
-    let subtitle = create_memo(move |_| {
-        match selected_type.get() {
-            PrincipalType::Individual => "Manage account details, password and email addresses.",
-            PrincipalType::Group => "Manage group members and member groups.",
-            PrincipalType::List => "Manage list details and members.",
-            _ => unreachable!(),
-        }
-        .to_string()
-    });
     let title = create_memo(move |_| {
         if let Some(name) = params.get().get("id") {
             match selected_type.get() {
@@ -191,6 +250,15 @@ pub fn PrincipalEdit() -> impl IntoView {
                 PrincipalType::List => {
                     format!("Update '{name}' List")
                 }
+                PrincipalType::Tenant => {
+                    format!("Update '{name}' Tenant")
+                }
+                PrincipalType::Domain => {
+                    format!("Update '{name}' Domain")
+                }
+                PrincipalType::Role => {
+                    format!("Update '{name}' Role")
+                }
                 _ => unreachable!(),
             }
         } else {
@@ -198,6 +266,9 @@ pub fn PrincipalEdit() -> impl IntoView {
                 PrincipalType::Individual => "Create Account",
                 PrincipalType::Group => "Create Group",
                 PrincipalType::List => "Create List",
+                PrincipalType::Tenant => "Create Tenant",
+                PrincipalType::Domain => "Create Domain",
+                PrincipalType::Role => "Create Role",
                 _ => unreachable!(),
             }
             .to_string()
@@ -205,7 +276,7 @@ pub fn PrincipalEdit() -> impl IntoView {
     });
 
     view! {
-        <Form title=title subtitle=subtitle>
+        <Form title=title subtitle="".to_string()>
 
             <Transition fallback=Skeleton set_pending>
 
@@ -232,107 +303,219 @@ pub fn PrincipalEdit() -> impl IntoView {
                             data.from_principal(&principal, selected_type.get());
                         });
                         let used_quota = principal.used_quota.unwrap_or_default();
-                        let total_quota = principal.quota.unwrap_or_default();
+                        let total_quota = principal.quota.as_ref().map_or(0, |q| q.first());
                         current_principal.set(principal);
+                        let typ = selected_type.get();
                         Some(
                             view! {
-                                <FormSection>
-                                    <FormItem label=Signal::derive(move || {
-                                        match selected_type.get() {
-                                            PrincipalType::Individual => "Login name",
-                                            _ => "Name",
-                                        }
-                                            .to_string()
-                                    })>
+                                <Tab tabs=Signal::derive(move || {
+                                    vec![
+                                        Some("Details".to_string()),
+                                        matches!(typ, PrincipalType::Individual)
+                                            .then_some("Authentication".to_string()),
+                                        matches!(
+                                            typ,
+                                            PrincipalType::Individual | PrincipalType::Tenant
+                                        )
+                                            .then_some("Limits".to_string()),
+                                        (!matches!(
+                                            typ,
+                                            PrincipalType::Tenant | PrincipalType::Domain
+                                        ))
+                                            .then_some("Memberships".to_string()),
+                                        matches!(
+                                            typ,
+                                            PrincipalType::Individual
+                                            | PrincipalType::Role
+                                            | PrincipalType::Tenant
+                                        )
+                                            .then_some("Security".to_string()),
+                                    ]
+                                })>
 
-                                        <InputText
-                                            placeholder=Signal::derive(move || {
+                                    <FormSection stacked=true>
+                                        <FormItem
+                                            stacked=true
+                                            label=Signal::derive(move || {
                                                 match selected_type.get() {
                                                     PrincipalType::Individual => "Login name",
-                                                    _ => "Short Name",
+                                                    _ => "Name",
                                                 }
                                                     .to_string()
                                             })
+                                        >
 
-                                            element=FormElement::new("name", data)
-                                        />
-                                    </FormItem>
+                                            <InputText
+                                                placeholder=Signal::derive(move || {
+                                                    match selected_type.get() {
+                                                        PrincipalType::Individual => "Login name",
+                                                        _ => "Short Name",
+                                                    }
+                                                        .to_string()
+                                                })
 
-                                    <FormItem label=Signal::derive(move || {
-                                        match selected_type.get() {
-                                            PrincipalType::Individual => "Name",
-                                            _ => "Description",
-                                        }
-                                            .to_string()
-                                    })>
-                                        <InputText
-                                            placeholder=Signal::derive(move || {
+                                                element=FormElement::new("name", data)
+                                            />
+                                        </FormItem>
+
+                                        <FormItem
+                                            stacked=true
+                                            label=Signal::derive(move || {
                                                 match selected_type.get() {
-                                                    PrincipalType::Individual => "Full Name",
+                                                    PrincipalType::Individual => "Name",
                                                     _ => "Description",
                                                 }
                                                     .to_string()
                                             })
+                                        >
 
-                                            element=FormElement::new("description", data)
-                                        />
-                                    </FormItem>
+                                            <InputText
+                                                placeholder=Signal::derive(move || {
+                                                    match selected_type.get() {
+                                                        PrincipalType::Individual => "Full Name",
+                                                        _ => "Description",
+                                                    }
+                                                        .to_string()
+                                                })
 
-                                    <Show when=move || {
-                                        matches!(selected_type.get(), PrincipalType::Individual)
-                                    }>
-                                        <FormItem label="Type">
-                                            <Select element=FormElement::new("type", data)/>
-
-                                        </FormItem>
-                                        <FormItem label="">
-                                            <InputSwitch
-                                                label="Suspend account"
-                                                tooltip="Temporarily disable the account."
-                                                element=FormElement::new("disabled", data)
+                                                element=FormElement::new("description", data)
                                             />
                                         </FormItem>
 
-                                        <FormItem label="Password">
+                                        <FormItem
+                                            stacked=true
+                                            label="Tenant"
+
+                                            hide=Signal::derive(move || {
+                                                matches!(selected_type.get(), PrincipalType::Tenant)
+                                            })
+                                        >
+
+                                            <Select
+                                                element=FormElement::new("tenant", data)
+                                                add_none=true
+                                                disabled=!is_enterprise
+                                                options=create_memo(move |_| {
+                                                    principals
+                                                        .get()
+                                                        .get(&PrincipalType::Tenant)
+                                                        .cloned()
+                                                        .unwrap_or_default()
+                                                })
+                                            />
+
+                                        </FormItem>
+
+                                        <FormItem
+                                            stacked=true
+                                            label="Email"
+                                            hide=Signal::derive(move || {
+                                                !matches!(
+                                                    selected_type.get(),
+                                                    PrincipalType::Individual
+                                                    | PrincipalType::Group
+                                                    | PrincipalType::List
+                                                )
+                                            })
+                                        >
+
+                                            <InputText
+                                                placeholder="user@example.org"
+                                                element=FormElement::new("email", data)
+                                            />
+                                        </FormItem>
+
+                                        <FormItem
+                                            stacked=true
+                                            label="Aliases"
+                                            hide=Signal::derive(move || {
+                                                !matches!(
+                                                    selected_type.get(),
+                                                    PrincipalType::Individual
+                                                    | PrincipalType::Group
+                                                    | PrincipalType::List
+                                                )
+                                            })
+                                        >
+
+                                            <StackedInput
+                                                element=FormElement::new("aliases", data)
+                                                placeholder="Email"
+                                                add_button_text="Add Email".to_string()
+                                            />
+                                        </FormItem>
+
+                                        <FormItem
+                                            stacked=true
+                                            label="Logo URL"
+
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Tenant)
+                                            })
+                                        >
+
+                                            <InputText element=FormElement::new("picture", data)/>
+                                        </FormItem>
+
+                                    </FormSection>
+
+                                    <FormSection stacked=true>
+
+                                        <FormItem
+                                            stacked=true
+                                            label="Password"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Individual)
+                                            })
+                                        >
+
                                             <InputPassword element=FormElement::new("password", data)/>
                                         </FormItem>
 
-                                        <FormItem label="OTP Auth URL">
+                                        <FormItem
+                                            stacked=true
+                                            label="OTP Auth URL"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Individual)
+                                            })
+                                        >
+
                                             <InputPassword element=FormElement::new(
                                                 "otpauth_url",
                                                 data,
                                             )/>
                                         </FormItem>
 
-                                        <FormItem label="App Passwords">
+                                        <FormItem
+                                            stacked=true
+                                            label="App Passwords"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Individual)
+                                            })
+                                        >
+
                                             <StackedBadge
                                                 color=Color::Gray
                                                 element=FormElement::new("app_passwords", data)
-                                                add_button_text="".to_string()
+                                                add_button_text="Add password".to_string()
                                             />
 
                                         </FormItem>
-                                    </Show>
 
-                                    <FormItem label="Email">
-                                        <InputText
-                                            placeholder="user@example.org"
-                                            element=FormElement::new("email", data)
-                                        />
-                                    </FormItem>
+                                    </FormSection>
 
-                                    <FormItem label="Aliases">
-                                        <StackedInput
-                                            element=FormElement::new("aliases", data)
-                                            placeholder="Email"
-                                            add_button_text="Add Email".to_string()
-                                        />
-                                    </FormItem>
+                                    <FormSection stacked=true>
+                                        <FormItem
+                                            stacked=true
+                                            label="Disk quota"
+                                            hide=Signal::derive(move || {
+                                                !matches!(
+                                                    selected_type.get(),
+                                                    PrincipalType::Individual | PrincipalType::Tenant
+                                                )
+                                            })
+                                        >
 
-                                    <Show when=move || {
-                                        matches!(selected_type.get(), PrincipalType::Individual)
-                                    }>
-                                        <FormItem label="Disk quota">
                                             <div class="relative">
                                                 <InputSize element=FormElement::new("quota", data)/>
                                                 <Show when=move || { used_quota > 0 }>
@@ -351,72 +534,224 @@ pub fn PrincipalEdit() -> impl IntoView {
 
                                                         </label>
                                                     </p>
-
                                                 </Show>
-
                                             </div>
                                         </FormItem>
-                                    </Show>
 
-                                    <Show when=move || {
-                                        matches!(
-                                            selected_type.get(),
-                                            PrincipalType::Group | PrincipalType::List
-                                        )
-                                    }>
-                                        <FormItem label="Members">
+                                        <FormItem
+                                            stacked=true
+                                            label="Maximum number of Accounts"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Tenant)
+                                            })
+                                        >
+
+                                            <InputText element=FormElement::new("max_accounts", data)/>
+                                        </FormItem>
+                                        <FormItem
+                                            stacked=true
+                                            label="Maximum number of Domains"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Tenant)
+                                            })
+                                        >
+
+                                            <InputText element=FormElement::new("max_domains", data)/>
+                                        </FormItem>
+                                        <FormItem
+                                            stacked=true
+                                            label="Maximum number of Groups"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Tenant)
+                                            })
+                                        >
+
+                                            <InputText element=FormElement::new("max_groups", data)/>
+                                        </FormItem>
+                                        <FormItem
+                                            stacked=true
+                                            label="Maximum number of Lists"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Tenant)
+                                            })
+                                        >
+
+                                            <InputText element=FormElement::new("max_lists", data)/>
+                                        </FormItem>
+                                        <FormItem
+                                            stacked=true
+                                            label="Maximum number of Roles"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Tenant)
+                                            })
+                                        >
+
+                                            <InputText element=FormElement::new("max_roles", data)/>
+                                        </FormItem>
+
+                                    </FormSection>
+
+                                    <FormSection>
+                                        <FormItem
+                                            label="Members"
+                                            hide=Signal::derive(move || {
+                                                !matches!(
+                                                    selected_type.get(),
+                                                    PrincipalType::Role
+                                                    | PrincipalType::Group
+                                                    | PrincipalType::List
+                                                )
+                                            })
+                                        >
+
                                             <StackedBadge
                                                 color=Color::Green
                                                 element=FormElement::new("members", data)
-
                                                 add_button_text="Add member".to_string()
-                                                validate_item=Callback::new(move |(value, cb)| {
-                                                    principal_is_valid
-                                                        .dispatch((
-                                                            value,
-                                                            cb,
-                                                            if selected_type.get() == PrincipalType::Group {
-                                                                vec![PrincipalType::Individual, PrincipalType::Group]
-                                                            } else {
-                                                                vec![PrincipalType::Individual]
-                                                            },
-                                                        ));
+                                                options=create_memo(move |_| {
+                                                    let principals = principals.get();
+                                                    let mut results = Vec::new();
+                                                    let types = match selected_type.get() {
+                                                        PrincipalType::Group | PrincipalType::List => {
+                                                            &[PrincipalType::Individual, PrincipalType::Group][..]
+                                                        }
+                                                        PrincipalType::Role => {
+                                                            &[PrincipalType::Individual, PrincipalType::Role][..]
+                                                        }
+                                                        _ => &[][..],
+                                                    };
+                                                    for typ in types {
+                                                        if let Some(principals) = principals.get(typ) {
+                                                            for (id, name) in principals {
+                                                                results
+                                                                    .push((id.clone(), format!("{} - {name}", typ.name())));
+                                                            }
+                                                        }
+                                                    }
+                                                    results
                                                 })
                                             />
 
                                         </FormItem>
-                                    </Show>
 
-                                    <Show when=move || {
-                                        matches!(
-                                            selected_type.get(),
-                                            PrincipalType::Individual | PrincipalType::Group
-                                        )
-                                    }>
-                                        <FormItem label="Member of">
+                                        <FormItem
+                                            label="Member of"
+                                            hide=Signal::derive(move || {
+                                                !matches!(
+                                                    selected_type.get(),
+                                                    PrincipalType::Individual | PrincipalType::Group
+                                                )
+                                            })
+                                        >
+
                                             <StackedBadge
                                                 color=Color::Blue
-
                                                 element=FormElement::new("member-of", data)
-
                                                 add_button_text="Add to group".to_string()
-                                                validate_item=Callback::new(move |(value, cb)| {
-                                                    principal_is_valid
-                                                        .dispatch((
-                                                            value,
-                                                            cb,
-                                                            if selected_type.get() == PrincipalType::Group {
-                                                                vec![PrincipalType::Group]
-                                                            } else {
-                                                                vec![PrincipalType::Group, PrincipalType::List]
-                                                            },
-                                                        ));
+                                                options=create_memo(move |_| {
+                                                    principals
+                                                        .get()
+                                                        .get(&PrincipalType::Group)
+                                                        .cloned()
+                                                        .unwrap_or_default()
                                                 })
                                             />
 
                                         </FormItem>
-                                    </Show>
-                                </FormSection>
+
+                                        <FormItem
+                                            label="Mailing lists"
+                                            hide=Signal::derive(move || {
+                                                !matches!(
+                                                    selected_type.get(),
+                                                    PrincipalType::Individual | PrincipalType::Group
+                                                )
+                                            })
+                                        >
+
+                                            <StackedBadge
+                                                color=Color::Blue
+                                                element=FormElement::new("lists", data)
+                                                add_button_text="Add to list".to_string()
+                                                options=create_memo(move |_| {
+                                                    principals
+                                                        .get()
+                                                        .get(&PrincipalType::List)
+                                                        .cloned()
+                                                        .unwrap_or_default()
+                                                })
+                                            />
+
+                                        </FormItem>
+                                    </FormSection>
+
+                                    <FormSection>
+                                        <FormItem
+                                            label="Roles"
+                                            hide=Signal::derive(move || {
+                                                !matches!(
+                                                    selected_type.get(),
+                                                    PrincipalType::Individual
+                                                    | PrincipalType::Tenant
+                                                    | PrincipalType::Role
+                                                )
+                                            })
+                                        >
+
+                                            <StackedBadge
+                                                color=Color::Blue
+                                                element=FormElement::new("roles", data)
+                                                add_button_text="Assign roles".to_string()
+                                                options=create_memo(move |_| {
+                                                    principals
+                                                        .get()
+                                                        .get(&PrincipalType::Role)
+                                                        .cloned()
+                                                        .unwrap_or_default()
+                                                })
+                                            />
+
+                                        </FormItem>
+                                        <FormItem
+                                            label="Permissions"
+                                            hide=Signal::derive(move || {
+                                                !matches!(
+                                                    selected_type.get(),
+                                                    PrincipalType::Individual
+                                                    | PrincipalType::Role
+                                                    | PrincipalType::Tenant
+                                                )
+                                            })
+                                        >
+
+                                            <CheckboxGroup
+                                                element=FormElement::new("enabled-permissions", data)
+                                                options=permissions
+                                            />
+
+                                        </FormItem>
+                                        <FormItem
+                                            label="Disabled"
+                                            hide=Signal::derive(move || {
+                                                !matches!(
+                                                    selected_type.get(),
+                                                    PrincipalType::Individual
+                                                    | PrincipalType::Role
+                                                    | PrincipalType::Tenant
+                                                )
+                                            })
+                                        >
+
+                                            <CheckboxGroup
+                                                element=FormElement::new("disabled-permissions", data)
+                                                options=permissions
+                                            />
+
+                                        </FormItem>
+
+                                    </FormSection>
+
+                                </Tab>
                             }
                                 .into_view(),
                         )
@@ -459,14 +794,44 @@ pub fn PrincipalEdit() -> impl IntoView {
 #[allow(clippy::wrong_self_convention)]
 impl FormData {
     fn from_principal(&mut self, principal: &Principal, default_type: PrincipalType) {
-        self.set("name", principal.name.clone().unwrap_or_default());
-        self.set(
-            "description",
-            principal.description.clone().unwrap_or_default(),
-        );
-        match principal.quota {
-            Some(quota) if quota > 0 => {
-                self.set("quota", quota.to_string());
+        for (key, field) in [
+            ("name", principal.name.as_deref()),
+            ("description", principal.description.as_deref()),
+            ("picture", principal.picture.as_deref()),
+            ("tenant", principal.tenant.as_deref()),
+            ("email", principal.emails.first().map(|s| s.as_str())),
+        ] {
+            if let Some(value) = field {
+                self.set(key, value.to_string());
+            }
+        }
+
+        match &principal.quota {
+            Some(IntOrMany::Int(quota)) => {
+                if *quota > 0 {
+                    self.set("quota", quota.to_string());
+                }
+            }
+            Some(IntOrMany::Many(quotas)) => {
+                for (pos, quota) in quotas.iter().enumerate() {
+                    if *quota > 0 {
+                        let field = match pos {
+                            0 => "quota",
+                            1 => "max_accounts",
+                            2 => "max_groups",
+                            3 => "max_resources",
+                            4 => "max_locations",
+                            5 => "max_lists",
+                            6 => "max_other",
+                            7 => "max_domains",
+                            8 => "max_tenants",
+                            9 => "max_roles",
+                            _ => continue,
+                        };
+
+                        self.set(field, quota.to_string());
+                    }
+                }
             }
             _ => {}
         }
@@ -474,12 +839,18 @@ impl FormData {
             "type",
             principal.typ.unwrap_or(default_type).id().to_string(),
         );
-        if let Some(email) = principal.emails.first() {
-            self.set("email", email);
-        }
-        self.array_set("member-of", principal.member_of.iter());
-        self.array_set("members", principal.members.iter());
         self.array_set("aliases", principal.emails.iter().skip(1));
+
+        for (key, list) in [
+            ("member-of", &principal.member_of),
+            ("members", &principal.members),
+            ("roles", &principal.roles),
+            ("lists", &principal.lists),
+            ("enabled-permissions", &principal.enabled_permissions),
+            ("disabled-permissions", &principal.disabled_permissions),
+        ] {
+            self.array_set(key, list.iter());
+        }
 
         let mut app_passwords = vec![];
         for secret in &principal.secrets {
@@ -497,12 +868,6 @@ impl FormData {
     fn to_principal(&mut self) -> Option<Principal> {
         if self.validate_form() {
             let mut secrets = vec![];
-            if self
-                .value::<String>("disabled")
-                .map_or(false, |v| v == "true")
-            {
-                secrets.push("$disabled$".to_string());
-            }
             for app_name in self.array_value("app_passwords") {
                 secrets.push(build_app_password(app_name, ""));
             }
@@ -513,9 +878,10 @@ impl FormData {
                 secrets.push(otpauth_url);
             }
 
-            Some(Principal {
-                typ: self.value::<PrincipalType>("type").unwrap().into(),
-                quota: self.value("quota"),
+            let typ = self.value::<PrincipalType>("type").unwrap();
+            let mut principal = Principal {
+                typ: Some(typ),
+                quota: self.quota(typ).into(),
                 name: self.value::<String>("name").unwrap().into(),
                 secrets,
                 emails: [self.value::<String>("email").unwrap_or_default()]
@@ -523,16 +889,49 @@ impl FormData {
                     .chain(self.array_value("aliases").map(|m| m.to_string()))
                     .filter(|x| !x.is_empty())
                     .collect::<Vec<_>>(),
-                member_of: self
-                    .array_value("member-of")
-                    .map(|m| m.to_string())
-                    .collect(),
-                members: self.array_value("members").map(|m| m.to_string()).collect(),
+                picture: self.value("picture"),
                 description: self.value("description"),
                 ..Default::default()
-            })
+            };
+
+            for (key, list) in [
+                ("member-of", &mut principal.member_of),
+                ("members", &mut principal.members),
+                ("roles", &mut principal.roles),
+                ("lists", &mut principal.lists),
+                ("enabled-permissions", &mut principal.enabled_permissions),
+                ("disabled-permissions", &mut principal.disabled_permissions),
+            ] {
+                *list = self.array_value(key).map(|m| m.to_string()).collect();
+            }
+
+            Some(principal)
         } else {
             None
+        }
+    }
+
+    pub fn quota(&mut self, typ: PrincipalType) -> IntOrMany {
+        if typ == PrincipalType::Tenant {
+            IntOrMany::Many(
+                [
+                    "quota",
+                    "max_accounts",
+                    "max_groups",
+                    "max_resources",
+                    "max_locations",
+                    "max_lists",
+                    "max_other",
+                    "max_domains",
+                    "max_tenants",
+                    "max_roles",
+                ]
+                .iter()
+                .map(|f| self.value::<u64>(f).unwrap_or_default())
+                .collect(),
+            )
+        } else {
+            IntOrMany::Int(self.value("quota").unwrap_or_default())
         }
     }
 }

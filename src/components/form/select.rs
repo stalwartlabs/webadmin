@@ -23,8 +23,11 @@ use super::FormElement;
 pub fn Select(
     element: FormElement,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
+    #[prop(optional)] options: Option<Memo<Vec<(String, String)>>>,
+    #[prop(optional)] add_none: bool,
 ) -> impl IntoView {
-    let options = create_memo(move |_| element.data.get().select_sources(element.id));
+    let options = options
+        .unwrap_or_else(|| create_memo(move |_| element.data.get().select_sources(element.id)));
     let value = create_memo(move |_| {
         element
             .data
@@ -63,21 +66,19 @@ pub fn Select(
 
             {move || {
                 let selected_id = value.get();
-                view! {
-                    <For
-                        each=move || options.get()
-                        key=move |(id, _)| id.clone()
-                        children=move |(id, label)| {
-                            let id_ = id.clone();
-                            let selected_id = selected_id.clone();
-                            view! {
-                                <option selected=move || selected_id == id value=id_>
-                                    {label}
-                                </option>
-                            }
+                let options = options.get();
+                (if add_none { vec![("".to_string(), "-- None --".to_string())] } else { vec![] })
+                    .into_iter()
+                    .chain(options.into_iter())
+                    .map(|(id, label)| {
+                        let selected = selected_id == id;
+                        view! {
+                            <option selected=selected value=id>
+                                {label}
+                            </option>
                         }
-                    />
-                }
+                    })
+                    .collect_view()
             }}
 
         </select>
@@ -96,8 +97,10 @@ pub fn Select(
 pub fn CheckboxGroup(
     element: FormElement,
     #[prop(optional, into)] disabled: MaybeSignal<bool>,
+    #[prop(optional)] options: Option<Memo<Vec<(String, String)>>>,
 ) -> impl IntoView {
-    let options = create_memo(move |_| element.data.get().select_sources(element.id));
+    let options = options
+        .unwrap_or_else(|| create_memo(move |_| element.data.get().select_sources(element.id)));
     let values = create_memo(move |_| {
         element
             .data

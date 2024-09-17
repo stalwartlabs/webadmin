@@ -32,6 +32,7 @@ pub enum OAuthCodeRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OAuthCodeResponse {
     pub code: String,
+    #[serde(default)]
     pub permissions: AHashSet<Permission>,
     #[serde(default)]
     #[serde(rename = "isEnterprise")]
