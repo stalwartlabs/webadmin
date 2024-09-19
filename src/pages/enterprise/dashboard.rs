@@ -261,7 +261,7 @@ pub fn Dashboard() -> impl IntoView {
             memory_usage.set(
                 Bucket::create(period)
                     .add_readings(&metrics, &[&["server.memory"]])
-                    .finish_avg(),
+                    .finish_avg_with_filter(|num| num / (1024 * 1024)),
             );
 
             // Messages sent and received
@@ -564,7 +564,7 @@ pub fn Dashboard() -> impl IntoView {
                 labels=&["sent", "received"]
                 data=messages_sent_received
             />
-            <DashboardChart title="Memory usage" labels=&["bytes"] data=memory_usage/>
+            <DashboardChart title="Memory usage" labels=&["MB"] data=memory_usage/>
         </Show>
         <Show when=move || { section.get() == Section::Network }>
             <CardSimple>
@@ -1004,6 +1004,22 @@ impl Bucket {
             }
             if count.y[1] > 0 {
                 value.y[1] /= count.y[1];
+            }
+        }
+        self.value
+    }
+
+    fn finish_avg_with_filter(mut self, filter: impl Fn(u64) -> u64) -> Vec<DataPoint> {
+        for (value, count) in self.value.iter_mut().zip(self.count.iter()) {
+            if count.y[0] > 0 {
+                value.y[0] = filter(value.y[0] / count.y[0]);
+            } else if value.y[0] > 0 {
+                value.y[0] = filter(value.y[0]);
+            }
+            if count.y[1] > 0 {
+                value.y[1] = filter(value.y[1] / count.y[1]);
+            } else if value.y[1] > 0 {
+                value.y[1] = filter(value.y[1]);
             }
         }
         self.value

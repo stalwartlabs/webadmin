@@ -11,6 +11,8 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
+use base64::{engine::general_purpose::STANDARD, Engine};
+
 pub mod dns;
 pub mod edit;
 pub mod list;
@@ -21,95 +23,57 @@ pub struct Principal {
     pub id: Option<u32>,
 
     #[serde(rename = "type")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub typ: Option<PrincipalType>,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub quota: Option<IntOrMany>,
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
+    pub quota: PrincipalValue,
 
     #[serde(rename = "usedQuota")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub used_quota: Option<u64>,
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
+    pub used_quota: PrincipalValue,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
+    pub name: PrincipalValue,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub tenant: Option<String>,
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
+    pub description: PrincipalValue,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub picture: Option<String>,
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
+    pub tenant: PrincipalValue,
 
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        deserialize_with = "string_or_vec"
-    )]
-    pub secrets: Vec<String>,
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
+    pub picture: PrincipalValue,
 
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        deserialize_with = "string_or_vec"
-    )]
-    pub emails: Vec<String>,
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
+    pub secrets: PrincipalValue,
 
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        deserialize_with = "string_or_vec"
-    )]
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
+    pub emails: PrincipalValue,
+
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
     #[serde(rename = "memberOf")]
-    pub member_of: Vec<String>,
+    pub member_of: PrincipalValue,
 
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        deserialize_with = "string_or_vec"
-    )]
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
     #[serde(rename = "roles")]
-    pub roles: Vec<String>,
+    pub roles: PrincipalValue,
 
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        deserialize_with = "string_or_vec"
-    )]
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
     #[serde(rename = "lists")]
-    pub lists: Vec<String>,
+    pub lists: PrincipalValue,
 
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        deserialize_with = "string_or_vec"
-    )]
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
     #[serde(rename = "members")]
-    pub members: Vec<String>,
+    pub members: PrincipalValue,
 
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        deserialize_with = "string_or_vec"
-    )]
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
     #[serde(rename = "enabledPermissions")]
-    pub enabled_permissions: Vec<String>,
+    pub enabled_permissions: PrincipalValue,
 
-    #[serde(
-        default,
-        skip_serializing_if = "Vec::is_empty",
-        deserialize_with = "string_or_vec"
-    )]
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
     #[serde(rename = "disabledPermissions")]
-    pub disabled_permissions: Vec<String>,
-
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum IntOrMany {
-    Int(u64),
-    Many(Vec<u64>),
+    pub disabled_permissions: PrincipalValue,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -164,7 +128,7 @@ pub enum PrincipalAction {
     RemoveItem,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 #[serde(untagged)]
 pub enum PrincipalValue {
     String(String),
@@ -178,10 +142,10 @@ impl Principal {
         self.id.is_none()
             && self.typ.is_none()
             && self.name.is_none()
-            && self.secrets.is_empty()
-            && self.emails.is_empty()
-            && self.member_of.is_empty()
-            && self.members.is_empty()
+            && self.secrets.is_none()
+            && self.emails.is_none()
+            && self.member_of.is_none()
+            && self.members.is_none()
             && self.description.is_none()
     }
 
@@ -199,8 +163,8 @@ impl Principal {
             (current.tenant, changes.tenant, PrincipalField::Tenant),
             (current.picture, changes.picture, PrincipalField::Picture),
         ] {
-            let current = current.unwrap_or_default();
-            let change = change.unwrap_or_default();
+            let current = current.unwrap_string();
+            let change = change.unwrap_string();
 
             if current != change {
                 updates.push(PrincipalUpdate {
@@ -211,23 +175,18 @@ impl Principal {
             }
         }
 
-        let current_quota = current.quota.unwrap_or(IntOrMany::Int(0));
-        let changes_quota = changes.quota.unwrap_or(IntOrMany::Int(0));
-
-        if current_quota != changes_quota {
+        if current.quota != changes.quota {
             updates.push(PrincipalUpdate {
                 action: PrincipalAction::Set,
                 field: PrincipalField::Quota,
-                value: match changes_quota {
-                    IntOrMany::Int(v) => PrincipalValue::Integer(v),
-                    IntOrMany::Many(v) => PrincipalValue::IntegerList(v),
-                },
+                value: changes.quota,
             });
         }
 
         let mut changed_password = false;
-        for new_secret in &changes.secrets {
-            if !new_secret.is_app_password() && !current.secrets.contains(new_secret) {
+        let current_secrets = current.secrets.unwrap_string_list();
+        for new_secret in changes.secrets.as_string_list() {
+            if !new_secret.is_app_password() && !current_secrets.contains(new_secret) {
                 updates.push(PrincipalUpdate {
                     action: PrincipalAction::AddItem,
                     field: PrincipalField::Secrets,
@@ -240,11 +199,11 @@ impl Principal {
             }
         }
 
-        for prev_secret in current.secrets {
+        for prev_secret in current_secrets {
             if !prev_secret.is_password() {
                 let mut found = false;
 
-                for new_secret in &changes.secrets {
+                for new_secret in changes.secrets.as_string_list() {
                     if prev_secret.starts_with(new_secret) {
                         found = true;
                         break;
@@ -288,6 +247,9 @@ impl Principal {
                 changes.disabled_permissions,
             ),
         ] {
+            let current = current.unwrap_string_list();
+            let change = change.unwrap_string_list();
+
             for item in &change {
                 if !current.contains(item) {
                     updates.push(PrincipalUpdate {
@@ -310,6 +272,107 @@ impl Principal {
         }
 
         updates
+    }
+
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_str()
+    }
+
+    pub fn name_or_empty(&self) -> String {
+        self.name.as_str().unwrap_or_default().to_string()
+    }
+
+    pub fn email(&self) -> Option<&str> {
+        self.emails.as_str()
+    }
+
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_str()
+    }
+
+    pub fn description_or_name(&self) -> Option<&str> {
+        self.description.as_str().or(self.name.as_str())
+    }
+}
+
+impl PrincipalValue {
+    pub fn is_none(&self) -> bool {
+        matches!(self, PrincipalValue::String(s) if s.is_empty())
+    }
+
+    pub fn unwrap_string(self) -> String {
+        match self {
+            PrincipalValue::String(s) => s,
+            PrincipalValue::StringList(l) => l.into_iter().next().unwrap_or_default(),
+            _ => String::new(),
+        }
+    }
+    pub fn try_unwrap_string(self) -> Option<String> {
+        match self {
+            PrincipalValue::String(s) if !s.is_empty() => Some(s),
+            PrincipalValue::StringList(l) => l.into_iter().next(),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            PrincipalValue::String(s) if !s.is_empty() => Some(s),
+            PrincipalValue::StringList(l) => l.first().map(|s| s.as_str()),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_string_list(self) -> Vec<String> {
+        match self {
+            PrincipalValue::String(s) if !s.is_empty() => vec![s],
+            PrincipalValue::StringList(l) => l,
+            _ => vec![],
+        }
+    }
+
+    pub fn as_string_list(&self) -> &[String] {
+        match self {
+            PrincipalValue::String(s) if !s.is_empty() => std::slice::from_ref(s),
+            PrincipalValue::StringList(l) => l,
+            _ => &[],
+        }
+    }
+
+    pub fn as_int(&self) -> Option<u64> {
+        match self {
+            PrincipalValue::Integer(i) => Some(*i),
+            PrincipalValue::IntegerList(l) => l.first().copied(),
+            _ => None,
+        }
+    }
+
+    pub fn as_int_non_zero(&self) -> Option<u64> {
+        self.as_int().filter(|&i| i > 0)
+    }
+
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        match self {
+            PrincipalValue::String(s) if !s.is_empty() => 1,
+            PrincipalValue::StringList(l) => l.len(),
+            _ => 0,
+        }
+    }
+
+    pub fn count(&self) -> usize {
+        match self {
+            PrincipalValue::Integer(v) => *v as usize,
+            PrincipalValue::IntegerList(l) => l.len(),
+            PrincipalValue::String(_) => 1,
+            PrincipalValue::StringList(l) => l.len(),
+        }
+    }
+}
+
+impl Default for PrincipalValue {
+    fn default() -> Self {
+        PrincipalValue::String(String::new())
     }
 }
 
@@ -397,8 +460,6 @@ impl FromStr for PrincipalType {
     }
 }
 
-use base64::{engine::general_purpose::STANDARD, Engine};
-
 pub fn parse_app_password(secret: &str) -> Option<(String, &str)> {
     secret
         .strip_prefix("$app$")
@@ -439,51 +500,119 @@ where
     }
 }
 
-impl IntOrMany {
-    pub fn first(&self) -> u64 {
-        match self {
-            IntOrMany::Int(i) => *i,
-            IntOrMany::Many(v) => v.first().copied().unwrap_or_default(),
+impl<'de> serde::Deserialize<'de> for PrincipalValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct PrincipalValueVisitor;
+
+        impl<'de> Visitor<'de> for PrincipalValueVisitor {
+            type Value = PrincipalValue;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("an optional values or a sequence of values")
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(PrincipalValue::default())
+            }
+
+            fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                deserializer.deserialize_any(self)
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(PrincipalValue::Integer(value))
+            }
+
+            fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(PrincipalValue::String(value))
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(PrincipalValue::String(v.to_string()))
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::SeqAccess<'de>,
+            {
+                let mut vec_u64 = Vec::new();
+                let mut vec_string = Vec::new();
+
+                while let Some(value) = seq.next_element::<StringOrU64>()? {
+                    match value {
+                        StringOrU64::String(s) => vec_string.push(s),
+                        StringOrU64::U64(u) => vec_u64.push(u),
+                    }
+                }
+
+                match (vec_u64.is_empty(), vec_string.is_empty()) {
+                    (true, false) => Ok(PrincipalValue::StringList(vec_string)),
+                    (false, true) => Ok(PrincipalValue::IntegerList(vec_u64)),
+                    (true, true) => Ok(PrincipalValue::StringList(vec_string)),
+                    _ => Err(serde::de::Error::custom("invalid principal value")),
+                }
+            }
         }
+
+        deserializer.deserialize_any(PrincipalValueVisitor)
     }
 }
 
-fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct StringOrVec;
+#[derive(Debug)]
+enum StringOrU64 {
+    String(String),
+    U64(u64),
+}
 
-    impl<'de> Visitor<'de> for StringOrVec {
-        type Value = Vec<String>;
+impl<'de> serde::Deserialize<'de> for StringOrU64 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct StringOrU64Visitor;
 
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("string or array of strings")
+        impl<'de> Visitor<'de> for StringOrU64Visitor {
+            type Value = StringOrU64;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a string or u64")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(StringOrU64::String(value.to_string()))
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(StringOrU64::U64(value))
+            }
         }
 
-        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(vec![value.to_owned()])
-        }
-
-        fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(vec![value])
-        }
-
-        fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: de::SeqAccess<'de>,
-        {
-            Deserialize::deserialize(de::value::SeqAccessDeserializer::new(seq))
-        }
+        deserializer.deserialize_any(StringOrU64Visitor)
     }
-
-    deserializer.deserialize_any(StringOrVec)
 }
 
 pub static PERMISSIONS: &[(&str, &str)] = &[

@@ -299,17 +299,20 @@ impl From<http::Error> for Alert {
                         "Record already exists".to_string(),
                         "Another record with the same ID already exists".into_view(),
                     ),
-                    ManagementApiError::Other { details } => (
+                    ManagementApiError::Other { details, reason } => (
                         AlertType::Error,
-                        "Operation failed".to_string(),
-                        details.into_view(),
+                        details,
+                        reason
+                            .unwrap_or_else(|| "Operation failed".to_string())
+                            .into_view(),
                     ),
                 };
 
                 Alert::new(alert, title).with_details(details)
             }
             http::Error::NotFound => Alert::error("Not found"),
-            http::Error::Forbidden => Alert::error("Forbidden"),
+            http::Error::Forbidden | http::Error::TotpRequired => Alert::error("Forbidden")
+                .with_details("You are not authorized to perform this action."),
             http::Error::Unauthorized => Alert::error("Unauthorized"),
         }
     }

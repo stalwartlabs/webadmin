@@ -305,6 +305,10 @@ impl LayoutBuilder {
             .create("Cache")
             .route("/cache/edit")
             .insert(true)
+            // Cache
+            .create("Enterprise")
+            .route("/enterprise/edit")
+            .insert(true)
             .insert(true)
             // Storage
             .create("Storage")

@@ -460,19 +460,6 @@ impl Builder<Schemas, ()> {
             .typ(Type::Boolean)
             .input_check([], [Validator::Required])
             .build()
-            .new_field("resolver.public-suffix")
-            .label("Public Suffix list")
-            .help(concat!(
-                "URL of the list of top-level domain names (or suffixes) under ",
-                "which Internet users can register domain names"
-            ))
-            .default(&[
-                "https://publicsuffix.org/list/public_suffix_list.dat",
-                "https://raw.githubusercontent.com/publicsuffix/list/master/public_suffix_list.dat"
-            ][..])
-            .typ(Type::Array)
-            .input_check([], [Validator::Required, Validator::IsUrl])
-            .build()
             .new_field("cache.resolver.txt.size")
             .label("TXT Records")
             .help(concat!("Number of TXT records to cache"))
@@ -518,7 +505,6 @@ impl Builder<Schemas, ()> {
                 "resolver.concurrency",
                 "resolver.timeout",
                 "resolver.attempts",
-                "resolver.public-suffix",
                 "resolver.preserve-intermediates",
                 "resolver.try-tcp-on-error",
             ])

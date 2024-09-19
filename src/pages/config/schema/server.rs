@@ -189,17 +189,6 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
             .placeholder("8")
             .build()
-            // License key
-            .new_field("enterprise.license-key")
-            .label("License Key")
-            .help(concat!(
-                "Upgrade to the enterprise version of Stalwart by ",
-                "entering your license key here."
-            ))
-            .typ(Type::Secret)
-            .input_check([Transformer::Trim], [])
-            .placeholder("8")
-            .build()
             .new_form_section()
             .title("Local configuration keys")
             .fields(["config.local-keys"])
@@ -207,10 +196,6 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Thread pool")
             .fields(["global.thread-pool"])
-            .build()
-            .new_form_section()
-            .title("Enterprise")
-            .fields(["enterprise.license-key"])
             .build()
             .build()
             // Caching
@@ -535,6 +520,33 @@ impl Builder<Schemas, ()> {
             .list_title("Webhooks")
             .list_subtitle("Manage Webhooks")
             .list_fields(["_id", "url"])
+            .build()
+            // Enterprise settings
+            .new_schema("enterprise")
+            // License key
+            .new_field("enterprise.license-key")
+            .label("License Key")
+            .help(concat!(
+                "Upgrade to the enterprise version of Stalwart by ",
+                "entering your license key here."
+            ))
+            .typ(Type::Secret)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("enterprise.logo-url")
+            .label("Default logo URL")
+            .help(concat!(
+                "URL to the default logo to use in the Webadmin interface. ",
+                "(Enterprise feature)"
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::IsUrl])
+            .enterprise_feature()
+            .build()
+            .new_form_section()
+            .title("Enterprise")
+            .fields(["enterprise.license-key", "enterprise.logo-url"])
+            .build()
             .build()
     }
 }

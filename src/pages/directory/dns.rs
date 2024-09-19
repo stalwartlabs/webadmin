@@ -23,7 +23,7 @@ use crate::{
         http::{self, HttpRequest},
         oauth::use_authorization,
     },
-    pages::List,
+    pages::{directory::Principal, List},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -42,7 +42,11 @@ fn format_zonefile(records: &[DnsRecord], domain: &str) -> String {
                 if name.is_empty() {
                     ["@", &record.typ, &record.content]
                 } else {
-                    [name, &record.typ, &record.content]
+                    [
+                        name.strip_suffix('.').unwrap_or(name),
+                        &record.typ,
+                        &record.content,
+                    ]
                 }
             })
         })
@@ -86,14 +90,17 @@ pub fn DnsDisplay() -> impl IntoView {
             let auth = auth.get_untracked();
 
             async move {
-                let result = HttpRequest::get(("/api/domain", &name))
+                let result = HttpRequest::get(("/api/dns/records", &name))
                     .with_authorization(&auth)
                     .send::<Vec<DnsRecord>>()
                     .await?;
                 let user_count = HttpRequest::get("/api/principal")
                     .with_authorization(&auth)
                     .with_parameter("filter", &name)
-                    .send::<List<String>>()
+                    .with_parameter("fields", "name")
+                    .with_parameter("count", "1")
+                    .with_parameter("types", "individual")
+                    .send::<List<Principal>>()
                     .await
                     .map(|r| r.total)
                     .unwrap_or_default();
@@ -129,8 +136,12 @@ pub fn DnsDisplay() -> impl IntoView {
                         .to_string();
                     let zonefile = format_zonefile(
                         &records,
-                        &params.get().get("id").cloned().unwrap_or_default(),
+                        &format!(
+                            "{}.",
+                            params.get().get("id").map(|d| d.as_str()).unwrap_or_default(),
+                        ),
                     );
+                    log::debug!("zomefile: {}", zonefile);
                     Some(
                         view! {
                             <Card>
@@ -179,7 +190,7 @@ pub fn DnsDisplay() -> impl IntoView {
                                             .collect_view()}
 
                                     </Table>
-                                    <div class="sm:col-span-12 pb-4">
+                                    <div class="sm:col-span-12 pb-4 pt-10">
                                         <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
                                             Zonefile
                                         </h2>
@@ -187,9 +198,9 @@ pub fn DnsDisplay() -> impl IntoView {
                                     <textarea
                                         class="py-3 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-gray-400 dark:focus:ring-gray-600"
                                         readonly=true
-                                    >
-                                        {zonefile}
-                                    </textarea>
+                                        rows=20
+                                        prop:value=zonefile
+                                    ></textarea>
 
                                 </div>
 

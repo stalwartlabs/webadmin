@@ -36,12 +36,12 @@ use crate::{
         Permission,
     },
     pages::{
-        directory::{Principal, PrincipalType, PERMISSIONS},
+        directory::{Principal, PrincipalType, PrincipalValue, PERMISSIONS},
         List,
     },
 };
 
-use super::{build_app_password, parse_app_password, IntOrMany, SpecialSecrets};
+use super::{build_app_password, parse_app_password, SpecialSecrets};
 
 type PrincipalMap = AHashMap<PrincipalType, Vec<(String, String)>>;
 
@@ -82,6 +82,10 @@ pub fn PrincipalEdit() -> impl IntoView {
         }
     });
     let is_enterprise = auth.get_untracked().is_enterprise();
+    let is_tenant = !auth
+        .get_untracked()
+        .permissions()
+        .has_access(Permission::TenantList);
     let principals: RwSignal<Arc<PrincipalMap>> = create_rw_signal(Arc::new(AHashMap::new()));
     let permissions = create_memo(move |_| {
         PERMISSIONS
@@ -94,27 +98,79 @@ pub fn PrincipalEdit() -> impl IntoView {
         move || params.get().get("id").cloned().unwrap_or_default(),
         move |name| {
             let auth = auth.get_untracked();
-            let fetch_types = match (selected_type.get(), is_enterprise) {
-                (PrincipalType::Individual, true) => Some("role,group,tenant,list"),
-                (PrincipalType::Individual, false) => Some("role,group,list"),
-                (PrincipalType::Group, true) => Some("individual,group,tenant,list"),
-                (PrincipalType::Group, false) => Some("individual,group,list"),
-                (PrincipalType::Domain, true) => Some("tenant"),
-                (PrincipalType::Domain, false) => None,
-                (PrincipalType::Tenant, _) => Some("role"),
-                (PrincipalType::Role, true) => Some("role,tenant"),
-                (PrincipalType::Role, false) => Some("role"),
-                (PrincipalType::List, true) => Some("individual,group,tenant"),
-                (PrincipalType::List, false) => Some("individual,group"),
-                (PrincipalType::Resource | PrincipalType::Location | PrincipalType::Other, _) => {
-                    None
-                }
+            let permissions = auth.permissions();
+            let selected_type = selected_type.get();
+
+            let needed_types = match selected_type {
+                PrincipalType::Individual => &[
+                    PrincipalType::Role,
+                    PrincipalType::Group,
+                    PrincipalType::Tenant,
+                    PrincipalType::List,
+                ][..],
+                PrincipalType::Group => &[
+                    PrincipalType::Individual,
+                    PrincipalType::Group,
+                    PrincipalType::Tenant,
+                    PrincipalType::List,
+                ][..],
+                PrincipalType::Domain => &[PrincipalType::Tenant][..],
+                PrincipalType::Tenant => &[PrincipalType::Role][..],
+                PrincipalType::Role => &[PrincipalType::Role, PrincipalType::Tenant][..],
+                PrincipalType::List => &[
+                    PrincipalType::Individual,
+                    PrincipalType::Group,
+                    PrincipalType::Tenant,
+                ][..],
+                PrincipalType::Resource | PrincipalType::Location | PrincipalType::Other => &[][..],
             };
+            let mut fetch_types = String::new();
+            for typ in needed_types {
+                let permission = match typ {
+                    PrincipalType::Individual => Permission::IndividualList,
+                    PrincipalType::Group => Permission::GroupList,
+                    PrincipalType::List => Permission::MailingListList,
+                    PrincipalType::Domain => Permission::DomainList,
+                    PrincipalType::Tenant if is_enterprise => Permission::TenantList,
+                    PrincipalType::Role => Permission::RoleList,
+                    _ => continue,
+                };
+                if permissions.has_access(permission) {
+                    if !fetch_types.is_empty() {
+                        fetch_types.push(',');
+                    }
+                    fetch_types.push_str(typ.id());
+                }
+            }
 
             async move {
-                let mut principals_: PrincipalMap = AHashMap::new();
+                // Fetch principal
+                let principal = if !name.is_empty() {
+                    HttpRequest::get(("/api/principal", &name))
+                        .with_authorization(&auth)
+                        .send::<Principal>()
+                        .await?
+                } else {
+                    // Add default roles
+                    let mut principal = Principal::default();
+                    match selected_type {
+                        PrincipalType::Individual => {
+                            principal.roles = PrincipalValue::StringList(vec!["user".to_string()]);
+                        }
+                        PrincipalType::Tenant => {
+                            principal.roles = PrincipalValue::StringList(vec![
+                                "tenant-admin".to_string(),
+                                "user".to_string(),
+                            ]);
+                        }
+                        _ => {}
+                    }
+
+                    principal
+                };
 
                 // Add default roles
+                let mut principals_: PrincipalMap = AHashMap::new();
                 principals_.insert(
                     PrincipalType::Role,
                     vec![
@@ -127,19 +183,21 @@ pub fn PrincipalEdit() -> impl IntoView {
                     ],
                 );
 
-                if let Some(fetch_types) = fetch_types {
+                if !fetch_types.is_empty() {
                     for principal in HttpRequest::get("/api/principal")
                         .with_authorization(&auth)
                         .with_parameter("types", fetch_types)
                         .with_parameter("fields", "name,description")
+                        .with_optional_parameter("tenant", principal.tenant.as_str())
                         .send::<List<Principal>>()
                         .await?
                         .items
                     {
-                        let id = principal.name.unwrap_or_default();
+                        let id = principal.name.unwrap_string();
                         if id != name {
                             let description = principal
                                 .description
+                                .try_unwrap_string()
                                 .map(|d| format!("{d} ({id})"))
                                 .unwrap_or_else(|| id.clone());
                             principals_
@@ -151,14 +209,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                 }
                 principals.set(Arc::new(principals_));
 
-                if !name.is_empty() {
-                    HttpRequest::get(("/api/principal", &name))
-                        .with_authorization(&auth)
-                        .send::<Principal>()
-                        .await
-                } else {
-                    Ok(Principal::default())
-                }
+                Ok(principal)
             }
         },
     );
@@ -177,7 +228,7 @@ pub fn PrincipalEdit() -> impl IntoView {
         async move {
             set_pending.set(true);
             let result = if !current.is_blank() {
-                let name = current.name.clone().unwrap_or_default();
+                let name = current.name().unwrap_or_default().to_string();
                 let updates = current.into_updates(changes);
 
                 if !updates.is_empty() {
@@ -211,7 +262,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                             .with_authorization(&auth)
                             .with_body(DkimSignature {
                                 algorithm: algo,
-                                domain: changes.name.clone().unwrap(),
+                                domain: changes.name().unwrap_or_default().to_string(),
                                 ..Default::default()
                             })
                             .unwrap()
@@ -302,8 +353,8 @@ pub fn PrincipalEdit() -> impl IntoView {
                         data.update(|data| {
                             data.from_principal(&principal, selected_type.get());
                         });
-                        let used_quota = principal.used_quota.unwrap_or_default();
-                        let total_quota = principal.quota.as_ref().map_or(0, |q| q.first());
+                        let used_quota = principal.used_quota.as_int().unwrap_or_default();
+                        let total_quota = principal.quota.as_int().unwrap_or_default();
                         current_principal.set(principal);
                         let typ = selected_type.get();
                         Some(
@@ -329,7 +380,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             | PrincipalType::Role
                                             | PrincipalType::Tenant
                                         )
-                                            .then_some("Security".to_string()),
+                                            .then_some("Permissions".to_string()),
                                     ]
                                 })>
 
@@ -387,7 +438,8 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             label="Tenant"
 
                                             hide=Signal::derive(move || {
-                                                matches!(selected_type.get(), PrincipalType::Tenant)
+                                                is_tenant
+                                                    || matches!(selected_type.get(), PrincipalType::Tenant)
                                             })
                                         >
 
@@ -448,13 +500,18 @@ pub fn PrincipalEdit() -> impl IntoView {
                                         <FormItem
                                             stacked=true
                                             label="Logo URL"
-
                                             hide=Signal::derive(move || {
-                                                !matches!(selected_type.get(), PrincipalType::Tenant)
+                                                !matches!(
+                                                    selected_type.get(),
+                                                    PrincipalType::Tenant | PrincipalType::Domain
+                                                )
                                             })
                                         >
 
-                                            <InputText element=FormElement::new("picture", data)/>
+                                            <InputText
+                                                element=FormElement::new("picture", data)
+                                                disabled=!is_enterprise
+                                            />
                                         </FormItem>
 
                                     </FormSection>
@@ -600,6 +657,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                     PrincipalType::Role
                                                     | PrincipalType::Group
                                                     | PrincipalType::List
+                                                    | PrincipalType::Tenant
                                                 )
                                             })
                                         >
@@ -795,11 +853,11 @@ pub fn PrincipalEdit() -> impl IntoView {
 impl FormData {
     fn from_principal(&mut self, principal: &Principal, default_type: PrincipalType) {
         for (key, field) in [
-            ("name", principal.name.as_deref()),
-            ("description", principal.description.as_deref()),
-            ("picture", principal.picture.as_deref()),
-            ("tenant", principal.tenant.as_deref()),
-            ("email", principal.emails.first().map(|s| s.as_str())),
+            ("name", principal.name.as_str()),
+            ("description", principal.description.as_str()),
+            ("picture", principal.picture.as_str()),
+            ("tenant", principal.tenant.as_str()),
+            ("email", principal.emails.as_str()),
         ] {
             if let Some(value) = field {
                 self.set(key, value.to_string());
@@ -807,12 +865,12 @@ impl FormData {
         }
 
         match &principal.quota {
-            Some(IntOrMany::Int(quota)) => {
+            PrincipalValue::Integer(quota) => {
                 if *quota > 0 {
                     self.set("quota", quota.to_string());
                 }
             }
-            Some(IntOrMany::Many(quotas)) => {
+            PrincipalValue::IntegerList(quotas) => {
                 for (pos, quota) in quotas.iter().enumerate() {
                     if *quota > 0 {
                         let field = match pos {
@@ -839,21 +897,27 @@ impl FormData {
             "type",
             principal.typ.unwrap_or(default_type).id().to_string(),
         );
-        self.array_set("aliases", principal.emails.iter().skip(1));
+        self.array_set("aliases", principal.emails.as_string_list().iter().skip(1));
 
         for (key, list) in [
-            ("member-of", &principal.member_of),
-            ("members", &principal.members),
-            ("roles", &principal.roles),
-            ("lists", &principal.lists),
-            ("enabled-permissions", &principal.enabled_permissions),
-            ("disabled-permissions", &principal.disabled_permissions),
+            ("member-of", principal.member_of.as_string_list()),
+            ("members", principal.members.as_string_list()),
+            ("roles", principal.roles.as_string_list()),
+            ("lists", principal.lists.as_string_list()),
+            (
+                "enabled-permissions",
+                principal.enabled_permissions.as_string_list(),
+            ),
+            (
+                "disabled-permissions",
+                principal.disabled_permissions.as_string_list(),
+            ),
         ] {
             self.array_set(key, list.iter());
         }
 
         let mut app_passwords = vec![];
-        for secret in &principal.secrets {
+        for secret in principal.secrets.as_string_list() {
             if let Some((app, _)) = parse_app_password(secret) {
                 app_passwords.push(app);
             } else if secret.is_otp_auth() {
@@ -881,16 +945,19 @@ impl FormData {
             let typ = self.value::<PrincipalType>("type").unwrap();
             let mut principal = Principal {
                 typ: Some(typ),
-                quota: self.quota(typ).into(),
-                name: self.value::<String>("name").unwrap().into(),
-                secrets,
-                emails: [self.value::<String>("email").unwrap_or_default()]
-                    .into_iter()
-                    .chain(self.array_value("aliases").map(|m| m.to_string()))
-                    .filter(|x| !x.is_empty())
-                    .collect::<Vec<_>>(),
-                picture: self.value("picture"),
-                description: self.value("description"),
+                quota: self.quota(typ),
+                name: PrincipalValue::String(self.value::<String>("name").unwrap_or_default()),
+                tenant: PrincipalValue::String(self.value::<String>("tenant").unwrap_or_default()),
+                secrets: PrincipalValue::StringList(secrets),
+                emails: PrincipalValue::StringList(
+                    [self.value::<String>("email").unwrap_or_default()]
+                        .into_iter()
+                        .chain(self.array_value("aliases").map(|m| m.to_string()))
+                        .filter(|x| !x.is_empty())
+                        .collect::<Vec<_>>(),
+                ),
+                picture: PrincipalValue::String(self.value("picture").unwrap_or_default()),
+                description: PrincipalValue::String(self.value("description").unwrap_or_default()),
                 ..Default::default()
             };
 
@@ -902,7 +969,9 @@ impl FormData {
                 ("enabled-permissions", &mut principal.enabled_permissions),
                 ("disabled-permissions", &mut principal.disabled_permissions),
             ] {
-                *list = self.array_value(key).map(|m| m.to_string()).collect();
+                *list = PrincipalValue::StringList(
+                    self.array_value(key).map(|m| m.to_string()).collect(),
+                );
             }
 
             Some(principal)
@@ -911,9 +980,9 @@ impl FormData {
         }
     }
 
-    pub fn quota(&mut self, typ: PrincipalType) -> IntOrMany {
+    pub fn quota(&mut self, typ: PrincipalType) -> PrincipalValue {
         if typ == PrincipalType::Tenant {
-            IntOrMany::Many(
+            PrincipalValue::IntegerList(
                 [
                     "quota",
                     "max_accounts",
@@ -931,7 +1000,7 @@ impl FormData {
                 .collect(),
             )
         } else {
-            IntOrMany::Int(self.value("quota").unwrap_or_default())
+            PrincipalValue::Integer(self.value("quota").unwrap_or_default())
         }
     }
 }

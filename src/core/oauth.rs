@@ -34,9 +34,14 @@ pub struct OAuthCodeResponse {
     pub code: String,
     #[serde(default)]
     pub permissions: AHashSet<Permission>,
+
     #[serde(default)]
     #[serde(rename = "isEnterprise")]
     pub is_enterprise: bool,
+
+    // Deprecated - remove in future
+    #[serde(default)]
+    pub is_admin: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -151,11 +156,14 @@ pub async fn oauth_user_authentication(
         .send::<OAuthCodeResponse>()
         .await
     {
-        Ok(response) => AuthenticationResult::Success(response),
+        Ok(response) => AuthenticationResult::Success(response.legacy_admin()),
         Err(http::Error::Unauthorized) => AuthenticationResult::Error(
             Alert::warning("Incorrect username or password").with_timeout(Duration::from_secs(3)),
         ),
-        Err(http::Error::Forbidden) => {
+        Err(http::Error::Forbidden) => AuthenticationResult::Error(Alert::error(
+            "You are not authorized to access this service.",
+        )),
+        Err(http::Error::TotpRequired) => {
             // Password matched but TOTP required
             AuthenticationResult::TotpRequired
         }
@@ -182,7 +190,7 @@ pub async fn oauth_device_authentication(
         Err(http::Error::Unauthorized) => AuthenticationResult::Error(
             Alert::warning("Incorrect username or password").with_timeout(Duration::from_secs(3)),
         ),
-        Err(http::Error::Forbidden) => AuthenticationResult::TotpRequired,
+        Err(http::Error::TotpRequired) => AuthenticationResult::TotpRequired,
         Err(err) => AuthenticationResult::Error(Alert::from(err)),
     }
 }
@@ -217,4 +225,94 @@ pub async fn oauth_refresh_token(base_url: &str, refresh_token: &str) -> Option<
 
 pub fn use_authorization() -> RwSignal<AccessToken> {
     expect_context::<RwSignal<AccessToken>>()
+}
+
+impl OAuthCodeResponse {
+    pub fn legacy_admin(mut self) -> Self {
+        if self.is_admin && self.permissions.is_empty() {
+            for permission in [
+                Permission::Impersonate,
+                Permission::UnlimitedRequests,
+                Permission::UnlimitedUploads,
+                Permission::DeleteSystemFolders,
+                Permission::MessageQueueList,
+                Permission::MessageQueueGet,
+                Permission::MessageQueueUpdate,
+                Permission::MessageQueueDelete,
+                Permission::OutgoingReportList,
+                Permission::OutgoingReportGet,
+                Permission::OutgoingReportDelete,
+                Permission::IncomingReportList,
+                Permission::IncomingReportGet,
+                Permission::IncomingReportDelete,
+                Permission::SettingsList,
+                Permission::SettingsUpdate,
+                Permission::SettingsDelete,
+                Permission::SettingsReload,
+                Permission::IndividualList,
+                Permission::IndividualGet,
+                Permission::IndividualUpdate,
+                Permission::IndividualDelete,
+                Permission::IndividualCreate,
+                Permission::GroupList,
+                Permission::GroupGet,
+                Permission::GroupUpdate,
+                Permission::GroupDelete,
+                Permission::GroupCreate,
+                Permission::DomainList,
+                Permission::DomainGet,
+                Permission::DomainCreate,
+                Permission::DomainUpdate,
+                Permission::DomainDelete,
+                Permission::TenantList,
+                Permission::TenantGet,
+                Permission::TenantCreate,
+                Permission::TenantUpdate,
+                Permission::TenantDelete,
+                Permission::MailingListList,
+                Permission::MailingListGet,
+                Permission::MailingListCreate,
+                Permission::MailingListUpdate,
+                Permission::MailingListDelete,
+                Permission::RoleList,
+                Permission::RoleGet,
+                Permission::RoleCreate,
+                Permission::RoleUpdate,
+                Permission::RoleDelete,
+                Permission::PrincipalList,
+                Permission::PrincipalGet,
+                Permission::PrincipalCreate,
+                Permission::PrincipalUpdate,
+                Permission::PrincipalDelete,
+                Permission::BlobFetch,
+                Permission::PurgeBlobStore,
+                Permission::PurgeDataStore,
+                Permission::PurgeLookupStore,
+                Permission::PurgeAccount,
+                Permission::Undelete,
+                Permission::DkimSignatureCreate,
+                Permission::DkimSignatureGet,
+                Permission::UpdateSpamFilter,
+                Permission::UpdateWebadmin,
+                Permission::LogsView,
+                Permission::SieveRun,
+                Permission::Restart,
+                Permission::TracingList,
+                Permission::TracingGet,
+                Permission::TracingLive,
+                Permission::MetricsList,
+                Permission::MetricsLive,
+                Permission::Authenticate,
+                Permission::AuthenticateOauth,
+                Permission::EmailSend,
+                Permission::EmailReceive,
+                Permission::ManageEncryption,
+                Permission::ManagePasswords,
+            ] {
+                self.permissions.insert(permission);
+            }
+        }
+
+        self
+    }
 }

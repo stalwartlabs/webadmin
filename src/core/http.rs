@@ -29,12 +29,24 @@ pub enum Response<T> {
 #[serde(tag = "error")]
 #[serde(rename_all = "camelCase")]
 pub enum ManagementApiError {
-    FieldAlreadyExists { field: String, value: String },
-    FieldMissing { field: String },
-    NotFound { item: String },
-    Unsupported { details: String },
+    FieldAlreadyExists {
+        field: String,
+        value: String,
+    },
+    FieldMissing {
+        field: String,
+    },
+    NotFound {
+        item: String,
+    },
+    Unsupported {
+        details: String,
+    },
     AssertFailed,
-    Other { details: String },
+    Other {
+        details: String,
+        reason: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +54,7 @@ pub enum Error {
     Unauthorized,
     Forbidden,
     NotFound,
+    TotpRequired,
     Network(String),
     Serializer { error: String, response: String },
     Server(ManagementApiError),
@@ -211,10 +224,12 @@ impl<'x> HttpRequest {
         match response.status() {
             200..=299 => response.binary().await.map_err(Into::into),
             401 => Err(Error::Unauthorized),
+            402 => Err(Error::TotpRequired),
             403 => Err(Error::Forbidden),
             404 => Err(Error::NotFound),
             code => Err(Error::Server(ManagementApiError::Other {
-                details: format!("Invalid response code {code}: {}", response.status_text()),
+                details: format!("Invalid response code {code}"),
+                reason: response.status_text().into(),
             })),
         }
     }

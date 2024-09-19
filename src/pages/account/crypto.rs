@@ -121,7 +121,7 @@ pub fn ManageCrypto() -> impl IntoView {
                 }
                 Err(Error::Unauthorized) => Alert::warning("Incorrect password")
                     .with_details("The password you entered is incorrect"),
-                Err(Error::Forbidden) => {
+                Err(Error::TotpRequired) => {
                     show_totp.set(true);
                     return;
                 }

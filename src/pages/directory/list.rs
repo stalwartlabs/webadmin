@@ -316,7 +316,7 @@ pub fn PrincipalList() -> impl IntoView {
                                     vec![
                                         "Name".to_string(),
                                         "Type".to_string(),
-                                        "Accounts".to_string(),
+                                        "Addresses".to_string(),
                                         "".to_string(),
                                     ]
                                 }
@@ -325,6 +325,7 @@ pub fn PrincipalList() -> impl IntoView {
                                         "Name".to_string(),
                                         "Type".to_string(),
                                         "Usage".to_string(),
+                                        "Members".to_string(),
                                         "".to_string(),
                                     ]
                                 }
@@ -332,6 +333,7 @@ pub fn PrincipalList() -> impl IntoView {
                                     vec![
                                         "Name".to_string(),
                                         "Type".to_string(),
+                                        "Used by".to_string(),
                                         "Subroles".to_string(),
                                         "".to_string(),
                                     ]
@@ -346,14 +348,14 @@ pub fn PrincipalList() -> impl IntoView {
                                             principals_
                                                 .items
                                                 .iter()
-                                                .map(|p| p.name.as_deref().unwrap_or_default().to_string())
+                                                .map(|p| p.name_or_empty())
                                                 .collect::<Vec<_>>()
                                         })
                                     >
 
                                         <For
                                             each=move || principals.items.clone()
-                                            key=|principal| principal.name.clone().unwrap_or_default()
+                                            key=|principal| principal.name_or_empty()
                                             let:principal
                                         >
                                             <PrincipalItem
@@ -519,12 +521,15 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                 matches!(selected_type, PrincipalType::Individual | PrincipalType::Tenant)
             }>
                 <ListTextItem>
-                    {match (principal.get_untracked().quota, principal.get_untracked().used_quota) {
-                        (Some(quota), Some(used_quota)) if quota.first() > 0 => {
+                    {match (
+                        principal.get_untracked().quota.as_int_non_zero(),
+                        principal.get_untracked().used_quota.as_int_non_zero(),
+                    ) {
+                        (Some(quota), Some(used_quota)) => {
                             format!(
                                 "{} ({}%)",
                                 format_size(used_quota, DECIMAL),
-                                (used_quota as f64 / quota.first() as f64 * 100.0).round() as u8,
+                                (used_quota as f64 / quota as f64 * 100.0).round() as u8,
                             )
                         }
                         (_, Some(used_quota)) => format_size(used_quota, DECIMAL).to_string(),
@@ -540,19 +545,23 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                     | PrincipalType::Group
                     | PrincipalType::Role
                     | PrincipalType::Domain
+                    | PrincipalType::Tenant
                 )
             }>
                 <ListTextItem>
 
                     {
-                        let num_members = principal.get_untracked().members.len();
+                        let num_members = principal.get_untracked().members.count();
                         match selected_type {
-                            PrincipalType::Group => maybe_plural(num_members, "group", "groups"),
-                            PrincipalType::List => maybe_plural(num_members, "member", "members"),
+                            PrincipalType::Group | PrincipalType::List | PrincipalType::Tenant => {
+                                maybe_plural(num_members, "member", "members")
+                            }
                             PrincipalType::Domain => {
                                 maybe_plural(num_members, "address", "addresses")
                             }
-                            PrincipalType::Role => maybe_plural(num_members, "role", "roles"),
+                            PrincipalType::Role => {
+                                maybe_plural(num_members, "principal", "principals")
+                            }
                             _ => String::new(),
                         }
                     }
@@ -560,7 +569,10 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                 </ListTextItem>
             </Show>
             <Show when=move || {
-                matches!(selected_type, PrincipalType::Individual | PrincipalType::Group)
+                matches!(
+                    selected_type,
+                    PrincipalType::Individual | PrincipalType::Group | PrincipalType::Role
+                )
             }>
                 <ListTextItem>
                     {match selected_type {
@@ -701,7 +713,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                                 .with_dangerous_callback(move || {
                                                     params
                                                         .delete_action
-                                                        .dispatch(Arc::new(HashSet::from_iter(vec![id.clone()])));
+                                                        .dispatch(Arc::new(HashSet::from_iter([id.clone()])));
                                                 }),
                                         );
                                 }
@@ -716,27 +728,5 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
             </ListItem>
 
         </tr>
-    }
-}
-
-impl Principal {
-    pub fn name(&self) -> Option<&str> {
-        self.name.as_deref()
-    }
-
-    pub fn name_or_empty(&self) -> String {
-        self.name.as_deref().unwrap_or_default().to_string()
-    }
-
-    pub fn email(&self) -> Option<&str> {
-        self.emails.first().map(|s| s.as_str())
-    }
-
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
-    }
-
-    pub fn description_or_name(&self) -> Option<&str> {
-        self.description.as_deref().or(self.name.as_deref())
     }
 }
