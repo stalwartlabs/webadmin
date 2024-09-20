@@ -92,6 +92,7 @@ pub enum Permission {
     PurgeDataStore,
     PurgeLookupStore,
     PurgeAccount,
+    FtsReindex,
     Undelete,
     DkimSignatureCreate,
     DkimSignatureGet,

@@ -9,12 +9,16 @@ use leptos_router::use_navigate;
 
 use crate::{
     components::{
-        icon::{IconCheckCircle, IconComputerDesktop, IconPower, IconRefresh, IconShieldCheck},
+        icon::{
+            IconCheckCircle, IconComputerDesktop, IconDocumentMagnifyingGlass, IconPower,
+            IconRefresh, IconShieldCheck,
+        },
         messages::alert::{use_alerts, Alert, Alerts},
     },
     core::{
         http::{self, HttpRequest},
         oauth::use_authorization,
+        Permission,
     },
     pages::config::ReloadSettings,
 };
@@ -26,6 +30,7 @@ struct Action {
     icon: &'static str,
     url: &'static str,
     success_message: &'static str,
+    permission: Permission,
 }
 
 const ACTIONS: &[Action] = &[
@@ -35,6 +40,7 @@ const ACTIONS: &[Action] = &[
         icon: "refresh",
         url: "/api/reload",
         success_message: "Successfully reloaded configuration",
+        permission: Permission::SettingsReload,
     },
     Action {
         title: "Validate configuration",
@@ -42,6 +48,7 @@ const ACTIONS: &[Action] = &[
         icon: "check_circle",
         url: "/api/reload?dry-run=true",
         success_message: "Configuration is valid",
+        permission: Permission::SettingsReload,
     },
     Action {
         title: "Restart server",
@@ -49,6 +56,7 @@ const ACTIONS: &[Action] = &[
         icon: "power",
         url: "/api/restart",
         success_message: "Restarting server, try reloading this page in a few seconds.",
+        permission: Permission::Restart,
     },
     Action {
         title: "Update SPAM rules",
@@ -56,6 +64,7 @@ const ACTIONS: &[Action] = &[
         icon: "shield_check",
         url: "/api/update/spam-filter",
         success_message: "Successfully updated SPAM rules to the latest version",
+        permission: Permission::UpdateSpamFilter,
     },
     Action {
         title: "Update Webadmin",
@@ -63,6 +72,15 @@ const ACTIONS: &[Action] = &[
         icon: "computer_desktop",
         url: "/api/update/webadmin",
         success_message: "Successfully updated the web admin to the latest version",
+        permission: Permission::UpdateWebadmin,
+    },
+    Action {
+        title: "Reindex FTS",
+        description: "Rebuilds the full-text search index for all accounts. This may take some time.",
+        icon: "document_magnifying_glass",
+        url: "/api/store/reindex",
+        success_message: "Successfully requested FTS reindex",
+        permission: Permission::FtsReindex,
     },
 
 ];
@@ -124,7 +142,8 @@ pub fn Maintenance() -> impl IntoView {
         }
     });
 
-    let actions = ACTIONS.iter().enumerate().map(|(idx, action)| {
+    let permissions = auth.get_untracked().permissions().clone();
+    let actions = ACTIONS.iter().enumerate().filter_map(|(idx, action)| {
         let icon_class = "mt-1 flex-shrink-0 size-5 text-gray-800 dark:text-gray-200";
         let icon = match action.icon {
             "refresh" => view! { <IconRefresh attr:class=icon_class/> },
@@ -132,10 +151,11 @@ pub fn Maintenance() -> impl IntoView {
             "power" => view! { <IconPower attr:class=icon_class/> },
             "shield_check" => view! { <IconShieldCheck attr:class=icon_class/> },
             "computer_desktop" => view! { <IconComputerDesktop attr:class=icon_class/> },
+            "document_magnifying_glass" => view! { <IconDocumentMagnifyingGlass attr:class=icon_class/> },
             _ => unreachable!("No icon specified"),
         };
 
-        view! {
+        permissions.has_access(action.permission).then(|| view! {
             <a
                 class="group flex flex-col bg-white border shadow-sm rounded-xl hover:shadow-md transition dark:bg-slate-900 dark:border-gray-800"
                 href="#"
@@ -157,7 +177,7 @@ pub fn Maintenance() -> impl IntoView {
                     </div>
                 </div>
             </a>
-        }
+        })
 
     }).collect_view();
 

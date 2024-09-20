@@ -289,6 +289,7 @@ impl OAuthCodeResponse {
                 Permission::PurgeDataStore,
                 Permission::PurgeLookupStore,
                 Permission::PurgeAccount,
+                Permission::FtsReindex,
                 Permission::Undelete,
                 Permission::DkimSignatureCreate,
                 Permission::DkimSignatureGet,

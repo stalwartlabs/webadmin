@@ -698,6 +698,10 @@ pub static PERMISSIONS: &[(&str, &str)] = &[
         "purge-account",
         "Completely remove an account and all associated data",
     ),
+    (
+        "fts-reindex",
+        "Rebuild the full-text search index for accounts",
+    ),
     ("undelete", "Restore deleted items"),
     (
         "dkim-signature-create",
