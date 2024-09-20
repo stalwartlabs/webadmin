@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.15] - 2024-09-20
+
+## Added
+- Multi-tenancy support.
+- Role & permissions management.
+- FTS reindex management action.
+- View DNS records in BIND format.
+
+### Changed
+
+### Fixed
+- Display memory usage in MBs rather than bytes.
+
 ## [0.1.14] - 2024-09-09
 
 ## Added
