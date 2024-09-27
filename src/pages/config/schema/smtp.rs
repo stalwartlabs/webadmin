@@ -1096,7 +1096,10 @@ impl Builder<Schemas, ()> {
                 "LOGIN, and OAUTHBEARER mechanisms"
             ))
             .default(Expression::new(
-                [("local_port != 25 && is_tls", "[plain, login]")],
+                [
+                    ("local_port != 25 && is_tls", "[plain, login, oauthbearer]"),
+                    ("local_port != 25", "[oauthbearer]"),
+                ],
                 "false",
             ))
             .input_check(
