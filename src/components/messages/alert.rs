@@ -174,7 +174,7 @@ impl Alert {
     }
 
     pub fn success(message: impl Into<String>) -> Self {
-        Self::new(AlertType::Success, message).with_timeout(Duration::from_secs(5))
+        Self::new(AlertType::Success, message)
     }
 
     pub fn error(message: impl Into<String>) -> Self {
@@ -186,11 +186,17 @@ impl Alert {
     }
 
     pub fn new(typ: AlertType, message: impl Into<String>) -> Self {
-        Self {
+        let alert = Self {
             typ,
             message: message.into(),
             details: None,
             timeout: None,
+        };
+
+        if matches!(typ, AlertType::Success | AlertType::Warning) {
+            alert.with_timeout(Duration::from_secs(5))
+        } else {
+            alert
         }
     }
 

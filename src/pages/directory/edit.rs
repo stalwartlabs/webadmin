@@ -390,6 +390,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             label=Signal::derive(move || {
                                                 match selected_type.get() {
                                                     PrincipalType::Individual => "Login name",
+                                                    PrincipalType::Domain => "Domain name",
                                                     _ => "Name",
                                                 }
                                                     .to_string()
@@ -400,6 +401,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                 placeholder=Signal::derive(move || {
                                                     match selected_type.get() {
                                                         PrincipalType::Individual => "Login name",
+                                                        PrincipalType::Domain => "example.org",
                                                         _ => "Short Name",
                                                     }
                                                         .to_string()
