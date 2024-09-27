@@ -369,6 +369,13 @@ pub fn UndeleteList() -> impl IntoView {
                             on_page_change=move |page: u32| {
                                 use_navigate()(
                                     &UrlBuilder::new("/manage/undelete")
+                                        .with_subpath(
+                                            params
+                                                .get()
+                                                .get("id")
+                                                .map(|s| s.as_str())
+                                                .unwrap_or_default(),
+                                        )
                                         .with_parameter("page", page.to_string())
                                         .finish(),
                                     Default::default(),
