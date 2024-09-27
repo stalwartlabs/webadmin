@@ -154,12 +154,11 @@ impl<'x> HttpRequest {
         self
     }
 
-    pub fn with_body<B: Serialize>(mut self, body: B) -> Result<Self> {
+    pub fn with_body<B: Serialize>(self, body: B) -> Result<Self> {
         match serde_json::to_string(&body) {
-            Ok(body) => {
-                self.body = Some(body);
-                Ok(self)
-            }
+            Ok(body) => Ok(self
+                .with_raw_body(body)
+                .with_header("Content-Type", "application/json")),
             Err(err) => Err(Error::Serializer {
                 error: err.to_string(),
                 response: "".to_string(),
