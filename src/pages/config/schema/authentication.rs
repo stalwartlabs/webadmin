@@ -140,13 +140,25 @@ impl Builder<Schemas, ()> {
             .input_check([], [Validator::Required])
             .default("4d")
             .build()
+            .new_field("oauth.client-registration.require")
+            .label("Require client registration")
+            .help("Whether to require OAuth client_ids to be registered before they can be used")
+            .typ(Type::Boolean)
+            .default("false")
+            .build()
+            .new_field("oauth.client-registration.anonymous")
+            .label("Allow anonymous registration")
+            .help("Whether to allow OAuth clients to register without authentication")
+            .typ(Type::Boolean)
+            .default("false")
+            .build()
             .new_form_section()
             .title("OAuth Settings")
             .fields(["oauth.key"])
             .fields(["oauth.auth.max-attempts"])
             .build()
             .new_form_section()
-            .title("Expiry")
+            .title("Token Expiration")
             .fields([
                 "oauth.expiry.user-code",
                 "oauth.expiry.auth-code",
@@ -154,6 +166,44 @@ impl Builder<Schemas, ()> {
                 "oauth.expiry.refresh-token",
                 "oauth.expiry.refresh-token-renew",
             ])
+            .build()
+            .new_form_section()
+            .title("Dynamic Client Registration")
+            .fields([
+                "oauth.client-registration.require",
+                "oauth.client-registration.anonymous",
+            ])
+            .build()
+            .build()
+            // OpenID
+            .new_schema("openid")
+            .new_field("oauth.oidc.signature-algorithm")
+            .label("Signature algorithm")
+            .help(concat!(
+                "JWT signature algorithm to use for OpenID Connect."
+            ))
+            .default("relaxed/relaxed")
+            .typ(Type::Select {
+                typ: SelectType::Single,
+                source: Source::StaticId(&[
+                    "ES256", "ES384", "PS256", "PS384", "PS512", "RS256", "RS384", "RS512",
+                    "HS256", "HS384", "HS512",
+                ]),
+            })
+            .default("HS256")
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("oauth.oidc.signature-key")
+            .label("Signature Key")
+            .help(concat!(
+                "Contents of the private key PEM used to sign JWTs for OpenID Connect."
+            ))
+            .typ(Type::Text)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_form_section()
+            .title("OpenID Connect")
+            .fields(["oauth.oidc.signature-algorithm", "oauth.oidc.signature-key"])
             .build()
             .build()
     }

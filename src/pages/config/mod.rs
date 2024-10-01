@@ -332,6 +332,9 @@ impl LayoutBuilder {
             .create("OAuth")
             .route("/oauth/edit")
             .insert(true)
+            .create("OpenID Connect")
+            .route("/openid/edit")
+            .insert(true)
             .insert(true)
             // SMTP
             .create("SMTP")
