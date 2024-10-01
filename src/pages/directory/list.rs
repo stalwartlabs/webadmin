@@ -61,6 +61,8 @@ pub fn PrincipalList() -> impl IntoView {
             "tenants" => PrincipalType::Tenant,
             "domains" => PrincipalType::Domain,
             "roles" => PrincipalType::Role,
+            "api-keys" => PrincipalType::ApiKey,
+            "oauth-clients" => PrincipalType::OauthClient,
             _ => PrincipalType::Individual,
         }
     });
@@ -165,6 +167,8 @@ pub fn PrincipalList() -> impl IntoView {
             PrincipalType::Tenant => "Tenants",
             PrincipalType::Domain => "Domains",
             PrincipalType::Role => "Roles",
+            PrincipalType::ApiKey => "API Keys",
+            PrincipalType::OauthClient => "OAuth Clients",
             _ => unreachable!("Invalid type."),
         }
         .to_string()
@@ -177,6 +181,8 @@ pub fn PrincipalList() -> impl IntoView {
             PrincipalType::Tenant => "Manage tenants",
             PrincipalType::Domain => "Manage domains",
             PrincipalType::Role => "Manage roles",
+            PrincipalType::ApiKey => "Manage API keys",
+            PrincipalType::OauthClient => "Manage OAuth clients",
             _ => unreachable!("Invalid type."),
         }
         .to_string()
@@ -338,6 +344,17 @@ pub fn PrincipalList() -> impl IntoView {
                                         "".to_string(),
                                     ]
                                 }
+                                PrincipalType::ApiKey => {
+                                    vec!["Name".to_string(), "Type".to_string(), "".to_string()]
+                                }
+                                PrincipalType::OauthClient => {
+                                    vec![
+                                        "Name".to_string(),
+                                        "Type".to_string(),
+                                        "Contact".to_string(),
+                                        "".to_string(),
+                                    ]
+                                }
                                 _ => unreachable!("Invalid type."),
                             };
                             Some(
@@ -487,7 +504,10 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
             <Show when=move || {
                 matches!(
                     selected_type,
-                    PrincipalType::Individual | PrincipalType::Group | PrincipalType::List
+                    PrincipalType::Individual
+                    | PrincipalType::Group
+                    | PrincipalType::List
+                    | PrincipalType::OauthClient
                 )
             }>
                 <ListItem class="h-px w-72 whitespace-nowrap">
@@ -707,7 +727,7 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                         .set(
                                             Modal::with_title("Confirm deletion")
                                                 .with_message(
-                                                    "Are you sure you want to delete this account? This action cannot be undone.",
+                                                    "Are you sure you want to delete this principal? This action cannot be undone.",
                                                 )
                                                 .with_button(format!("Delete {id}"))
                                                 .with_dangerous_callback(move || {

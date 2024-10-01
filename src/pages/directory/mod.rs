@@ -52,6 +52,9 @@ pub struct Principal {
     pub emails: PrincipalValue,
 
     #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
+    pub urls: PrincipalValue,
+
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
     #[serde(rename = "memberOf")]
     pub member_of: PrincipalValue,
 
@@ -89,7 +92,11 @@ pub enum PrincipalType {
     Domain = 7,
     Tenant = 8,
     Role = 9,
+    ApiKey = 10,
+    OauthClient = 11,
 }
+
+pub const MAX_TYPE_ID: usize = 11;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -109,6 +116,7 @@ pub enum PrincipalField {
     EnabledPermissions,
     DisabledPermissions,
     Picture,
+    Urls,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -142,7 +150,6 @@ impl Principal {
         self.id.is_none()
             && self.typ.is_none()
             && self.name.is_none()
-            && self.secrets.is_none()
             && self.emails.is_none()
             && self.member_of.is_none()
             && self.members.is_none()
@@ -246,6 +253,7 @@ impl Principal {
                 current.disabled_permissions,
                 changes.disabled_permissions,
             ),
+            (PrincipalField::Urls, current.urls, changes.urls),
         ] {
             let current = current.unwrap_string_list();
             let change = change.unwrap_string_list();
@@ -388,6 +396,8 @@ impl PrincipalType {
             PrincipalType::Domain => "domain",
             PrincipalType::Tenant => "tenant",
             PrincipalType::Role => "role",
+            PrincipalType::ApiKey => "apiKey",
+            PrincipalType::OauthClient => "oauthClient",
         }
     }
 
@@ -402,6 +412,8 @@ impl PrincipalType {
             PrincipalType::Domain => "Domain",
             PrincipalType::Tenant => "Tenant",
             PrincipalType::Role => "Role",
+            PrincipalType::ApiKey => "API Key",
+            PrincipalType::OauthClient => "OAuth Client",
         }
     }
 
@@ -425,6 +437,10 @@ impl PrincipalType {
             (PrincipalType::Tenant, true) => "tenants",
             (PrincipalType::Role, false) => "role",
             (PrincipalType::Role, true) => "roles",
+            (PrincipalType::ApiKey, false) => "API key",
+            (PrincipalType::ApiKey, true) => "API keys",
+            (PrincipalType::OauthClient, false) => "OAuth client",
+            (PrincipalType::OauthClient, true) => "OAuth clients",
         }
     }
 
@@ -436,6 +452,8 @@ impl PrincipalType {
             PrincipalType::Role => "roles",
             PrincipalType::Tenant => "tenants",
             PrincipalType::Domain => "domains",
+            PrincipalType::ApiKey => "api-keys",
+            PrincipalType::OauthClient => "oauth-clients",
             _ => unimplemented!("resource_name for {:?}", self),
         }
     }
@@ -455,6 +473,8 @@ impl FromStr for PrincipalType {
             "domain" => Ok(PrincipalType::Domain),
             "tenant" => Ok(PrincipalType::Tenant),
             "role" => Ok(PrincipalType::Role),
+            "apiKey" => Ok(PrincipalType::ApiKey),
+            "oauthClient" => Ok(PrincipalType::OauthClient),
             _ => Err(format!("Invalid PrincipalType: {}", s)),
         }
     }

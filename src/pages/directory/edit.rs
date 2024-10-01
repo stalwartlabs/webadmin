@@ -7,10 +7,12 @@
 use std::{sync::Arc, vec};
 
 use ahash::AHashMap;
+use base64::{engine::general_purpose, Engine};
 use humansize::{format_size, DECIMAL};
 use leptos::*;
 use leptos_router::{use_navigate, use_params_map};
 use pwhash::sha512_crypt;
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -78,6 +80,8 @@ pub fn PrincipalEdit() -> impl IntoView {
             "tenants" => PrincipalType::Tenant,
             "domains" => PrincipalType::Domain,
             "roles" => PrincipalType::Role,
+            "api-keys" => PrincipalType::ApiKey,
+            "oauth-clients" => PrincipalType::OauthClient,
             _ => PrincipalType::Individual,
         }
     });
@@ -115,14 +119,17 @@ pub fn PrincipalEdit() -> impl IntoView {
                     PrincipalType::List,
                 ][..],
                 PrincipalType::Domain => &[PrincipalType::Tenant][..],
-                PrincipalType::Tenant => &[PrincipalType::Role][..],
+                PrincipalType::Tenant | PrincipalType::ApiKey => &[PrincipalType::Role][..],
                 PrincipalType::Role => &[PrincipalType::Role, PrincipalType::Tenant][..],
                 PrincipalType::List => &[
                     PrincipalType::Individual,
                     PrincipalType::Group,
                     PrincipalType::Tenant,
                 ][..],
-                PrincipalType::Resource | PrincipalType::Location | PrincipalType::Other => &[][..],
+                PrincipalType::Resource
+                | PrincipalType::Location
+                | PrincipalType::Other
+                | PrincipalType::OauthClient => &[][..],
             };
             let mut fetch_types = String::new();
             for typ in needed_types {
@@ -168,6 +175,13 @@ pub fn PrincipalEdit() -> impl IntoView {
                                 "email-send".to_string(),
                                 "email-receive".to_string(),
                             ]);
+                        }
+                        PrincipalType::ApiKey => {
+                            principal.secrets = PrincipalValue::StringList(vec![thread_rng()
+                                .sample_iter(Alphanumeric)
+                                .take(30)
+                                .map(char::from)
+                                .collect::<String>()]);
                         }
                         _ => {}
                     }
@@ -316,6 +330,12 @@ pub fn PrincipalEdit() -> impl IntoView {
                 PrincipalType::Role => {
                     format!("Update '{name}' Role")
                 }
+                PrincipalType::ApiKey => {
+                    format!("Update '{name}' API Key")
+                }
+                PrincipalType::OauthClient => {
+                    format!("Update '{name}' OAuth Client")
+                }
                 _ => unreachable!(),
             }
         } else {
@@ -326,6 +346,8 @@ pub fn PrincipalEdit() -> impl IntoView {
                 PrincipalType::Tenant => "Create Tenant",
                 PrincipalType::Domain => "Create Domain",
                 PrincipalType::Role => "Create Role",
+                PrincipalType::ApiKey => "Create API Key",
+                PrincipalType::OauthClient => "Create OAuth Client",
                 _ => unreachable!(),
             }
             .to_string()
@@ -368,7 +390,10 @@ pub fn PrincipalEdit() -> impl IntoView {
                                 <Tab tabs=Signal::derive(move || {
                                     vec![
                                         Some("Details".to_string()),
-                                        matches!(typ, PrincipalType::Individual)
+                                        matches!(
+                                            typ,
+                                            PrincipalType::Individual | PrincipalType::ApiKey
+                                        )
                                             .then_some("Authentication".to_string()),
                                         matches!(
                                             typ,
@@ -377,7 +402,10 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             .then_some("Limits".to_string()),
                                         (!matches!(
                                             typ,
-                                            PrincipalType::Tenant | PrincipalType::Domain
+                                            PrincipalType::Tenant
+                                            | PrincipalType::Domain
+                                            | PrincipalType::OauthClient
+                                            | PrincipalType::ApiKey
                                         ))
                                             .then_some("Memberships".to_string()),
                                         matches!(
@@ -386,6 +414,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             | PrincipalType::Group
                                             | PrincipalType::Role
                                             | PrincipalType::Tenant
+                                            | PrincipalType::ApiKey
                                         )
                                             .then_some("Permissions".to_string()),
                                     ]
@@ -398,6 +427,8 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                 match selected_type.get() {
                                                     PrincipalType::Individual => "Login name",
                                                     PrincipalType::Domain => "Domain name",
+                                                    PrincipalType::ApiKey => "Key Id",
+                                                    PrincipalType::OauthClient => "Client Id",
                                                     _ => "Name",
                                                 }
                                                     .to_string()
@@ -422,7 +453,9 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             stacked=true
                                             label=Signal::derive(move || {
                                                 match selected_type.get() {
-                                                    PrincipalType::Individual => "Name",
+                                                    PrincipalType::Individual | PrincipalType::OauthClient => {
+                                                        "Name"
+                                                    }
                                                     _ => "Description",
                                                 }
                                                     .to_string()
@@ -448,7 +481,10 @@ pub fn PrincipalEdit() -> impl IntoView {
 
                                             hide=Signal::derive(move || {
                                                 is_tenant
-                                                    || matches!(selected_type.get(), PrincipalType::Tenant)
+                                                    || matches!(
+                                                        selected_type.get(),
+                                                        PrincipalType::Tenant | PrincipalType::OauthClient
+                                                    )
                                             })
                                         >
 
@@ -476,6 +512,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                     PrincipalType::Individual
                                                     | PrincipalType::Group
                                                     | PrincipalType::List
+                                                    | PrincipalType::OauthClient
                                                 )
                                             })
                                         >
@@ -512,7 +549,9 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             hide=Signal::derive(move || {
                                                 !matches!(
                                                     selected_type.get(),
-                                                    PrincipalType::Tenant | PrincipalType::Domain
+                                                    PrincipalType::Tenant
+                                                    | PrincipalType::Domain
+                                                    | PrincipalType::OauthClient
                                                 )
                                             })
                                         >
@@ -520,6 +559,21 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             <InputText
                                                 element=FormElement::new("picture", data)
                                                 disabled=!is_enterprise
+                                            />
+                                        </FormItem>
+
+                                        <FormItem
+                                            stacked=true
+                                            label="Redirect URIs"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::OauthClient)
+                                            })
+                                        >
+
+                                            <StackedInput
+                                                element=FormElement::new("urls", data)
+                                                placeholder="URI"
+                                                add_button_text="Add URI".to_string()
                                             />
                                         </FormItem>
 
@@ -565,6 +619,37 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                 element=FormElement::new("app_passwords", data)
                                                 add_button_text="Add password".to_string()
                                             />
+
+                                        </FormItem>
+
+                                        <FormItem
+                                            stacked=true
+                                            label="Key"
+
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::ApiKey)
+                                            })
+                                        >
+
+                                            <span class="block font-semibold font-mono text-gray-800 dark:text-gray-200">
+                                                {move || {
+                                                    let data = data.get();
+                                                    let name = data.value::<String>("name").unwrap_or_default();
+                                                    let secret = data
+                                                        .value::<String>("api_secret")
+                                                        .unwrap_or_default();
+                                                    log::debug!("{}:{}", name, secret);
+                                                    (!name.is_empty() && !secret.is_empty())
+                                                        .then(|| {
+                                                            format!(
+                                                                "api_{}",
+                                                                general_purpose::STANDARD
+                                                                    .encode(format!("{}:{}", name, secret).as_bytes()),
+                                                            )
+                                                        })
+                                                }}
+
+                                            </span>
 
                                         </FormItem>
 
@@ -653,6 +738,16 @@ pub fn PrincipalEdit() -> impl IntoView {
                                         >
 
                                             <InputText element=FormElement::new("max_roles", data)/>
+                                        </FormItem>
+                                        <FormItem
+                                            stacked=true
+                                            label="Maximum number of API Keys"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Tenant)
+                                            })
+                                        >
+
+                                            <InputText element=FormElement::new("max_api_keys", data)/>
                                         </FormItem>
 
                                     </FormSection>
@@ -762,6 +857,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                     | PrincipalType::Group
                                                     | PrincipalType::Tenant
                                                     | PrincipalType::Role
+                                                    | PrincipalType::ApiKey
                                                 )
                                             })
                                         >
@@ -789,6 +885,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                     | PrincipalType::Group
                                                     | PrincipalType::Role
                                                     | PrincipalType::Tenant
+                                                    | PrincipalType::ApiKey
                                                 )
                                             })
                                         >
@@ -808,6 +905,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                     | PrincipalType::Group
                                                     | PrincipalType::Role
                                                     | PrincipalType::Tenant
+                                                    | PrincipalType::ApiKey
                                                 )
                                             })
                                         >
@@ -896,6 +994,7 @@ impl FormData {
                             8 => "max_domains",
                             9 => "max_tenants",
                             10 => "max_roles",
+                            11 => "max_api_keys",
                             _ => continue,
                         };
 
@@ -924,6 +1023,7 @@ impl FormData {
                 "disabled-permissions",
                 principal.disabled_permissions.as_string_list(),
             ),
+            ("urls", principal.urls.as_string_list()),
         ] {
             self.array_set(key, list.iter());
         }
@@ -934,6 +1034,8 @@ impl FormData {
                 app_passwords.push(app);
             } else if secret.is_otp_auth() {
                 self.set("otpauth_url", secret);
+            } else if default_type == PrincipalType::ApiKey {
+                self.set("api_secret", secret);
             }
         }
         if !app_passwords.is_empty() {
@@ -949,7 +1051,10 @@ impl FormData {
             }
             if let Some(password) = self.value::<String>("password") {
                 secrets.push(sha512_crypt::hash(password).unwrap());
+            } else if let Some(password) = self.value::<String>("api_secret") {
+                secrets.push(password);
             }
+
             if let Some(otpauth_url) = self.value::<String>("otpauth_url") {
                 secrets.push(otpauth_url);
             }
@@ -980,6 +1085,7 @@ impl FormData {
                 ("lists", &mut principal.lists),
                 ("enabled-permissions", &mut principal.enabled_permissions),
                 ("disabled-permissions", &mut principal.disabled_permissions),
+                ("urls", &mut principal.urls),
             ] {
                 *list = PrincipalValue::StringList(
                     self.array_value(key).map(|m| m.to_string()).collect(),
@@ -1007,6 +1113,7 @@ impl FormData {
                     "max_domains",
                     "max_tenants",
                     "max_roles",
+                    "max_api_keys",
                 ]
                 .iter()
                 .map(|f| self.value::<u64>(f).unwrap_or_default())
@@ -1041,6 +1148,10 @@ impl Builder<Schemas, ()> {
                 [Transformer::Trim, Transformer::Lowercase],
                 [Validator::IsEmail],
             )
+            .build()
+            .new_field("urls")
+            .typ(Type::Array)
+            .input_check([Transformer::Trim], [Validator::IsUrl])
             .build()
             .new_field("description")
             .typ(Type::Input)
