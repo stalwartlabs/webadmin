@@ -548,6 +548,139 @@ impl Builder<Schemas, ()> {
             .fields(["enterprise.license-key", "enterprise.logo-url"])
             .build()
             .build()
+            // Contact form settings
+            .new_schema("form")
+            .new_field("form.deliver-to")
+            .label("Recipients")
+            .help(concat!(
+                "List of local e-mail addresses to deliver the contact form to.",
+            ))
+            .typ(Type::Array)
+            .input_check([Transformer::Trim], [Validator::IsEmail])
+            .build()
+            .new_field("form.email.field")
+            .label("E-mail field")
+            .help(concat!(
+                "The name of the field in the contact form that contains the ",
+                "e-mail address of the sender."
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::IsEmail])
+            .build()
+            .new_field("form.name.field")
+            .label("Name field")
+            .help(concat!(
+                "The name of the field in the contact form that contains the ",
+                "name of the sender."
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("form.subject.field")
+            .label("Subject field")
+            .help(concat!(
+                "The name of the field in the contact form that contains the ",
+                "subject of the message."
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("form.honey-pot.subject")
+            .label("Honey Pot field")
+            .help(concat!(
+                "The name of the field in the contact form that is used as a ",
+                "honey pot to catch spam bots."
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("form.email.default")
+            .label("E-mail default")
+            .help(concat!(
+                "The default e-mail address to use when the sender does not ",
+                "provide one."
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::IsEmail])
+            .default("postmaster@localhost")
+            .build()
+            .new_field("form.subject.default")
+            .label("Subject default")
+            .help(concat!(
+                "The default subject to use when the sender does not ",
+                "provide one."
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .default("Contact form submission")
+            .build()
+            .new_field("form.name.default")
+            .label("Name default")
+            .help(concat!(
+                "The default name to use when the sender does not ",
+                "provide one."
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .default("Anonymous")
+            .build()
+            .new_field("form.rate-limit")
+            .label("Rate limit")
+            .help(concat!(
+                "Maximum number of contact form submissions that can be made ",
+                "in a timeframe by a given IP address."
+            ))
+            .default("5/1h")
+            .typ(Type::Rate)
+            .build()
+            .new_field("form.max-size")
+            .label("Max Size")
+            .help(concat!(
+                "Maximum size of the contact form submission in bytes."
+            ))
+            .typ(Type::Size)
+            .default("102400")
+            .build()
+            .new_field("form.enable")
+            .label("Enable form submissions")
+            .help(concat!("Whether to enable contact form submissions."))
+            .typ(Type::Boolean)
+            .default("false")
+            .build()
+            .new_field("form.validate-domain")
+            .label("Validate email domain")
+            .help(concat!(
+                "Whether to validate the domain of the sender's email address."
+            ))
+            .typ(Type::Boolean)
+            .default("true")
+            .build()
+            .new_form_section()
+            .title("Form submission settings")
+            .fields(["form.deliver-to", "form.enable"])
+            .build()
+            .new_form_section()
+            .title("Fields")
+            .fields([
+                "form.email.field",
+                "form.name.field",
+                "form.subject.field",
+                "form.honey-pot.subject",
+            ])
+            .build()
+            .new_form_section()
+            .title("Security")
+            .fields(["form.rate-limit", "form.max-size", "form.validate-domain"])
+            .build()
+            .new_form_section()
+            .title("Defaults")
+            .fields([
+                "form.email.default",
+                "form.name.default",
+                "form.subject.default",
+            ])
+            .build()
+            .build()
     }
 }
 

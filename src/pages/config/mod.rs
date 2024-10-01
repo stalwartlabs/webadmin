@@ -305,7 +305,11 @@ impl LayoutBuilder {
             .create("Cache")
             .route("/cache/edit")
             .insert(true)
-            // Cache
+            // Contact form
+            .create("Form submission")
+            .route("/form/edit")
+            .insert(true)
+            // Enterprise
             .create("Enterprise")
             .route("/enterprise/edit")
             .insert(true)
