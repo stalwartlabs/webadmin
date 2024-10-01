@@ -6,7 +6,7 @@
 
 use std::{sync::Arc, vec};
 
-use ahash::AHashMap;
+use ahash::{AHashMap, AHashSet};
 use base64::{engine::general_purpose, Engine};
 use humansize::{format_size, DECIMAL};
 use leptos::*;
@@ -20,7 +20,7 @@ use crate::{
         form::{
             button::Button,
             input::{InputPassword, InputSize, InputText},
-            select::{CheckboxGroup, Select},
+            select::Select,
             stacked_badge::StackedBadge,
             stacked_input::StackedInput,
             tab::Tab,
@@ -91,12 +91,6 @@ pub fn PrincipalEdit() -> impl IntoView {
         .permissions()
         .has_access(Permission::TenantList);
     let principals: RwSignal<Arc<PrincipalMap>> = create_rw_signal(Arc::new(AHashMap::new()));
-    let permissions = create_memo(move |_| {
-        PERMISSIONS
-            .iter()
-            .map(|(id, name)| (id.to_string(), name.to_string()))
-            .collect::<Vec<_>>()
-    });
 
     let fetch_principal = create_resource(
         move || params.get().get("id").cloned().unwrap_or_default(),
@@ -182,6 +176,9 @@ pub fn PrincipalEdit() -> impl IntoView {
                                 .take(30)
                                 .map(char::from)
                                 .collect::<String>()]);
+                            principal.enabled_permissions = PrincipalValue::StringList(vec![
+                                "authenticate".to_string(),
+                            ]);
                         }
                         _ => {}
                     }
@@ -638,7 +635,6 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                     let secret = data
                                                         .value::<String>("api_secret")
                                                         .unwrap_or_default();
-                                                    log::debug!("{}:{}", name, secret);
                                                     (!name.is_empty() && !secret.is_empty())
                                                         .then(|| {
                                                             format!(
@@ -890,31 +886,106 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             })
                                         >
 
-                                            <CheckboxGroup
-                                                element=FormElement::new("enabled-permissions", data)
-                                                options=permissions
-                                            />
+                                            <div class="grid space-y-2">
+                                                {move || {
+                                                    let form_data = data.get();
+                                                    let enabled_permissions = form_data
+                                                        .array_value("enabled-permissions")
+                                                        .collect::<AHashSet<_>>();
+                                                    let disabled_permissions = form_data
+                                                        .array_value("disabled-permissions")
+                                                        .collect::<AHashSet<_>>();
+                                                    PERMISSIONS
+                                                        .iter()
+                                                        .map(|(id, name)| {
+                                                            view! {
+                                                                <div class="flex flex-col space-y-3 p-3 w-full bg-white border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-blue-500 dark:bg-neutral-900 dark:border-neutral-700">
+                                                                    <div class="flex justify-between items-center">
+                                                                        <span
+                                                                            id="hs-radio-delete-description"
+                                                                            class="block text-sm text-gray-600 dark:text-neutral-500"
+                                                                        >
+                                                                            {name.to_string()}
+                                                                        </span>
 
-                                        </FormItem>
-                                        <FormItem
-                                            label="Disabled"
-                                            hide=Signal::derive(move || {
-                                                !matches!(
-                                                    selected_type.get(),
-                                                    PrincipalType::Individual
-                                                    | PrincipalType::Group
-                                                    | PrincipalType::Role
-                                                    | PrincipalType::Tenant
-                                                    | PrincipalType::ApiKey
-                                                )
-                                            })
-                                        >
+                                                                        <div class="flex gap-x-6">
+                                                                            <div class="flex">
+                                                                                <input
+                                                                                    type="radio"
+                                                                                    name=id.to_string()
+                                                                                    class="shrink-0 mt-0.5 border-gray-200 rounded-full text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-800 dark:border-neutral-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
+                                                                                    id=format!("{id}-on")
+                                                                                    prop:checked=enabled_permissions.contains(id)
+                                                                                    on:input=move |_| {
+                                                                                        data.update_untracked(|data| {
+                                                                                            data.array_push(
+                                                                                                "enabled-permissions",
+                                                                                                id.to_string(),
+                                                                                                true,
+                                                                                            );
+                                                                                            data.array_delete_item("disabled-permissions", id);
+                                                                                        });
+                                                                                    }
+                                                                                />
 
-                                            <CheckboxGroup
-                                                element=FormElement::new("disabled-permissions", data)
-                                                options=permissions
-                                            />
+                                                                                <label class="text-sm text-gray-500 ms-2 dark:text-neutral-400">
+                                                                                    On
+                                                                                </label>
+                                                                            </div>
 
+                                                                            <div class="flex">
+                                                                                <input
+                                                                                    type="radio"
+                                                                                    name=id.to_string()
+                                                                                    class="shrink-0 mt-0.5 border-gray-200 rounded-full text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-800 dark:border-neutral-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
+                                                                                    id=format!("{id}-off")
+                                                                                    prop:checked=disabled_permissions.contains(id)
+                                                                                    on:input=move |_| {
+                                                                                        data.update_untracked(|data| {
+                                                                                            data.array_push(
+                                                                                                "disabled-permissions",
+                                                                                                id.to_string(),
+                                                                                                true,
+                                                                                            );
+                                                                                            data.array_delete_item("enabled-permissions", id);
+                                                                                        });
+                                                                                    }
+                                                                                />
+
+                                                                                <label class="text-sm text-gray-500 ms-2 dark:text-neutral-400">
+                                                                                    Off
+                                                                                </label>
+                                                                            </div>
+
+                                                                            <div class="flex">
+                                                                                <input
+                                                                                    type="radio"
+                                                                                    name=id.to_string()
+                                                                                    class="shrink-0 mt-0.5 border-gray-200 rounded-full text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-800 dark:border-neutral-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
+                                                                                    id=format!("{id}-inherit")
+                                                                                    prop:checked=!enabled_permissions.contains(id)
+                                                                                        && !disabled_permissions.contains(id)
+                                                                                    on:input=move |_| {
+                                                                                        data.update_untracked(|data| {
+                                                                                            data.array_delete_item("disabled-permissions", id);
+                                                                                            data.array_delete_item("enabled-permissions", id);
+                                                                                        });
+                                                                                    }
+                                                                                />
+
+                                                                                <label class="text-sm text-gray-500 ms-2 dark:text-neutral-400">
+                                                                                    Default
+                                                                                </label>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                        })
+                                                        .collect_view()
+                                                }}
+
+                                            </div>
                                         </FormItem>
 
                                     </FormSection>

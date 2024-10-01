@@ -585,7 +585,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
             .build()
-            .new_field("form.honey-pot.subject")
+            .new_field("form.honey-pot.field")
             .label("Honey Pot field")
             .help(concat!(
                 "The name of the field in the contact form that is used as a ",
@@ -665,7 +665,7 @@ impl Builder<Schemas, ()> {
                 "form.email.field",
                 "form.name.field",
                 "form.subject.field",
-                "form.honey-pot.subject",
+                "form.honey-pot.field",
             ])
             .build()
             .new_form_section()

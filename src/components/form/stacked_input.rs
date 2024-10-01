@@ -125,7 +125,7 @@ pub fn StackedInput(
                         element
                             .data
                             .update(|data| {
-                                data.array_push(element.id, "".to_string());
+                                data.array_push(element.id, "".to_string(), false);
                             });
                     }
                 }

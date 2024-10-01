@@ -188,6 +188,25 @@ impl FormData {
         self.errors.remove(id);
     }
 
+    pub fn array_push(&mut self, id: &str, value: impl Into<String>, unique: bool) {
+        let v = self
+            .values
+            .entry(id.to_string())
+            .or_insert_with(|| FormValue::Array(vec![]));
+        let value = value.into();
+
+        match v {
+            FormValue::Value(val) if !unique || val != &value => {
+                *v = FormValue::Array(vec![std::mem::take(val), value]);
+            }
+            FormValue::Array(arr) if !unique || !arr.contains(&value) => {
+                arr.push(value);
+            }
+            _ => (),
+        };
+        self.errors.remove(id);
+    }
+
     pub fn array_delete(&mut self, id: &str, idx: usize) {
         let left = self.values.get_mut(id).and_then(|v| match v {
             FormValue::Array(values) => {
@@ -203,21 +222,18 @@ impl FormData {
         self.errors.remove(id);
     }
 
-    pub fn array_push(&mut self, id: &str, value: impl Into<String>) {
-        let v = self
-            .values
-            .entry(id.to_string())
-            .or_insert_with(|| FormValue::Array(vec![]));
-
-        match v {
-            FormValue::Value(val) => {
-                *v = FormValue::Array(vec![std::mem::take(val), value.into()]);
+    pub fn array_delete_item(&mut self, id: &str, item: &str) {
+        let left = self.values.get_mut(id).and_then(|v| match v {
+            FormValue::Array(values) => {
+                values.retain(|v| v != item);
+                Some(values.len())
             }
-            FormValue::Array(arr) => {
-                arr.push(value.into());
-            }
-            _ => unreachable!(),
-        };
+            FormValue::Value(value) if value == item => Some(0),
+            _ => None,
+        });
+        if left == Some(0) {
+            self.values.remove(id);
+        }
         self.errors.remove(id);
     }
 

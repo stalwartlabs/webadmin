@@ -52,7 +52,7 @@ pub fn StackedBadge(
                     (move |result| match result {
                         Ok(add_value) => {
                             element.data.update(|data| {
-                                data.array_push(element.id, add_value);
+                                data.array_push(element.id, add_value, false);
                             });
                             show_tooltip.set(false);
                         }
@@ -64,7 +64,7 @@ pub fn StackedBadge(
                 ));
             } else {
                 element.data.update(|data| {
-                    data.array_push(element.id, add_value);
+                    data.array_push(element.id, add_value, false);
                 });
                 show_tooltip.set(false);
             }
