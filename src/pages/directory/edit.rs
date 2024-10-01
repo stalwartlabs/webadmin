@@ -163,6 +163,12 @@ pub fn PrincipalEdit() -> impl IntoView {
                                 "user".to_string(),
                             ]);
                         }
+                        PrincipalType::Group => {
+                            principal.enabled_permissions = PrincipalValue::StringList(vec![
+                                "email-send".to_string(),
+                                "email-receive".to_string(),
+                            ]);
+                        }
                         _ => {}
                     }
 
@@ -377,6 +383,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                         matches!(
                                             typ,
                                             PrincipalType::Individual
+                                            | PrincipalType::Group
                                             | PrincipalType::Role
                                             | PrincipalType::Tenant
                                         )
@@ -752,6 +759,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                 !matches!(
                                                     selected_type.get(),
                                                     PrincipalType::Individual
+                                                    | PrincipalType::Group
                                                     | PrincipalType::Tenant
                                                     | PrincipalType::Role
                                                 )
@@ -778,6 +786,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                 !matches!(
                                                     selected_type.get(),
                                                     PrincipalType::Individual
+                                                    | PrincipalType::Group
                                                     | PrincipalType::Role
                                                     | PrincipalType::Tenant
                                                 )
@@ -796,6 +805,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                 !matches!(
                                                     selected_type.get(),
                                                     PrincipalType::Individual
+                                                    | PrincipalType::Group
                                                     | PrincipalType::Role
                                                     | PrincipalType::Tenant
                                                 )

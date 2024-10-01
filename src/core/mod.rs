@@ -212,6 +212,27 @@ pub enum Permission {
     SieveRenameScript,
     SieveCheckScript,
     SieveHaveSpace,
+
+    // API keys
+    ApiKeyList,
+    ApiKeyGet,
+    ApiKeyCreate,
+    ApiKeyUpdate,
+    ApiKeyDelete,
+
+    // OAuth clients
+    OauthClientList,
+    OauthClientGet,
+    OauthClientCreate,
+    OauthClientUpdate,
+    OauthClientDelete,
+
+    // OAuth client registration
+    OauthClientRegistration,
+    OauthClientOverride,
+
+    #[serde(other)]
+    Unknown,
 }
 
 impl AccessToken {
