@@ -435,12 +435,14 @@ impl Builder<Schemas, ()> {
             .new_field("auth.token")
             .label("Auth token")
             .typ(Type::Secret)
+            .enterprise_feature()
             .help(concat!(
                 "Bearer token used to authenticate with the OAuth introspect endpoint.",
             ))
             .display_if_eq("auth.method", ["token"])
             .build()
             .new_field("auth.username")
+            .enterprise_feature()
             .label("Auth username")
             .help(concat!(
                 "Username used to authenticate with the OAuth introspect endpoint.",
@@ -449,6 +451,7 @@ impl Builder<Schemas, ()> {
             .display_if_eq("auth.method", ["basic"])
             .build()
             .new_field("auth.secret")
+            .enterprise_feature()
             .label("Auth secret")
             .help(concat!(
                 "Password used to authenticate with the OAuth introspect endpoint.",

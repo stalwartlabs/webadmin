@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.16] - 2024-10-01
+
+## Added
+- OpenID Connect support.
+- API key and OAuth client management.
+- Form submission management.
+
+### Changed
+- Improved Permission management UI.
+
+### Fixed
+- Add permissions tab to group edit screen (stalwartlabs/mail-server#826)
+- Include account name in undelete pages (stalwartlabs/mail-server#808)
+- Include a Content-Type header when posting (#18).
+- Correctly set tenant limits.
+
 ## [0.1.15] - 2024-09-20
 
 ## Added
