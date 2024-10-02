@@ -28,6 +28,7 @@ impl Builder<Schemas, ()> {
                     ("internal", "Internal"),
                     ("ldap", "LDAP Directory"),
                     ("sql", "SQL Database"),
+                    ("oidc", "OpenID Connect"),
                     ("lmtp", "LMTP Server"),
                     ("smtp", "SMTP Server"),
                     ("imap", "IMAP4 Server"),
@@ -210,7 +211,7 @@ impl Builder<Schemas, ()> {
             .label("Timeout")
             .help("Connection timeout to the server")
             .typ(Type::Duration)
-            .display_if_eq("type", ["ldap", "smtp", "lmtp", "imap"])
+            .display_if_eq("type", ["ldap", "smtp", "lmtp", "imap", "oidc"])
             .default("15s")
             .build()
             // LDAP settings
@@ -342,11 +343,133 @@ impl Builder<Schemas, ()> {
             .help("DAP attribute for the user's disk quota")
             .default("diskQuota")
             .build()
+            // OIDC
+            // Type
+            .new_field("endpoint.url")
+            .enterprise_feature()
+            .label("URL")
+            .help(concat!(
+                "URL of the OpenID Connect provider. This is used to ",
+                "retrieve user information from the OpenID Connect provider."
+            ))
+            .display_if_eq("type", ["oidc"])
+            .placeholder("https://accounts.example.org/userinfo")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
+            .build()
+            .new_field("endpoint.method")
+            .enterprise_feature()
+            .label("Type")
+            .help(concat!(
+                "Type of endpoint to use for user information. ",
+                "This is used to retrieve user information from the ",
+                "OpenID Connect provider."
+            ))
+            .default("userinfo")
+            .display_if_eq("type", ["oidc"])
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("userinfo", "OpenID Connect Userinfo"),
+                    ("introspect", "OAuth Token Introspection"),
+                ]),
+                typ: SelectType::Single,
+            })
+            .build()
+            .new_field("fields.email")
+            .enterprise_feature()
+            .label("E-mail field")
+            .help(concat!(
+                "Field name in the OpenID Connect provider response ",
+                "that contains the user's email address."
+            ))
+            .display_if_eq("type", ["oidc"])
+            .placeholder("email")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .build()
+            .new_field("fields.username")
+            .enterprise_feature()
+            .label("Username field")
+            .help(concat!(
+                "Field name in the OpenID Connect provider response ",
+                "that contains the user's username. If not provided, ",
+                "the email field will be used."
+            ))
+            .display_if_eq("type", ["oidc"])
+            .placeholder("preferred_username")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("fields.full-name")
+            .enterprise_feature()
+            .label("Name field")
+            .help(concat!(
+                "Field name in the OpenID Connect provider response ",
+                "that contains the user's full name."
+            ))
+            .display_if_eq("type", ["oidc"])
+            .placeholder("name")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("auth.method")
+            .enterprise_feature()
+            .label("Method")
+            .help(concat!(
+                "Type of endpoint to use for user information. ",
+                "This is used to retrieve user information from the ",
+                "OpenID Connect provider."
+            ))
+            .default("none")
+            .display_if_eq("endpoint.method", ["introspect"])
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("none", "No Authentication"),
+                    ("basic", "Basic Authentication"),
+                    ("token", "Bearer Token"),
+                    ("user-token", "User Access Token"),
+                ]),
+                typ: SelectType::Single,
+            })
+            .build()
+            .new_field("auth.token")
+            .label("Auth token")
+            .typ(Type::Secret)
+            .help(concat!(
+                "Bearer token used to authenticate with the OAuth introspect endpoint.",
+            ))
+            .display_if_eq("auth.method", ["token"])
+            .build()
+            .new_field("auth.username")
+            .label("Auth username")
+            .help(concat!(
+                "Username used to authenticate with the OAuth introspect endpoint.",
+            ))
+            .typ(Type::Input)
+            .display_if_eq("auth.method", ["basic"])
+            .build()
+            .new_field("auth.secret")
+            .label("Auth secret")
+            .help(concat!(
+                "Password used to authenticate with the OAuth introspect endpoint.",
+            ))
+            .typ(Type::Secret)
+            .display_if_eq("auth.method", ["basic"])
+            .build()
             // Form layouts
             .new_form_section()
             .title("Configuration")
             .fields([
-                "_id", "type", "store", "url", "base-dn", "host", "port", "timeout",
+                "_id",
+                "type",
+                "store",
+                "url",
+                "base-dn",
+                "host",
+                "port",
+                "endpoint.url",
+                "endpoint.method",
+                "timeout",
             ])
             .build()
             .new_form_section()
@@ -358,6 +481,16 @@ impl Builder<Schemas, ()> {
             .title("TLS")
             .display_if_eq("type", ["ldap", "imap", "smtp", "lmtp"])
             .fields(["tls.enable", "tls.allow-invalid-certs"])
+            .build()
+            .new_form_section()
+            .title("Endpoint Authentication")
+            .display_if_eq("endpoint.method", ["introspect"])
+            .fields(["auth.method", "auth.token", "auth.username", "auth.secret"])
+            .build()
+            .new_form_section()
+            .title("Field Mappings")
+            .display_if_eq("type", ["oidc"])
+            .fields(["fields.email", "fields.username", "fields.full-name"])
             .build()
             .new_form_section()
             .title("Column Mappings")

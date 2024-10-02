@@ -350,8 +350,8 @@ pub fn PrincipalList() -> impl IntoView {
                                 PrincipalType::OauthClient => {
                                     vec![
                                         "Name".to_string(),
-                                        "Type".to_string(),
                                         "Contact".to_string(),
+                                        "Type".to_string(),
                                         "".to_string(),
                                     ]
                                 }
