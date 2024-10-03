@@ -96,13 +96,15 @@ pub struct AuthenticationResponse {
     pub is_enterprise: bool,
 }
 
+const REDIRECT_URI: &str = "stalwart://auth";
+
 pub async fn oauth_authenticate(
     base_url: &str,
     username: &str,
     password: &str,
 ) -> AuthenticationResult<AuthenticationResponse> {
     let response =
-        match oauth_user_authentication(base_url, username, password, "webadmin", None).await {
+        match oauth_user_authentication(base_url, username, password, "webadmin", REDIRECT_URI.into()).await {
             AuthenticationResult::Success(response) => response,
             AuthenticationResult::TotpRequired => return AuthenticationResult::TotpRequired,
             AuthenticationResult::Error(err) => return AuthenticationResult::Error(err),
@@ -115,7 +117,7 @@ pub async fn oauth_authenticate(
                 ("grant_type", "authorization_code"),
                 ("client_id", "webadmin"),
                 ("code", &response.code),
-                ("redirect_uri", ""),
+                ("redirect_uri", REDIRECT_URI),
             ])
             .unwrap(),
         )
