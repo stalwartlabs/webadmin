@@ -196,8 +196,7 @@ pub fn Authorize() -> impl IntoView {
                                         let (redirect_uri, client_id) = if !is_device_auth.get() {
                                             let redirect_uri = redirect_uri.get();
                                             match &redirect_uri {
-                                                Some(redirect_uri) if redirect_uri.starts_with("https") => {}
-                                                Some(_) => {
+                                                Some(redirect_uri) if redirect_uri.starts_with("http:") => {
                                                     alert
                                                         .set(
                                                             Alert::error(
@@ -206,6 +205,7 @@ pub fn Authorize() -> impl IntoView {
                                                         );
                                                     return;
                                                 }
+                                                Some(_) => {}
                                                 None => {
                                                     alert
                                                         .set(

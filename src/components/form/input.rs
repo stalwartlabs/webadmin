@@ -47,6 +47,7 @@ pub fn InputText(
                     }
                 }
 
+                autocapitalize="off"
                 placeholder=placeholder.map(|p| move || p.get())
                 prop:value=move || value.get()
                 disabled=move || disabled.get()
@@ -697,6 +698,7 @@ pub fn TextArea(
                     }
                 }
 
+                autocapitalize="off"
                 rows="5"
                 placeholder=placeholder.map(|p| move || p.get())
                 prop:value=move || value.get()
