@@ -484,6 +484,22 @@ impl Builder<Schemas, ()> {
             .typ(Type::Secret)
             .new_field("security-token")
             .label("Security Token")
+            .new_field("max-retries")
+            .label("Retry limit")
+            .help(concat!(
+                "The maximum number of times to retry failed requests. ",
+                "Set to 0 to disable retries"
+            ))
+            .placeholder("3")
+            .default("3")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue(10.into()),
+                ],
+            )
             .build()
             // FS specific
             .new_field("depth")
@@ -603,6 +619,7 @@ impl Builder<Schemas, ()> {
                 "compression",
                 "settings.min-blob-size",
                 "settings.write-buffer-size",
+                "max-retries",
                 "depth",
                 "purge.frequency",
             ])

@@ -885,4 +885,5 @@ pub static PERMISSIONS: &[(&str, &str)] = &[
     ("oauth-client-delete", "Remove OAuth clients"),
     ("oauth-client-registration", "Register OAuth clients"),
     ("oauth-client-override", "Override OAuth client settings"),
+    ("ai-model-interact", "Interact with AI models"),
 ];

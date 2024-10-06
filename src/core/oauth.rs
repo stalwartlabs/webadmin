@@ -305,10 +305,6 @@ impl OAuthCodeResponse {
                 Permission::TracingLive,
                 Permission::MetricsList,
                 Permission::MetricsLive,
-                Permission::Authenticate,
-                Permission::AuthenticateOauth,
-                Permission::EmailSend,
-                Permission::EmailReceive,
                 Permission::ManageEncryption,
                 Permission::ManagePasswords,
             ] {
