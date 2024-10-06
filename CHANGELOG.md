@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.17] - 2024-10-07
+
+## Added
+- AI model management.
+- LLM Classifier settings.
+- S3 `max-retries` setting.
+
+### Changed
+
+### Fixed
+- Allow non-HTTPS `redirect-uri` for OAuth clients.
+- Viewport and autocapitalize fixes for mobile devices.
+- Fix error reporting in array fields (#25).
+
 ## [0.1.16] - 2024-10-01
 
 ## Added
