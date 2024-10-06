@@ -30,60 +30,6 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
-            .new_field("lookup.spam-config.learn-enable")
-            .label("Automatically train the Bayes classifier")
-            .help("Whether the bayes classifier should be trained automatically")
-            .default("true")
-            .typ(Type::Boolean)
-            .build()
-            .new_field("lookup.spam-config.learn-balance")
-            .label("Balance")
-            .help("Keep difference for spam/ham learns for at least this value")
-            .default("0.9")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [
-                    Validator::Required,
-                    Validator::MinValue((-100.0).into()),
-                    Validator::MaxValue(100.0.into()),
-                ],
-            )
-            .build()
-            .new_field("lookup.spam-config.learn-ham.replies")
-            .label("Train on messages sent from authenticated users")
-            .help("Whether messages sent from authenticated users should be learned as ham")
-            .default("true")
-            .typ(Type::Boolean)
-            .build()
-            .new_field("lookup.spam-config.learn-ham-threshold")
-            .label("Ham threshold")
-            .help("When to learn ham (score >= threshold)")
-            .default("-0.5")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [
-                    Validator::Required,
-                    Validator::MinValue((-100.0).into()),
-                    Validator::MaxValue(100.0.into()),
-                ],
-            )
-            .build()
-            .new_field("lookup.spam-config.learn-spam-threshold")
-            .label("Spam threshold")
-            .help("When to learn spam (score >= threshold)")
-            .default("6.0")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [
-                    Validator::Required,
-                    Validator::MinValue((-100.0).into()),
-                    Validator::MaxValue(100.0.into()),
-                ],
-            )
-            .build()
             .new_field("lookup.spam-config.threshold-spam")
             .label("Spam threshold")
             .help("Mark as SPAM messages with a score above this threshold")
@@ -158,6 +104,30 @@ impl Builder<Schemas, ()> {
                 "redis",
             ])
             .build()
+            .new_form_section()
+            .title("Header")
+            .fields([
+                "spam.header.is-spam",
+                "lookup.spam-config.add-spam",
+                "lookup.spam-config.add-spam-result",
+            ])
+            .build()
+            .new_form_section()
+            .title("Thresholds")
+            .fields([
+                "lookup.spam-config.threshold-spam",
+                "lookup.spam-config.threshold-discard",
+                "lookup.spam-config.threshold-reject",
+            ])
+            .build()
+            .new_form_section()
+            .title("Data")
+            .fields(["lookup.spam-config.directory", "lookup.spam-config.lookup"])
+            .build()
+            .build()
+            // Bayes settings
+            .new_schema("spam-bayes")
+            .reload_prefix("lookup")
             .new_field("cache.bayes.capacity")
             .label("Capacity")
             .help("Starting capacity for the Bayes cache")
@@ -179,25 +149,59 @@ impl Builder<Schemas, ()> {
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
-            .new_form_section()
-            .title("Header")
-            .fields([
-                "spam.header.is-spam",
-                "lookup.spam-config.add-spam",
-                "lookup.spam-config.add-spam-result",
-            ])
+            .new_field("lookup.spam-config.learn-enable")
+            .label("Automatically train the Bayes classifier")
+            .help("Whether the bayes classifier should be trained automatically")
+            .default("true")
+            .typ(Type::Boolean)
             .build()
-            .new_form_section()
-            .title("Thresholds")
-            .fields([
-                "lookup.spam-config.threshold-spam",
-                "lookup.spam-config.threshold-discard",
-                "lookup.spam-config.threshold-reject",
-            ])
+            .new_field("lookup.spam-config.learn-balance")
+            .label("Balance")
+            .help("Keep difference for spam/ham learns for at least this value")
+            .default("0.9")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::MinValue((-100.0).into()),
+                    Validator::MaxValue(100.0.into()),
+                ],
+            )
             .build()
-            .new_form_section()
-            .title("Data")
-            .fields(["lookup.spam-config.directory", "lookup.spam-config.lookup"])
+            .new_field("lookup.spam-config.learn-ham.replies")
+            .label("Train on messages sent from authenticated users")
+            .help("Whether messages sent from authenticated users should be learned as ham")
+            .default("true")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("lookup.spam-config.learn-ham-threshold")
+            .label("Ham threshold")
+            .help("When to learn ham (score >= threshold)")
+            .default("-0.5")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::MinValue((-100.0).into()),
+                    Validator::MaxValue(100.0.into()),
+                ],
+            )
+            .build()
+            .new_field("lookup.spam-config.learn-spam-threshold")
+            .label("Spam threshold")
+            .help("When to learn spam (score >= threshold)")
+            .default("6.0")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::MinValue((-100.0).into()),
+                    Validator::MaxValue(100.0.into()),
+                ],
+            )
             .build()
             .new_form_section()
             .title("Bayes Autolearn")
@@ -215,6 +219,45 @@ impl Builder<Schemas, ()> {
                 "cache.bayes.capacity",
                 "cache.bayes.ttl.positive",
                 "cache.bayes.ttl.negative",
+            ])
+            .build()
+            .build()
+            // LLM settings
+            .new_schema("spam-llm")
+            .reload_prefix("lookup")
+            .new_field("lookup.spam-config.llm-model")
+            .label("Model")
+            .help("The AI model to use for the LLM classifier")
+            .typ(Type::Select {
+                source: Source::Dynamic {
+                    schema: "ai-models",
+                    field: "model",
+                    filter: Default::default(),
+                },
+                typ: SelectType::Single,
+            })
+            .enterprise_feature()
+            .build()
+            .new_field("lookup.spam-config.llm-prompt")
+            .label("Prompt")
+            .help("The prompt to use for the LLM classifier")
+            .typ(Type::Text)
+            .enterprise_feature()
+            .build()
+            .new_field("lookup.spam-config.add-llm-result")
+            .label("Add LLM result header to messages")
+            .help("Whether to add the X-Spam-Llm-Result header to messages")
+            .default("true")
+            .typ(Type::Boolean)
+            .default("true")
+            .enterprise_feature()
+            .build()
+            .new_form_section()
+            .title("LLM Classifier")
+            .fields([
+                "lookup.spam-config.llm-model",
+                "lookup.spam-config.llm-prompt",
+                "lookup.spam-config.add-llm-result",
             ])
             .build()
             .build()

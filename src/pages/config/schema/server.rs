@@ -681,6 +681,115 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
+            // AI models
+            .new_schema("ai-models")
+            .prefix("enterprise.ai")
+            .suffix("url")
+            .names("model", "models")
+            .new_id_field()
+            .label("Model Id")
+            .help("Unique identifier for this AI model")
+            .enterprise_feature()
+            .build()
+            .new_field("url")
+            .label("Endpoint URL")
+            .help(concat!("URL of the OpenAI compatible endpoint"))
+            .placeholder("https://api.openai.com/v1/chat/completions")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
+            .enterprise_feature()
+            .build()
+            .new_field("allow-invalid-certs")
+            .label("Allow Invalid Certs")
+            .help(concat!(
+                "Whether Stalwart should connect to an ",
+                "endpoint that has an invalid TLS certificate"
+            ))
+            .default("false")
+            .typ(Type::Boolean)
+            .input_check([], [Validator::Required])
+            .enterprise_feature()
+            .build()
+            .new_field("timeout")
+            .label("Timeout")
+            .help(concat!(
+                "Maximum amount of time that Stalwart will wait for a response ",
+                "from this endpoint"
+            ))
+            .default("2m")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .enterprise_feature()
+            .build()
+            .new_field("auth.token")
+            .label("API token")
+            .help(concat!(
+                "The API token used to authenticate with the AI model endpoint"
+            ))
+            .typ(Type::Secret)
+            .enterprise_feature()
+            .build()
+            .new_field("headers")
+            .typ(Type::Array)
+            .label("HTTP Headers")
+            .help("The headers to be sent with requests")
+            .enterprise_feature()
+            .build()
+            .new_field("default-temperature")
+            .label("Temperature")
+            .help(concat!(
+                "The temperature of the AI model, which controls the randomness ",
+                "of the output. A higher temperature will produce more random output."
+            ))
+            .typ(Type::Input)
+            .default("0.7")
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::MinValue(NumberType::Float(0.0)),
+                    Validator::MaxValue(NumberType::Float(1.0)),
+                ],
+            )
+            .enterprise_feature()
+            .build()
+            .new_field("model")
+            .label("Model")
+            .help(concat!("The name of the AI model to use.",))
+            .typ(Type::Input)
+            .placeholder("gpt-4")
+            .input_check([Transformer::Trim], [Validator::Required])
+            .enterprise_feature()
+            .build()
+            .new_field("type")
+            .label("Type")
+            .help("API type")
+            .typ(Type::Select {
+                typ: SelectType::Single,
+                source: Source::Static(&[("chat", "Chat Completion"), ("text", "Text Generation")]),
+            })
+            .default("chat")
+            .enterprise_feature()
+            .build()
+            .new_form_section()
+            .title("AI Endpoint settings")
+            .fields(["_id", "url", "allow-invalid-certs"])
+            .build()
+            .new_form_section()
+            .title("Model")
+            .fields(["type", "model"])
+            .build()
+            .new_form_section()
+            .title("Authentication")
+            .fields(["auth.token"])
+            .build()
+            .new_form_section()
+            .title("Options")
+            .fields(["timeout", "headers"])
+            .build()
+            .list_title("AI Models")
+            .list_subtitle("Manage AI Models")
+            .list_fields(["_id", "model", "type"])
+            .build()
     }
 }
 

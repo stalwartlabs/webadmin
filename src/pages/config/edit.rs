@@ -409,7 +409,10 @@ pub fn SettingsEdit() -> impl IntoView {
                                                 }
                                                 Type::Secret => {
                                                     view! {
-                                                        <InputPassword element=FormElement::new(field.id, data)/>
+                                                        <InputPassword
+                                                            element=FormElement::new(field.id, data)
+                                                            disabled=is_disabled
+                                                        />
                                                     }
                                                         .into_view()
                                                 }
@@ -443,7 +446,10 @@ pub fn SettingsEdit() -> impl IntoView {
                                                 }
                                                 Type::Size => {
                                                     view! {
-                                                        <InputSize element=FormElement::new(field.id, data)/>
+                                                        <InputSize
+                                                            element=FormElement::new(field.id, data)
+                                                            disabled=is_disabled
+                                                        />
                                                     }
                                                         .into_view()
                                                 }
@@ -469,7 +475,10 @@ pub fn SettingsEdit() -> impl IntoView {
                                                 }
                                                 Type::Rate => {
                                                     view! {
-                                                        <InputRate element=FormElement::new(field.id, data)/>
+                                                        <InputRate
+                                                            element=FormElement::new(field.id, data)
+                                                            disabled=is_disabled
+                                                        />
                                                     }
                                                         .into_view()
                                                 }
@@ -495,6 +504,8 @@ pub fn SettingsEdit() -> impl IntoView {
                                                                     .unwrap_or_default()
                                                                     .to_string()
                                                             })
+
+                                                            disabled=is_disabled
                                                         />
                                                     }
                                                         .into_view()
