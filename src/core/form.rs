@@ -504,6 +504,8 @@ impl FormData {
                         ..
                     } => {
                         let mut total_values = 0;
+                        let mut has_errors = false;
+
                         for (idx, result) in self
                             .array_value(field.id)
                             .map(|v| check.check_value(v.to_string()))
@@ -527,34 +529,37 @@ impl FormData {
                                             error: err.to_string(),
                                         },
                                     );
+                                    has_errors = true;
                                 }
                             }
                         }
 
-                        for validator in &check.validators {
-                            match validator {
-                                Validator::Required => {
-                                    if total_values == 0 {
-                                        self.new_error(field.id, "This field is required");
+                        if !has_errors {
+                            for validator in &check.validators {
+                                match validator {
+                                    Validator::Required => {
+                                        if total_values == 0 {
+                                            self.new_error(field.id, "This field is required");
+                                        }
                                     }
-                                }
-                                Validator::MinItems(min) => {
-                                    if total_values < *min {
-                                        self.new_error(
-                                            field.id,
-                                            format!("At least {min} items are required"),
-                                        );
+                                    Validator::MinItems(min) => {
+                                        if total_values < *min {
+                                            self.new_error(
+                                                field.id,
+                                                format!("At least {min} items are required"),
+                                            );
+                                        }
                                     }
-                                }
-                                Validator::MaxItems(max) => {
-                                    if total_values > *max {
-                                        self.new_error(
-                                            field.id,
-                                            format!("At most {max} items are allowed"),
-                                        );
+                                    Validator::MaxItems(max) => {
+                                        if total_values > *max {
+                                            self.new_error(
+                                                field.id,
+                                                format!("At most {max} items are allowed"),
+                                            );
+                                        }
                                     }
+                                    _ => (),
                                 }
-                                _ => (),
                             }
                         }
                     }
