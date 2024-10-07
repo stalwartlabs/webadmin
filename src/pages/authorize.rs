@@ -38,6 +38,7 @@ pub fn Authorize() -> impl IntoView {
         create_memo(move |_| params.get().get("type").map_or(true, |t| t != "code"));
     let redirect_uri = create_memo(move |_| query.get().get("redirect_uri").cloned());
     let client_id = create_memo(move |_| query.get().get("client_id").cloned());
+    let nonce = create_memo(move |_| query.get().get("nonce").cloned());
     let show_totp = create_rw_signal(false);
 
     let login_action = create_action(
@@ -48,17 +49,17 @@ pub fn Authorize() -> impl IntoView {
             let state = query.get().get("state").cloned();
 
             async move {
+
                 match &request {
                     OAuthCodeRequest::Code {
-                        client_id,
                         redirect_uri,
+                        ..
                     } => {
                         match oauth_user_authentication(
                             BASE_URL,
                             &username,
                             &password,
-                            client_id,
-                            redirect_uri.as_deref(),
+                            &request,
                         )
                         .await
                         {
@@ -90,9 +91,9 @@ pub fn Authorize() -> impl IntoView {
                             }
                         }
                     }
-                    OAuthCodeRequest::Device { code } => {
+                    OAuthCodeRequest::Device { .. } => {
                         let message =
-                            match oauth_device_authentication(BASE_URL, &username, &password, code)
+                            match oauth_device_authentication(BASE_URL, &username, &password, &request)
                                 .await
                             {
                                 AuthenticationResult::Success(true) => {
@@ -193,33 +194,30 @@ pub fn Authorize() -> impl IntoView {
                                     type="submit"
                                     class="w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                                     on:click=move |_| {
-                                        let (redirect_uri, client_id) = if !is_device_auth.get() {
-                                            let redirect_uri = redirect_uri.get();
-                                            match &redirect_uri {
-                                                Some(redirect_uri) if redirect_uri.starts_with("http:") => {
-                                                    alert
-                                                        .set(
-                                                            Alert::error(
-                                                                "Invalid redirect_uri parameter, must be a valid HTTPS URL",
-                                                            ),
-                                                        );
-                                                    return;
-                                                }
-                                                Some(_) => {}
-                                                None => {
-                                                    alert
-                                                        .set(
-                                                            Alert::error("Missing redirect_uri in query parameters"),
-                                                        );
-                                                    return;
-                                                }
+                                        let is_auth_flow = !is_device_auth.get();
+                                        let redirect_uri = match redirect_uri.get() {
+                                            Some(redirect_uri) if redirect_uri.starts_with("http:") => {
+                                                alert
+                                                    .set(
+                                                        Alert::error(
+                                                            "Invalid redirect_uri parameter, must be a valid HTTPS URL",
+                                                        ),
+                                                    );
+                                                return;
                                             }
-                                            (redirect_uri, client_id.get().unwrap_or_default().into())
-                                        } else {
-                                            (None, None)
+                                            None if is_auth_flow => {
+                                                alert
+                                                    .set(
+                                                        Alert::error("Missing redirect_uri in query parameters"),
+                                                    );
+                                                return;
+                                            }
+                                            redirect_uri => redirect_uri,
                                         };
+                                        let client_id = client_id.get();
+                                        let nonce = nonce.get();
                                         data.update(|data| {
-                                            if client_id.is_some() {
+                                            if is_auth_flow {
                                                 data.set("code", "none");
                                             }
                                             if data.validate_form() {
@@ -233,10 +231,11 @@ pub fn Authorize() -> impl IntoView {
                                                     (password, Some(totp)) => format!("{}${}", password, totp),
                                                     (password, None) => password,
                                                 };
-                                                let request = if let Some(client_id) = client_id {
+                                                let request = if is_auth_flow {
                                                     OAuthCodeRequest::Code {
-                                                        client_id,
+                                                        client_id: client_id.unwrap_or_default(),
                                                         redirect_uri,
+                                                        nonce,
                                                     }
                                                 } else {
                                                     OAuthCodeRequest::Device {

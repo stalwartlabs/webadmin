@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use ahash::AHashSet;
 use leptos::{expect_context, RwSignal};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
 use crate::components::messages::alert::Alert;
@@ -23,6 +24,9 @@ pub enum OAuthCodeRequest {
     Code {
         client_id: String,
         redirect_uri: Option<String>,
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        nonce: Option<String>,
     },
     Device {
         code: String,
@@ -103,12 +107,27 @@ pub async fn oauth_authenticate(
     username: &str,
     password: &str,
 ) -> AuthenticationResult<AuthenticationResponse> {
-    let response =
-        match oauth_user_authentication(base_url, username, password, "webadmin", REDIRECT_URI.into()).await {
-            AuthenticationResult::Success(response) => response,
-            AuthenticationResult::TotpRequired => return AuthenticationResult::TotpRequired,
-            AuthenticationResult::Error(err) => return AuthenticationResult::Error(err),
-        };
+    let response = match oauth_user_authentication(
+        base_url,
+        username,
+        password,
+        &OAuthCodeRequest::Code {
+            client_id: "webadmin".to_string(),
+            redirect_uri: REDIRECT_URI.to_string().into(),
+            nonce: thread_rng()
+                .sample_iter(Alphanumeric)
+                .take(10)
+                .map(char::from)
+                .collect::<String>()
+                .into(),
+        },
+    )
+    .await
+    {
+        AuthenticationResult::Success(response) => response,
+        AuthenticationResult::TotpRequired => return AuthenticationResult::TotpRequired,
+        AuthenticationResult::Error(err) => return AuthenticationResult::Error(err),
+    };
     let permissions = response.permissions;
     let is_enterprise = response.is_enterprise;
     match HttpRequest::post(format!("{base_url}/auth/token"))
@@ -145,15 +164,11 @@ pub async fn oauth_user_authentication(
     base_url: &str,
     username: &str,
     password: &str,
-    client_id: &str,
-    redirect_uri: Option<&str>,
+    request: &OAuthCodeRequest,
 ) -> AuthenticationResult<OAuthCodeResponse> {
     match HttpRequest::post(format!("{base_url}/api/oauth"))
         .with_basic_authorization(username, password)
-        .with_body(OAuthCodeRequest::Code {
-            client_id: client_id.to_string(),
-            redirect_uri: redirect_uri.map(ToOwned::to_owned),
-        })
+        .with_body(request)
         .unwrap()
         .send::<OAuthCodeResponse>()
         .await
@@ -177,13 +192,11 @@ pub async fn oauth_device_authentication(
     base_url: &str,
     username: &str,
     password: &str,
-    code: &str,
+    request: &OAuthCodeRequest,
 ) -> AuthenticationResult<bool> {
     match HttpRequest::post(format!("{base_url}/api/oauth"))
         .with_basic_authorization(username, password)
-        .with_body(OAuthCodeRequest::Device {
-            code: code.to_string(),
-        })
+        .with_body(request)
         .unwrap()
         .send::<bool>()
         .await

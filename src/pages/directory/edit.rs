@@ -176,9 +176,8 @@ pub fn PrincipalEdit() -> impl IntoView {
                                 .take(30)
                                 .map(char::from)
                                 .collect::<String>()]);
-                            principal.enabled_permissions = PrincipalValue::StringList(vec![
-                                "authenticate".to_string(),
-                            ]);
+                            principal.enabled_permissions =
+                                PrincipalValue::StringList(vec!["authenticate".to_string()]);
                         }
                         _ => {}
                     }
