@@ -305,33 +305,73 @@ impl Builder<Schemas, ()> {
             .list_fields(["_id"])
             .no_list_action(Action::Modify)
             .build()
-            // Fail2ban settings
-            .new_schema("fail2ban")
-            .new_field("server.fail2ban.authentication")
+            // Auto-ban settings
+            .new_schema("auto-ban")
+            .new_field("server.auto-ban.auth.rate")
             .label("Auth failures")
             .help("The maximum number of failed login attempts before the IP is banned")
             .typ(Type::Rate)
             .default("100/1d")
             .build()
-            .new_field("server.fail2ban.invalid-rcpt")
-            .label("Brute force")
-            .help("The maximum number of brute force attempts before the IP is banned")
+            .new_field("server.auto-ban.scan.rate")
+            .label("Scanning attempts")
+            .help(concat!(
+                "The maximum number of port scanning attempts before the IP is banned"
+            ))
+            .typ(Type::Rate)
+            .default("30/1d")
+            .build()
+            .new_field("server.auto-ban.abuse.rate")
+            .label("Abuse attempts")
+            .help(concat!(
+                "The maximum number of abuse attempts (relaying or failed ",
+                "RCPT TO attempts) before the IP is banned"
+            ))
             .typ(Type::Rate)
             .default("35/1d")
             .build()
-            .new_field("server.fail2ban.loitering")
+            .new_field("server.auto-ban.loiter.rate")
             .label("Loitering")
             .help("The maximum number of loitering disconnections before the IP is banned")
             .typ(Type::Rate)
             .default("150/1d")
             .build()
+            .new_field("server.auto-ban.scan.paths")
+            .label("HTTP banned paths")
+            .help(concat!(
+                "The paths that will trigger an immediate ban if accessed. ",
+                "Each path should be a glob expression"
+            ))
+            .typ(Type::Array)
+            .input_check([Transformer::Trim], [])
+            .default(
+                &[
+                    "*.php*",
+                    "*.cgi*",
+                    "*.asp*",
+                    "*/wp-*",
+                    "*/php*",
+                    "*/cgi-bin*",
+                    "*xmlrpc*",
+                    "*../*",
+                    "*/..*",
+                    "*joomla*",
+                    "*wordpress*",
+                    "*drupal*",
+                ][..],
+            )
+            .build()
             .new_form_section()
-            .title("Fail2ban settings")
+            .title("Automatic banning")
             .fields([
-                "server.fail2ban.authentication",
-                "server.fail2ban.invalid-rcpt",
-                "server.fail2ban.loitering",
+                "server.auto-ban.auth.rate",
+                "server.auto-ban.abuse.rate",
+                "server.auto-ban.loiter.rate",
             ])
+            .build()
+            .new_form_section()
+            .title("Port scanning ban")
+            .fields(["server.auto-ban.scan.rate", "server.auto-ban.scan.paths"])
             .build()
             .build()
             // Clustering

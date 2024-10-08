@@ -25,6 +25,20 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
             .default("https://acme-v02.api.letsencrypt.org/directory")
             .build()
+            // EAB Key
+            .new_field("eab.kid")
+            .label("Key ID")
+            .help("The External Account Binding (EAB) key ID")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            // EAB Key
+            .new_field("eab.hmac-key")
+            .label("HMAC Key")
+            .help("The External Account Binding (EAB) HMAC key")
+            .typ(Type::Secret)
+            .input_check([Transformer::Trim], [])
+            .build()
             // Domains
             .new_field("domains")
             .typ(Type::Array)
@@ -218,6 +232,10 @@ impl Builder<Schemas, ()> {
                 "renew-before",
                 "default",
             ])
+            .build()
+            .new_form_section()
+            .title("External Account Binding")
+            .fields(["eab.kid", "eab.hmac-key"])
             .build()
             .new_form_section()
             .title("DNS settings")

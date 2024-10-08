@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.18] - 2024-10-08
+
+## Added
+- 'Automatic Ban' section.
+- Support for 'External Account Binding' in ACME providers.
+
+### Changed
+
+### Fixed
+- Include nonce in OAuth code request.
+
 ## [0.1.17] - 2024-10-07
 
 ## Added

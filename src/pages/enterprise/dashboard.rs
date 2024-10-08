@@ -315,7 +315,8 @@ pub fn Dashboard() -> impl IntoView {
                         &metrics,
                         &[
                             &["security.authentication-ban"],
-                            &["security.brute-force-ban"],
+                            &["security.abuse-ban"],
+                            &["security.scan-ban"],
                             &["security.loiter-ban"],
                             &["security.ip-blocked"],
                         ],
@@ -675,7 +676,8 @@ pub fn Dashboard() -> impl IntoView {
                             .sum(
                                 &[
                                     "security.authentication-ban",
-                                    "security.brute-force-ban",
+                                    "security.abuse-ban",
+                                    "security.scan-ban",
                                     "security.loiter-ban",
                                 ],
                             )

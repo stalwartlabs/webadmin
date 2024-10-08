@@ -473,9 +473,9 @@ impl LayoutBuilder {
             // Security
             .create("Security")
             .icon(view! { <IconHandRaised/> })
-            // Fail2ban
-            .create("Fail2ban")
-            .route("/fail2ban/edit")
+            // Threat Shield
+            .create("Automatic Ban")
+            .route("/auto-ban/edit")
             .insert(true)
             // Blocked IPs
             .create("Blocked IPs")
