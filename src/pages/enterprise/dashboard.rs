@@ -315,8 +315,7 @@ pub fn Dashboard() -> impl IntoView {
                         &metrics,
                         &[
                             &["security.authentication-ban"],
-                            &["security.abuse-ban"],
-                            &["security.scan-ban"],
+                            &["security.abuse-ban", "security.scan-ban"],
                             &["security.loiter-ban"],
                             &["security.ip-blocked"],
                         ],
