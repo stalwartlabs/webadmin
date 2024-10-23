@@ -28,7 +28,7 @@ impl Builder<Schemas, ()> {
             .help("Move messages to the Junk folder if this header is present")
             .default("X-Spam-Status: Yes")
             .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::Required])
+            .input_check([Transformer::Trim], [])
             .build()
             .new_field("lookup.spam-config.threshold-spam")
             .label("Spam threshold")
