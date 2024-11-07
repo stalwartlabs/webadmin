@@ -258,6 +258,17 @@ impl Builder<Schemas, ()> {
             .placeholder("cn=?,ou=svcaccts,dc=example,dc=org")
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
+            .new_field("bind.auth.search")
+            .label("Use Auth DN for search")
+            .help(concat!(
+                "Weather to perform LDAP searches with the bind auth DN connection. ",
+                "If disabled, LDAP searches will be done using a separate connection ",
+                "using the default Bind DN."
+            ))
+            .typ(Type::Boolean)
+            .display_if_eq("bind.auth.enable", ["true"])
+            .default("true")
+            .build()
             .new_field("filter.name")
             .display_if_eq("type", ["ldap"])
             .input_check([Transformer::Trim], [Validator::Required])
@@ -478,7 +489,13 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Binding")
             .display_if_eq("type", ["ldap"])
-            .fields(["bind.dn", "bind.secret", "bind.auth.enable", "bind.auth.dn"])
+            .fields([
+                "bind.dn",
+                "bind.secret",
+                "bind.auth.enable",
+                "bind.auth.dn",
+                "bind.auth.search",
+            ])
             .build()
             .new_form_section()
             .title("TLS")

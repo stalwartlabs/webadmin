@@ -289,7 +289,7 @@ impl From<http::Error> for Alert {
                                     <div>
                                         {"This feature is only available in the enterprise version of the software. "}
                                         <a
-                                            href="https://stalw.art/contact/"
+                                            href="https://license.stalw.art/trial/"
                                             class="text-yellow-800 underline decoration-yellow-800 hover:opacity-80 focus:outline-none focus:opacity-80"
                                             target="_blank"
                                         >

@@ -568,7 +568,17 @@ impl Builder<Schemas, ()> {
             .label("License Key")
             .help(concat!(
                 "Upgrade to the enterprise version of Stalwart by ",
-                "entering your license key here."
+                "entering your license key here. Obtain your license at ",
+                "https://license.stalw.art/buy"
+            ))
+            .typ(Type::Secret)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("enterprise.api-key")
+            .label("API Key")
+            .help(concat!(
+                "API key for license retrieval and automatic renewals. ",
+                "Obtain your API key at https://license.stalw.art.",
             ))
             .typ(Type::Secret)
             .input_check([Transformer::Trim], [])
@@ -584,8 +594,12 @@ impl Builder<Schemas, ()> {
             .enterprise_feature()
             .build()
             .new_form_section()
-            .title("Enterprise")
-            .fields(["enterprise.license-key", "enterprise.logo-url"])
+            .title("Licensing")
+            .fields(["enterprise.license-key", "enterprise.api-key"])
+            .build()
+            .new_form_section()
+            .title("Branding")
+            .fields(["enterprise.logo-url"])
             .build()
             .build()
             // Contact form settings

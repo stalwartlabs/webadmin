@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.19] - 2024-11-07
+
+## Added
+- `bind.auth.search` and `enterprise.api-key` settings.
+
+### Changed
+
+### Fixed
+
 ## [0.1.18] - 2024-10-08
 
 ## Added
