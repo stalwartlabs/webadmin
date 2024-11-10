@@ -63,6 +63,7 @@ impl Builder<Schemas, ()> {
                     ("s3", "S3-compatible"),
                     ("redis", "Redis/Memcached"),
                     ("elasticsearch", "ElasticSearch"),
+                    ("azure", "Azure blob storage"),
                     ("fs", "Filesystem"),
                     ("sql-read-replica", "SQL with Replicas ⭐"),
                     ("distributed-blob", "Distributed Blob ⭐"),
@@ -159,7 +160,7 @@ impl Builder<Schemas, ()> {
             .new_field("timeout")
             .label("Timeout")
             .help("Connection timeout to the database")
-            .display_if_eq("type", ["postgresql", "mysql", "redis", "s3"])
+            .display_if_eq("type", ["postgresql", "mysql", "redis", "s3", "azure"])
             .typ(Type::Duration)
             .default("15s")
             .build()
@@ -239,6 +240,32 @@ impl Builder<Schemas, ()> {
             .default_if_eq("type", ["elasticsearch"], "https://localhost:9200")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
+            .build()
+            // Maximum number of retries
+            .new_field("max-retries")
+            .label("Retry limit")
+            .help(concat!(
+                "The maximum number of times to retry failed requests. ",
+                "Set to 0 to disable retries"
+            ))
+            .display_if_eq("type", ["s3", "azure"])
+            .placeholder("3")
+            .default("3")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue(10.into()),
+                ],
+            )
+            .build()
+            // Key prefix (for blob stores)
+            .new_field("key-prefix")
+            .label("Key Prefix")
+            .help("A prefix that will be added to the keys of all objects stored in the blob store")
+            .display_if_eq("type", ["s3", "azure"])
+            .input_check([Transformer::Trim], [])
             .build()
             // SQL directory specific
             .new_field("query.name")
@@ -456,10 +483,6 @@ impl Builder<Schemas, ()> {
             .label("Region")
             .help("The geographical region where the bucket resides")
             .placeholder("us-east-1")
-            .new_field("key-prefix")
-            .label("Key Prefix")
-            .help("A prefix that will be added to the keys of all objects stored in the S3 bucket")
-            .input_check([Transformer::Trim], [])
             .new_field("endpoint")
             .help(concat!(
                 "The network address (hostname and optionally a port) of the S3 service. ",
@@ -484,22 +507,30 @@ impl Builder<Schemas, ()> {
             .typ(Type::Secret)
             .new_field("security-token")
             .label("Security Token")
-            .new_field("max-retries")
-            .label("Retry limit")
-            .help(concat!(
-                "The maximum number of times to retry failed requests. ",
-                "Set to 0 to disable retries"
-            ))
-            .placeholder("3")
-            .default("3")
+            .build()
+            // Azure specific
+            .new_field("storage-account")
             .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [
-                    Validator::MinValue(1.into()),
-                    Validator::MaxValue(10.into()),
-                ],
-            )
+            .label("Storage Account Name")
+            .help("The Azure Storage Account where blobs (e-mail messages, Sieve scripts, etc.) will be stored")
+            .input_check([Transformer::Trim], [Validator::Required])
+            .placeholder("mycompany")
+            .display_if_eq("type", ["azure"])
+            .new_field("container")
+            .typ(Type::Input)
+            .label("Container")
+            .help("The name of the container in the Storage Account")
+            .input_check([Transformer::Trim], [Validator::Required])
+            .placeholder("stalwart")
+            .new_field("azure-access-key")
+            .label("Access Key")
+            .help("The access key for the Azure Storage Account")
+            .typ(Type::Secret)
+            .input_check([Transformer::Trim], [])
+            .new_field("sas-token")
+            .label("SAS Token (if not using access-key based authentication)")
+            .typ(Type::Secret)
+            .input_check([Transformer::Trim], [])
             .build()
             // FS specific
             .new_field("depth")
@@ -588,8 +619,13 @@ impl Builder<Schemas, ()> {
             .fields(["bucket", "key-prefix"])
             .build()
             .new_form_section()
+            .title("Storage Account")
+            .display_if_eq("type", ["azure"])
+            .fields(["storage-account", "container", "key-prefix"])
+            .build()
+            .new_form_section()
             .title("Authentication")
-            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch", "s3"])
+            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch", "s3", "azure"])
             .display_if_eq("redis-type", ["cluster"])
             .fields([
                 "user",
@@ -597,6 +633,8 @@ impl Builder<Schemas, ()> {
                 "access-key",
                 "secret-key",
                 "security-token",
+                "azure-access-key",
+                "sas-token",
             ])
             .build()
             .new_form_section()
@@ -611,6 +649,7 @@ impl Builder<Schemas, ()> {
                     "foundationdb",
                     "fs",
                     "s3",
+                    "azure",
                     "sql-read-replica",
                     "distributed-blob",
                 ],
