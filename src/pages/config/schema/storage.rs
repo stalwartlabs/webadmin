@@ -55,6 +55,7 @@ impl Builder<Schemas, ()> {
                 "sqlite",
                 "rocksdb",
                 "s3",
+                "azure",
                 "fs",
                 "sql-read-replica",
                 "distributed-blob",
