@@ -24,7 +24,7 @@ use crate::{
             stacked_badge::StackedBadge,
             stacked_input::StackedInput,
             tab::Tab,
-            Form, FormButtonBar, FormElement, FormItem, FormSection,
+            Form, FormButtonBar, FormElement, FormItem, FormSection, ValidateCb,
         },
         messages::alert::{use_alerts, Alert},
         skeleton::Skeleton,
@@ -840,6 +840,30 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             />
 
                                         </FormItem>
+                                        <FormItem
+                                            label="External Members"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::List)
+                                            })
+                                        >
+
+                                            <StackedBadge
+                                                color=Color::Red
+                                                element=FormElement::new("external-members", data)
+                                                add_button_text="Add e-mail".to_string()
+                                                validate_item=Callback::new(move |
+                                                    (value, cb): (String, ValidateCb)|
+                                                {
+                                                    let email = value.trim().to_lowercase();
+                                                    if email.contains('@') && email.contains('.') {
+                                                        cb.call(Ok(email));
+                                                    } else {
+                                                        cb.call(Err("Please enter a valid e-mail".to_string()))
+                                                    }
+                                                })
+                                            />
+
+                                        </FormItem>
                                     </FormSection>
 
                                     <FormSection>
@@ -1094,6 +1118,7 @@ impl FormData {
                 principal.disabled_permissions.as_string_list(),
             ),
             ("urls", principal.urls.as_string_list()),
+            ("external-members", principal.external_members.as_string_list()),
         ] {
             self.array_set(key, list.iter());
         }
@@ -1156,6 +1181,7 @@ impl FormData {
                 ("enabled-permissions", &mut principal.enabled_permissions),
                 ("disabled-permissions", &mut principal.disabled_permissions),
                 ("urls", &mut principal.urls),
+                ("external-members", &mut principal.external_members)
             ] {
                 *list = PrincipalValue::StringList(
                     self.array_value(key).map(|m| m.to_string()).collect(),
@@ -1213,6 +1239,13 @@ impl Builder<Schemas, ()> {
             )
             .build()
             .new_field("aliases")
+            .typ(Type::Array)
+            .input_check(
+                [Transformer::Trim, Transformer::Lowercase],
+                [Validator::IsEmail],
+            )
+            .build()
+            .new_field("external-members")
             .typ(Type::Array)
             .input_check(
                 [Transformer::Trim, Transformer::Lowercase],

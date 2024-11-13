@@ -77,6 +77,10 @@ pub struct Principal {
     #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
     #[serde(rename = "disabledPermissions")]
     pub disabled_permissions: PrincipalValue,
+
+    #[serde(default, skip_serializing_if = "PrincipalValue::is_none")]
+    #[serde(rename = "externalMembers")]
+    pub external_members: PrincipalValue,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -117,6 +121,7 @@ pub enum PrincipalField {
     DisabledPermissions,
     Picture,
     Urls,
+    ExternalMembers,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -240,6 +245,11 @@ impl Principal {
 
         for (field, current, change) in [
             (PrincipalField::Emails, current.emails, changes.emails),
+            (
+                PrincipalField::ExternalMembers,
+                current.external_members,
+                changes.external_members,
+            ),
             (
                 PrincipalField::MemberOf,
                 current.member_of,
