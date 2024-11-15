@@ -94,16 +94,25 @@ impl Builder<Schemas, ()> {
             .help("Column name for account type")
             .display_if_eq("type", ["sql"])
             .input_check([Transformer::Trim], [Validator::Required])
-            .new_field("columns.secret")
-            .label("Password")
-            .help("Column name for account password")
             .new_field("columns.description")
-            .label("Name")
-            .help("Column name for account name")
+            .label("Description")
+            .help("Column name for account full name or description")
             .new_field("columns.quota")
             .label("Quota")
             .help("Column name for account quota")
             .input_check([Transformer::Trim], [])
+            .new_field("columns.email")
+            .label("E-mail")
+            .help(concat!(
+                "Column name for e-mail address. ",
+                "Optional, you can use instead a query to obtain the account's addresses."
+            ))
+            .new_field("columns.secret")
+            .label("Password")
+            .help(concat!(
+                "Column name for the account password. ",
+                "Optional, you can use instead a query to obtain the account's secrets."
+            ))
             .build()
             // Host
             .new_field("host")
@@ -284,40 +293,6 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Searches for objects associated with a specific primary ",
                 "addresses, alias or mailing lists address"
-            ))
-            .new_field("filter.verify")
-            .label("Verify (VRFY)")
-            .default(concat!(
-                "(&(|(objectClass=posixAccount)(objectClass=posixGroup))",
-                "(|(mail=*?*)(mailAlias=*?*)))"
-            ))
-            .help(concat!(
-                "A wildcard search filter to retrieve the objects that contain",
-                " a certain string in their email addresses. This ",
-                "filter is used by the SMTP VRFY command."
-            ))
-            .new_field("filter.expand")
-            .label("Expand (EXPN)")
-            .default(concat!(
-                "(&(|(objectClass=posixAccount)(objectClass=posixGroup))",
-                "(mailList=?))"
-            ))
-            .help(concat!(
-                "This filter is used to search for objects that belong ",
-                "to a specific mailing list. This filter is ",
-                "used by the SMTP EXPN command."
-            ))
-            .new_field("filter.domains")
-            .label("Local Domains")
-            .default(concat!(
-                "(&(|(objectClass=posixAccount)(objectClass=posixGroup))",
-                "(|(mail=*@?)(mailAlias=*@?)))"
-            ))
-            .help(concat!(
-                "Searches for objects that have an email address ",
-                "in a specific domain name. This filter is used ",
-                "by the SMTP server to validate local domains during ",
-                "the RCPT TO command."
             ))
             .new_field("attributes.name")
             .label("Name")
@@ -517,21 +492,16 @@ impl Builder<Schemas, ()> {
             .display_if_eq("type", ["sql"])
             .fields([
                 "columns.class",
-                "columns.secret",
                 "columns.description",
+                "columns.secret",
+                "columns.email",
                 "columns.quota",
             ])
             .build()
             .new_form_section()
             .title("Lookup Filters")
             .display_if_eq("type", ["ldap"])
-            .fields([
-                "filter.name",
-                "filter.email",
-                "filter.verify",
-                "filter.expand",
-                "filter.domains",
-            ])
+            .fields(["filter.name", "filter.email"])
             .build()
             .new_form_section()
             .title("Object Attributes")

@@ -726,6 +726,18 @@ impl Builder<(Schemas, Schema), Field> {
         self
     }
 
+    pub fn placeholder_if_eq(
+        mut self,
+        field: &'static str,
+        conditions: impl IntoIterator<Item = &'static str>,
+        placeholder: &'static str,
+    ) -> Self {
+        self.item
+            .placeholder
+            .push_if_matches_eq(self.field(field), conditions, placeholder);
+        self
+    }
+
     pub fn placeholder(mut self, placeholder: &'static str) -> Self {
         self.item.placeholder.push_else(placeholder);
         self

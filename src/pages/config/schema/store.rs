@@ -10,31 +10,22 @@ const PGSQL_NAME: &str =
     "SELECT name, type, secret, description, quota FROM accounts WHERE name = $1 AND active = true";
 const PGSQL_MEMBERS: &str = "SELECT member_of FROM group_members WHERE name = $1";
 const PGSQL_RECIPIENTS: &str = "SELECT name FROM emails WHERE address = $1 ORDER BY name ASC";
-const PGSQL_EMAILS: &str =
-    "SELECT address FROM emails WHERE name = $1 AND type != 'list' ORDER BY type DESC, address ASC";
-const PGSQL_VRFY : &str = "SELECT address FROM emails WHERE address LIKE '%' || $1 || '%' AND type = 'primary' ORDER BY address LIMIT 5";
-const PGSQL_EXPN : &str = "SELECT p.address FROM emails AS p JOIN emails AS l ON p.name = l.name WHERE p.type = 'primary' AND l.address = $1 AND l.type = 'list' ORDER BY p.address LIMIT 50";
-const PGSQL_DOMAINS: &str = "SELECT 1 FROM emails WHERE address LIKE '%@' || $1 LIMIT 1";
+const PGSQL_EMAILS: &str = "SELECT address FROM emails WHERE name = $1 ORDER BY address ASC";
+const PGSQL_SECRETS: &str = "SELECT secret FROM secrets WHERE name = $1";
 
 const MYSQL_NAME: &str =
     "SELECT name, type, secret, description, quota FROM accounts WHERE name = ? AND active = true";
 const MYSQL_MEMBERS: &str = "SELECT member_of FROM group_members WHERE name = ?";
 const MYSQL_RECIPIENTS: &str = "SELECT name FROM emails WHERE address = ? ORDER BY name ASC";
-const MYSQL_EMAILS: &str =
-    "SELECT address FROM emails WHERE name = ? AND type != 'list' ORDER BY type DESC, address ASC";
-const MYSQL_VRFY : &str = "SELECT address FROM emails WHERE address LIKE CONCAT('%', ?, '%') AND type = 'primary' ORDER BY address LIMIT 5";
-const MYSQL_EXPN : &str = "SELECT p.address FROM emails AS p JOIN emails AS l ON p.name = l.name WHERE p.type = 'primary' AND l.address = ? AND l.type = 'list' ORDER BY p.address LIMIT 50";
-const MYSQL_DOMAINS: &str = "SELECT 1 FROM emails WHERE address LIKE CONCAT('%@', ?) LIMIT 1";
+const MYSQL_EMAILS: &str = "SELECT address FROM emails WHERE name = ? ORDER BY address ASC";
+const MYSQL_SECRETS: &str = "SELECT secret FROM secrets WHERE name = ?";
 
 const SQLITE_NAME: &str =
     "SELECT name, type, secret, description, quota FROM accounts WHERE name = ? AND active = true";
 const SQLITE_MEMBERS: &str = "SELECT member_of FROM group_members WHERE name = ?";
 const SQLITE_RECIPIENTS: &str = "SELECT name FROM emails WHERE address = ?";
-const SQLITE_EMAILS: &str =
-    "SELECT address FROM emails WHERE name = ? AND type != 'list' ORDER BY type DESC, address ASC";
-const SQLITE_VRFY : &str = "SELECT address FROM emails WHERE address LIKE '%' || ? || '%' AND type = 'primary' ORDER BY address LIMIT 5";
-const SQLITE_EXPN : &str = "SELECT p.address FROM emails AS p JOIN emails AS l ON p.name = l.name WHERE p.type = 'primary' AND l.address = ? AND l.type = 'list' ORDER BY p.address LIMIT 50";
-const SQLITE_DOMAINS: &str = "SELECT 1 FROM emails WHERE address LIKE '%@' || ? LIMIT 1";
+const SQLITE_EMAILS: &str = "SELECT address FROM emails WHERE name = ? ORDER BY address ASC";
+const SQLITE_SECRETS: &str = "SELECT secret FROM secrets WHERE name = ?";
 
 impl Builder<Schemas, ()> {
     pub fn build_store(self) -> Self {
@@ -274,45 +265,44 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
             .display_if_eq("type", ["postgresql", "mysql", "sqlite"])
-            .default_if_eq("type", ["postgresql"], PGSQL_NAME)
-            .default_if_eq("type", ["mysql"], MYSQL_NAME)
-            .default_if_eq("type", ["sqlite"], SQLITE_NAME)
+            .placeholder_if_eq("type", ["postgresql"], PGSQL_NAME)
+            .placeholder_if_eq("type", ["mysql"], MYSQL_NAME)
+            .placeholder_if_eq("type", ["sqlite"], SQLITE_NAME)
             .new_field("query.members")
-            .label("Members")
+            .label("Members by Name")
             .help("Query to obtain the members of a group by account name")
-            .default_if_eq("type", ["postgresql"], PGSQL_MEMBERS)
-            .default_if_eq("type", ["mysql"], MYSQL_MEMBERS)
-            .default_if_eq("type", ["sqlite"], SQLITE_MEMBERS)
+            .placeholder_if_eq("type", ["postgresql"], PGSQL_MEMBERS)
+            .placeholder_if_eq("type", ["mysql"], MYSQL_MEMBERS)
+            .placeholder_if_eq("type", ["sqlite"], SQLITE_MEMBERS)
             .new_field("query.recipients")
-            .label("Recipients")
-            .help("Query to obtain the recipient(s) of an e-mail address")
-            .default_if_eq("type", ["postgresql"], PGSQL_RECIPIENTS)
-            .default_if_eq("type", ["mysql"], MYSQL_RECIPIENTS)
-            .default_if_eq("type", ["sqlite"], SQLITE_RECIPIENTS)
+            .label("Name by E-mail")
+            .help(concat!(
+                "Query to obtain the account name ",
+                "associated with an e-mail address."
+            ))
+            .placeholder_if_eq("type", ["postgresql"], PGSQL_RECIPIENTS)
+            .placeholder_if_eq("type", ["mysql"], MYSQL_RECIPIENTS)
+            .placeholder_if_eq("type", ["sqlite"], SQLITE_RECIPIENTS)
             .new_field("query.emails")
-            .label("E-mails")
-            .help("Query to obtain the e-mail address(es) of an account")
-            .default_if_eq("type", ["postgresql"], PGSQL_EMAILS)
-            .default_if_eq("type", ["mysql"], MYSQL_EMAILS)
-            .default_if_eq("type", ["sqlite"], SQLITE_EMAILS)
-            .new_field("query.verify")
-            .label("Verify (VRFY)")
-            .help("Query to verify an e-mail address with the VRFY SMTP command")
-            .default_if_eq("type", ["postgresql"], PGSQL_VRFY)
-            .default_if_eq("type", ["mysql"], MYSQL_VRFY)
-            .default_if_eq("type", ["sqlite"], SQLITE_VRFY)
-            .new_field("query.expand")
-            .label("Expand (EXPN)")
-            .help("Query to expand an e-mail address with the EXPN SMTP command")
-            .default_if_eq("type", ["postgresql"], PGSQL_EXPN)
-            .default_if_eq("type", ["mysql"], MYSQL_EXPN)
-            .default_if_eq("type", ["sqlite"], SQLITE_EXPN)
-            .new_field("query.domains")
-            .label("Local domains")
-            .help("Query to verify whether a domain is local")
-            .default_if_eq("type", ["postgresql"], PGSQL_DOMAINS)
-            .default_if_eq("type", ["mysql"], MYSQL_DOMAINS)
-            .default_if_eq("type", ["sqlite"], SQLITE_DOMAINS)
+            .label("E-mails by Name")
+            .help(concat!(
+                "Query to obtain the e-mail address(es) of an account. ",
+                "Optional, you may also obtain a single ",
+                "address from the 'email' column."
+            ))
+            .placeholder_if_eq("type", ["postgresql"], PGSQL_EMAILS)
+            .placeholder_if_eq("type", ["mysql"], MYSQL_EMAILS)
+            .placeholder_if_eq("type", ["sqlite"], SQLITE_EMAILS)
+            .new_field("query.secrets")
+            .label("Passwords by Name")
+            .help(concat!(
+                "Query to obtain all the account's secrets. ",
+                "Optional, you may also obtain a single secret ",
+                "from the 'secret' column."
+            ))
+            .placeholder_if_eq("type", ["postgresql"], PGSQL_SECRETS)
+            .placeholder_if_eq("type", ["mysql"], MYSQL_SECRETS)
+            .placeholder_if_eq("type", ["sqlite"], SQLITE_SECRETS)
             .build()
             // RocksDB specific
             .new_field("settings.min-blob-size")
@@ -333,7 +323,10 @@ impl Builder<Schemas, ()> {
             )
             .new_field("settings.write-buffer-size")
             .label("Write buffer size")
-            .help("Size of the write buffer in bytes, used to batch writes to the store")
+            .help(concat!(
+                "Size of the write buffer in bytes, ",
+                "used to batch writes to the store"
+            ))
             .default("134217728")
             .typ(Type::Size)
             .input_check(
@@ -512,7 +505,10 @@ impl Builder<Schemas, ()> {
             .new_field("storage-account")
             .typ(Type::Input)
             .label("Storage Account Name")
-            .help("The Azure Storage Account where blobs (e-mail messages, Sieve scripts, etc.) will be stored")
+            .help(concat!(
+                "The Azure Storage Account where blobs (e-mail messages, ",
+                "Sieve scripts, etc.) will be stored"
+            ))
             .input_check([Transformer::Trim], [Validator::Required])
             .placeholder("mycompany")
             .display_if_eq("type", ["azure"])
@@ -528,7 +524,8 @@ impl Builder<Schemas, ()> {
             .typ(Type::Secret)
             .input_check([Transformer::Trim], [])
             .new_field("sas-token")
-            .label("SAS Token (if not using access-key based authentication)")
+            .label("SAS Token")
+            .help("SAS Token, when not using access-key based authentication")
             .typ(Type::Secret)
             .input_check([Transformer::Trim], [])
             .build()
@@ -625,7 +622,10 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Authentication")
-            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch", "s3", "azure"])
+            .display_if_eq(
+                "type",
+                ["postgresql", "mysql", "elasticsearch", "s3", "azure"],
+            )
             .display_if_eq("redis-type", ["cluster"])
             .fields([
                 "user",
@@ -709,9 +709,7 @@ impl Builder<Schemas, ()> {
                 "query.members",
                 "query.recipients",
                 "query.emails",
-                "query.verify",
-                "query.expand",
-                "query.domains",
+                "query.secrets",
             ])
             .build()
             .new_form_section()
