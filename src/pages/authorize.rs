@@ -49,19 +49,10 @@ pub fn Authorize() -> impl IntoView {
             let state = query.get().get("state").cloned();
 
             async move {
-
                 match &request {
-                    OAuthCodeRequest::Code {
-                        redirect_uri,
-                        ..
-                    } => {
-                        match oauth_user_authentication(
-                            BASE_URL,
-                            &username,
-                            &password,
-                            &request,
-                        )
-                        .await
+                    OAuthCodeRequest::Code { redirect_uri, .. } => {
+                        match oauth_user_authentication(BASE_URL, &username, &password, &request)
+                            .await
                         {
                             AuthenticationResult::Success(response) => {
                                 let url = if let Some(state) = state {
@@ -92,27 +83,26 @@ pub fn Authorize() -> impl IntoView {
                         }
                     }
                     OAuthCodeRequest::Device { .. } => {
-                        let message =
-                            match oauth_device_authentication(BASE_URL, &username, &password, &request)
-                                .await
-                            {
-                                AuthenticationResult::Success(true) => {
-                                    Alert::success("Device authenticated")
-                                        .with_details(
-                                            "You have successfully authenticated your device",
-                                        )
-                                        .without_timeout()
-                                }
-                                AuthenticationResult::Success(false) => Alert::warning(
-                                    "Device authentication failed",
-                                )
-                                .with_details("The code you entered is invalid or has expired"),
-                                AuthenticationResult::TotpRequired => {
-                                    show_totp.set(true);
-                                    return;
-                                }
-                                AuthenticationResult::Error(err) => err,
-                            };
+                        let message = match oauth_device_authentication(
+                            BASE_URL, &username, &password, &request,
+                        )
+                        .await
+                        {
+                            AuthenticationResult::Success(true) => {
+                                Alert::success("Device authenticated")
+                                    .with_details("You have successfully authenticated your device")
+                                    .without_timeout()
+                            }
+                            AuthenticationResult::Success(false) => {
+                                Alert::warning("Device authentication failed")
+                                    .with_details("The code you entered is invalid or has expired")
+                            }
+                            AuthenticationResult::TotpRequired => {
+                                show_totp.set(true);
+                                return;
+                            }
+                            AuthenticationResult::Error(err) => err,
+                        };
 
                         alert.set(message);
                     }

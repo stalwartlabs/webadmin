@@ -674,7 +674,39 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                 }
                             >
 
-                                DNS records
+                                View DNS records
+                            </a>
+                            <a
+                                class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+                                href=move || {
+                                    format!(
+                                        "/manage/troubleshoot/delivery?target={}",
+                                        principal.get_untracked().name().unwrap_or_default(),
+                                    )
+                                }
+
+                                class:hidden=move || {
+                                    !matches!(selected_type, PrincipalType::Domain)
+                                }
+                            >
+
+                                Test Email Delivery
+                            </a>
+                            <a
+                                class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+                                href=move || {
+                                    format!(
+                                        "/manage/troubleshoot/dmarc?target={}",
+                                        principal.get_untracked().name().unwrap_or_default(),
+                                    )
+                                }
+
+                                class:hidden=move || {
+                                    !matches!(selected_type, PrincipalType::Domain)
+                                }
+                            >
+
+                                Test DMARC
                             </a>
                             <a
                                 class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"

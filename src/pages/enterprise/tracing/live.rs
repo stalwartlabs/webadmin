@@ -71,8 +71,9 @@ pub fn LiveTracing() -> impl IntoView {
                 let auth = auth.get_untracked();
                 let filter = data.get().value::<String>("filter").unwrap_or_default();
                 let mut url_builer = UrlBuilder::new(
-                    format!("{}/api/telemetry/traces/live/{}", auth.base_url, auth_token),
-                );
+                        format!("{}/api/telemetry/traces/live", auth.base_url),
+                    )
+                    .with_parameter("token", auth_token);
                 if !filter.is_empty() {
                     for keyword in filter.split_ascii_whitespace() {
                         if let Some((key, value)) = keyword.split_once(':') {

@@ -106,6 +106,7 @@ pub enum Permission {
     TracingLive,
     MetricsList,
     MetricsLive,
+    Troubleshoot,
 
     // Account Management
     ManageEncryption,

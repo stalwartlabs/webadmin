@@ -1118,7 +1118,10 @@ impl FormData {
                 principal.disabled_permissions.as_string_list(),
             ),
             ("urls", principal.urls.as_string_list()),
-            ("external-members", principal.external_members.as_string_list()),
+            (
+                "external-members",
+                principal.external_members.as_string_list(),
+            ),
         ] {
             self.array_set(key, list.iter());
         }
@@ -1181,7 +1184,7 @@ impl FormData {
                 ("enabled-permissions", &mut principal.enabled_permissions),
                 ("disabled-permissions", &mut principal.disabled_permissions),
                 ("urls", &mut principal.urls),
-                ("external-members", &mut principal.external_members)
+                ("external-members", &mut principal.external_members),
             ] {
                 *list = PrincipalValue::StringList(
                     self.array_value(key).map(|m| m.to_string()).collect(),

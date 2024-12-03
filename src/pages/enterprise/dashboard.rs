@@ -175,10 +175,10 @@ pub fn Dashboard() -> impl IntoView {
     create_effect(move |_| match start_live_telemetry.get() {
         Some(Ok(auth_token)) => {
             let url_builer = UrlBuilder::new(format!(
-                "{}/api/telemetry/metrics/live/{}",
+                "{}/api/telemetry/metrics/live",
                 auth.get_untracked().base_url,
-                auth_token
             ))
+            .with_parameter("token", auth_token)
             .with_parameter("interval", "30")
             .with_parameter(
                 "metrics",

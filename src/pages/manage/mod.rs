@@ -7,3 +7,4 @@
 pub mod logs;
 pub mod maintenance;
 pub mod spam;
+pub mod troubleshoot;

@@ -10,9 +10,9 @@ use std::{sync::Arc, time::Duration};
 
 use components::{
     icon::{
-        IconAdjustmentsHorizontal, IconChartBarSquare, IconClock, IconDocumentChartBar, IconKey,
-        IconLockClosed, IconQueueList, IconShieldCheck, IconSignal, IconSquare2x2, IconUserGroup,
-        IconWrench,
+        IconAdjustmentsHorizontal, IconBeaker, IconChartBarSquare, IconClock, IconDocumentChartBar,
+        IconKey, IconLockClosed, IconQueueList, IconShieldCheck, IconSignal, IconSquare2x2,
+        IconUserGroup, IconWrench,
     },
     layout::MenuItem,
 };
@@ -33,7 +33,10 @@ use pages::{
         tracing::{display::SpanDisplay, list::SpanList, live::LiveTracing},
         undelete::UndeleteList,
     },
-    manage::spam::{SpamTest, SpamTrain},
+    manage::{
+        spam::{SpamTest, SpamTrain},
+        troubleshoot::{TroubleshootDelivery, TroubleshootDmarc},
+    },
 };
 
 pub static VERSION_NAME: &str = concat!("Stalwart Management UI v", env!("CARGO_PKG_VERSION"),);
@@ -419,6 +422,28 @@ pub fn App() -> impl IntoView {
                         }
                     />
 
+                    <ProtectedRoute
+                        path="/troubleshoot/delivery"
+                        view=TroubleshootDelivery
+                        redirect_path="/login"
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::Troubleshoot) })
+                        }
+                    />
+
+                    <ProtectedRoute
+                        path="/troubleshoot/dmarc"
+                        view=TroubleshootDmarc
+                        redirect_path="/login"
+                        condition=move || {
+                            permissions
+                                .get()
+                                .map_or(false, |p| { p.has_access(Permission::Troubleshoot) })
+                        }
+                    />
+
                 </ProtectedRoute>
                 <ProtectedRoute
                     path="/settings"
@@ -653,6 +678,15 @@ impl LayoutBuilder {
             .route("/spam/test")
             .insert(true)
             .insert(permissions.has_access(Permission::SieveRun))
+            .create("Troubleshoot")
+            .icon(view! { <IconBeaker/> })
+            .create("E-mail Delivery")
+            .route("/troubleshoot/delivery")
+            .insert(true)
+            .create("DMARC")
+            .route("/troubleshoot/dmarc")
+            .insert(true)
+            .insert(permissions.has_access(Permission::Troubleshoot))
             .create("Settings")
             .icon(view! { <IconAdjustmentsHorizontal/> })
             .raw_route(DEFAULT_SETTINGS_URL)
@@ -717,6 +751,7 @@ pub fn build_schemas() -> Arc<Schemas> {
         .build_mfa()
         .build_app_passwords()
         .build_live_tracing()
+        .build_troubleshoot()
         .build()
         .into()
 }
