@@ -320,6 +320,7 @@ impl OAuthCodeResponse {
                 Permission::MetricsLive,
                 Permission::ManageEncryption,
                 Permission::ManagePasswords,
+                Permission::Troubleshoot,
             ] {
                 self.permissions.insert(permission);
             }

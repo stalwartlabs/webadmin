@@ -1184,6 +1184,7 @@ pub static EVENT_NAMES: &[&str] = &[
     "telemetry.webhook-error",
     "tls-rpt.record-fetch",
     "tls-rpt.record-fetch-error",
+    "tls-rpt.record-not-found",
     "tls.certificate-not-found",
     "tls.handshake",
     "tls.handshake-error",

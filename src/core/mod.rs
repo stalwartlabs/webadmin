@@ -303,6 +303,7 @@ impl Permission {
                 | Permission::TracingLive
                 | Permission::MetricsList
                 | Permission::MetricsLive
+                | Permission::Troubleshoot
         )
     }
 }

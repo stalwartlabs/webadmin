@@ -440,14 +440,14 @@ pub fn TroubleshootDmarc() -> impl IntoView {
                                 />
                             </FormItem>
                             <FormItem
-                                label="Headers"
+                                label="Message Body"
                                 tooltip=concat!(
-                                    "Message headers including DKIM signatures. ",
+                                    "Message body including DKIM signatures. ",
                                     "Leave blank to test SPF only.",
                                 )
                             >
 
-                                <TextArea element=FormElement::new("headers", data)/>
+                                <TextArea element=FormElement::new("body", data)/>
                             </FormItem>
 
                         </FormSection>
@@ -476,8 +476,8 @@ pub fn TroubleshootDmarc() -> impl IntoView {
                                                         .get("mail_from")
                                                         .unwrap_or_default()
                                                         .to_string(),
-                                                    headers: data
-                                                        .get("headers")
+                                                    body: data
+                                                        .get("body")
                                                         .and_then(|h| {
                                                             if h.trim().is_empty() { None } else { Some(h.to_string()) }
                                                         }),
@@ -749,7 +749,7 @@ struct DmarcTroubleshootRequest {
     ehlo_domain: String,
     #[serde(rename = "mailFrom")]
     mail_from: String,
-    headers: Option<String>,
+    body: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1295,7 +1295,7 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [Validator::Required])
             .typ(Type::Input)
             .build()
-            .new_field("headers")
+            .new_field("body")
             .typ(Type::Input)
             .build()
             .build()
