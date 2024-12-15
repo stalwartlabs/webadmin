@@ -1730,7 +1730,6 @@ impl Builder<Schemas, ()> {
                 source: Source::Static(&[
                     ("enforce", "Enforce"),
                     ("testing", "Testing"),
-                    ("none", "None"),
                     ("disable", "Disabled"),
                 ]),
             })
