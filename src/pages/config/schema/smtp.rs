@@ -290,6 +290,18 @@ impl Builder<Schemas, ()> {
             .build()
             // Limits & Timeouts
             .new_schema("smtp-out-limits")
+            .new_field("queue.outbound.concurrency")
+            .label("Outbound")
+            .help(concat!(
+                "Maximum number of concurrent outbound connections"
+            ))
+            .default("25")
+            .typ(Type::Input)
+            .input_check(
+                [],
+                [Validator::Required, Validator::MinValue(1.into())],
+            )
+            .build()
             .new_field("queue.outbound.limits.mx")
             .label("MX Hosts")
             .help(concat!(
@@ -360,6 +372,10 @@ impl Builder<Schemas, ()> {
                 "Maximum time to wait for the MTA-STS policy lookup to complete"
             ))
             .default("2m")
+            .build()
+            .new_form_section()
+            .title("Concurrency")
+            .fields(["queue.outbound.concurrency"])
             .build()
             .new_form_section()
             .title("Limits")
@@ -460,43 +476,6 @@ impl Builder<Schemas, ()> {
             .typ(Type::Boolean)
             .input_check([], [Validator::Required])
             .build()
-            .new_field("cache.resolver.txt.size")
-            .label("TXT Records")
-            .help(concat!("Number of TXT records to cache"))
-            .default("2048")
-            .typ(Type::Input)
-            .input_check([], [Validator::Required, Validator::MinValue(1.into())])
-            .new_field("cache.resolver.mx.size")
-            .label("MX Records")
-            .help(concat!("Number of MX records to cache"))
-            .default("1024")
-            .typ(Type::Input)
-            .new_field("cache.resolver.ipv4.size")
-            .label("IPv4 Records")
-            .help(concat!("Number of IPv4 records to cache"))
-            .default("1024")
-            .typ(Type::Input)
-            .new_field("cache.resolver.ipv6.size")
-            .label("IPv6 Records")
-            .help(concat!("Number of IPv6 records to cache"))
-            .default("1024")
-            .typ(Type::Input)
-            .new_field("cache.resolver.ptr.size")
-            .label("PTR Records")
-            .help(concat!("Number of PTR records to cache"))
-            .default("1024")
-            .typ(Type::Input)
-            .new_field("cache.resolver.tlsa.size")
-            .label("TLSA Records")
-            .help(concat!("Number of TLSA records to cache"))
-            .default("1024")
-            .typ(Type::Input)
-            .new_field("cache.resolver.mta-sts.size")
-            .label("MTA-STS Records")
-            .help(concat!("Number of MTA-STS records to cache"))
-            .default("1024")
-            .typ(Type::Input)
-            .build()
             .new_form_section()
             .title("DNS Resolver settings")
             .fields([
@@ -507,18 +486,6 @@ impl Builder<Schemas, ()> {
                 "resolver.attempts",
                 "resolver.preserve-intermediates",
                 "resolver.try-tcp-on-error",
-            ])
-            .build()
-            .new_form_section()
-            .title("DNS Record Cache")
-            .fields([
-                "cache.resolver.txt.size",
-                "cache.resolver.mx.size",
-                "cache.resolver.ipv4.size",
-                "cache.resolver.ipv6.size",
-                "cache.resolver.ptr.size",
-                "cache.resolver.tlsa.size",
-                "cache.resolver.mta-sts.size",
             ])
             .build()
             .build()
@@ -1242,10 +1209,12 @@ impl Builder<Schemas, ()> {
             .new_field("session.data.script")
             .label("Run Script")
             .help("Which Sieve script to run after the client sends a DATA command")
-            .default(Expression::new(
-                [("is_empty(authenticated_as)", "'spam-filter'")],
-                "'track-replies'",
-            ))
+            .typ(Type::Expression)
+            .input_check([], [Validator::IsValidExpression(has_rcpt_vars)])
+            .new_field("session.data.spam-filter")
+            .label("Spam filtering")
+            .help("Whether to enable the spam filter for incoming messages")
+            .default(Expression::new([], "true"))
             .typ(Type::Expression)
             .input_check([], [Validator::IsValidExpression(has_rcpt_vars)])
             .new_field("session.data.limits.messages")
@@ -1294,10 +1263,14 @@ impl Builder<Schemas, ()> {
             .label("Return-Path")
             .help("Whether to add a Return-Path header to the message")
             .default(Expression::new([("local_port == 25", "true")], "false"))
+            .new_field("session.data.add-headers.delivered-to")
+            .label("Delivered-To")
+            .help("Whether to add a Delivered-To header to the message")
+            .default(Expression::new([], "true"))
             .build()
             .new_form_section()
             .title("DATA Stage")
-            .fields(["session.data.script"])
+            .fields(["session.data.spam-filter", "session.data.script"])
             .build()
             .new_form_section()
             .title("Limits")
@@ -1316,6 +1289,7 @@ impl Builder<Schemas, ()> {
                 "session.data.add-headers.message-id",
                 "session.data.add-headers.date",
                 "session.data.add-headers.return-path",
+                "session.data.add-headers.delivered-to",
             ])
             .build()
             .build()
@@ -1684,43 +1658,6 @@ impl Builder<Schemas, ()> {
             .list_title("MTA Hooks")
             .list_subtitle("Manage MTA Hooks")
             .list_fields(["_id", "url"])
-            .build()
-            // Pipes
-            .new_schema("pipe")
-            .names("pipe", "pipes")
-            .prefix("session.data.pipe")
-            .suffix("command")
-            .new_id_field()
-            .label("Pipe Id")
-            .help("Unique identifier for this pipe")
-            .build()
-            .new_field("command")
-            .label("Command")
-            .help("Command name to execute")
-            .typ(Type::Expression)
-            .input_check(
-                [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(has_rcpt_vars),
-                ],
-            )
-            .new_field("arguments")
-            .label("Arguments")
-            .help("Arguments to pass to the command")
-            .default("[]")
-            .new_field("timeout")
-            .label("Timeout")
-            .help("Maximum time to wait for the command to complete")
-            .default("30s")
-            .build()
-            .new_form_section()
-            .title("Pipe settings")
-            .fields(["_id", "command", "arguments", "timeout"])
-            .build()
-            .list_title("Pipes")
-            .list_subtitle("Manage external filters (pipes)")
-            .list_fields(["_id", "command", "arguments"])
             .build()
             // MTA-STS
             .new_schema("smtp-in-mta-sts")

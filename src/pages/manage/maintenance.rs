@@ -64,7 +64,7 @@ const ACTIONS: &[Action] = &[
         icon: "shield_check",
         url: "/api/update/spam-filter",
         success_message: "Successfully updated SPAM rules to the latest version",
-        permission: Permission::UpdateSpamFilter,
+        permission: Permission::SpamFilterUpdate,
     },
     Action {
         title: "Update Webadmin",
@@ -72,7 +72,7 @@ const ACTIONS: &[Action] = &[
         icon: "computer_desktop",
         url: "/api/update/webadmin",
         success_message: "Successfully updated the web admin to the latest version",
-        permission: Permission::UpdateWebadmin,
+        permission: Permission::WebadminUpdate,
     },
     Action {
         title: "Reindex FTS",

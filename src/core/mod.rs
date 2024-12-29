@@ -90,16 +90,16 @@ pub enum Permission {
     BlobFetch,
     PurgeBlobStore,
     PurgeDataStore,
-    PurgeLookupStore,
+    PurgeInMemoryStore,
     PurgeAccount,
     FtsReindex,
     Undelete,
     DkimSignatureCreate,
     DkimSignatureGet,
-    UpdateSpamFilter,
-    UpdateWebadmin,
+    SpamFilterUpdate,
+    WebadminUpdate,
     LogsView,
-    SieveRun,
+    SpamFilterTrain,
     Restart,
     TracingList,
     TracingGet,
@@ -186,7 +186,7 @@ impl Permissions {
                 Permission::MessageQueueList,
                 Permission::OutgoingReportList,
                 Permission::IncomingReportList,
-                Permission::SieveRun,
+                Permission::SpamFilterTrain,
                 Permission::LogsView,
                 Permission::TracingList,
                 Permission::TracingLive,
@@ -208,7 +208,7 @@ impl Permissions {
                         Permission::IncomingReportList => "/manage/reports/dmarc",
                         Permission::ManageEncryption => "/account/crypto",
                         Permission::ManagePasswords => "/account/password",
-                        Permission::SieveRun => "/manage/spam/train",
+                        Permission::SpamFilterTrain => "/manage/spam/train",
                         Permission::LogsView => "/manage/logs",
                         Permission::TracingList => "/manage/tracing/received",
                         Permission::TracingLive => "/manage/tracing/live",
@@ -288,15 +288,15 @@ impl Permission {
                 | Permission::BlobFetch
                 | Permission::PurgeBlobStore
                 | Permission::PurgeDataStore
-                | Permission::PurgeLookupStore
+                | Permission::PurgeInMemoryStore
                 | Permission::PurgeAccount
                 | Permission::Undelete
                 | Permission::DkimSignatureCreate
                 | Permission::DkimSignatureGet
-                | Permission::UpdateSpamFilter
-                | Permission::UpdateWebadmin
+                | Permission::SpamFilterUpdate
+                | Permission::WebadminUpdate
                 | Permission::LogsView
-                | Permission::SieveRun
+                | Permission::SpamFilterTrain
                 | Permission::Restart
                 | Permission::TracingList
                 | Permission::TracingGet

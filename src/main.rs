@@ -340,7 +340,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::SieveRun) })
+                                .map_or(false, |p| { p.has_access(Permission::SpamFilterTrain) })
                         }
                     />
 
@@ -351,7 +351,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::SieveRun) })
+                                .map_or(false, |p| { p.has_access(Permission::SpamFilterTrain) })
                         }
                     />
 
@@ -369,8 +369,8 @@ pub fn App() -> impl IntoView {
                                             &[
                                                 Permission::SettingsReload,
                                                 Permission::Restart,
-                                                Permission::UpdateSpamFilter,
-                                                Permission::UpdateWebadmin,
+                                                Permission::SpamFilterUpdate,
+                                                Permission::WebadminUpdate,
                                             ],
                                         )
                                     },
@@ -677,7 +677,7 @@ impl LayoutBuilder {
             .create("Test")
             .route("/spam/test")
             .insert(true)
-            .insert(permissions.has_access(Permission::SieveRun))
+            .insert(permissions.has_access(Permission::SpamFilterTrain))
             .create("Troubleshoot")
             .icon(view! { <IconBeaker/> })
             .create("E-mail Delivery")
@@ -697,8 +697,8 @@ impl LayoutBuilder {
             .insert(permissions.has_access_any(&[
                 Permission::SettingsReload,
                 Permission::Restart,
-                Permission::UpdateSpamFilter,
-                Permission::UpdateWebadmin,
+                Permission::SpamFilterUpdate,
+                Permission::WebadminUpdate,
             ]))
             .menu_items
     }

@@ -117,15 +117,6 @@ impl Builder<Schemas, ()> {
             ))
             .default("10")
             .build()
-            .new_field("jmap.principal.allow-lookups")
-            .label("Allow lookups")
-            .help(concat!(
-                "Specifies whether authenticated users can perform lookups of ",
-                "other users' details"
-            ))
-            .typ(Type::Boolean)
-            .default("true")
-            .build()
             .new_field("jmap.protocol.upload.ttl")
             .label("Expire after")
             .help(concat!(
@@ -179,10 +170,6 @@ impl Builder<Schemas, ()> {
                 "jmap.email.max-size",
                 "jmap.email.parse.max-items",
             ])
-            .build()
-            .new_form_section()
-            .title("Directory Access")
-            .fields(["jmap.principal.allow-lookups"])
             .build()
             .build()
             // Session

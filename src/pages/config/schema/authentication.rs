@@ -23,15 +23,6 @@ impl Builder<Schemas, ()> {
             })
             .input_check([], [Validator::Required])
             .build()
-            .new_field("authentication.rate-limit")
-            .label("Limit rate")
-            .help(concat!(
-                "Amount of authentication requests that can be made in a ",
-                "timeframe by a given IP address"
-            ))
-            .typ(Type::Rate)
-            .default("10/1m")
-            .build()
             // Fallback admin
             .new_field("authentication.fallback-admin.user")
             .label("Username")
@@ -84,10 +75,6 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Master User")
             .fields(["authentication.master.user", "authentication.master.secret"])
-            .build()
-            .new_form_section()
-            .title("Security")
-            .fields(["authentication.rate-limit"])
             .build()
             .build()
             // OAuth

@@ -200,66 +200,101 @@ impl Builder<Schemas, ()> {
             .build()
             // Caching
             .new_schema("cache")
-            .new_field("cache.capacity")
-            .label("Initial capacity")
-            .help("The initial capacity of the cache")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::MinValue(1.into())],
-            )
-            .default("512")
-            .build()
-            .new_field("cache.shard")
-            .label("Shard size")
-            .help("The number of shards in the cache")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::MinValue(2.into())],
-            )
-            .default("32")
-            .build()
+            .new_field("cache.dns.txt.size")
+            .label("TXT Records")
+            .help(concat!("Maximum size of the TXT record cache"))
+            .default("5242880")
+            .typ(Type::Size)
+            .input_check([], [Validator::Required, Validator::MinValue(2048.into())])
+            .new_field("cache.dns.mx.size")
+            .label("MX Records")
+            .help(concat!("Maximum size of the MX record cache"))
+            .default("5242880")
+            .new_field("cache.dns.ipv4.size")
+            .label("IPv4 Records")
+            .help(concat!("Maximum size of the IPv4 record cache"))
+            .default("5242880")
+            .new_field("cache.dns.ipv6.size")
+            .label("IPv6 Records")
+            .help(concat!("Maximum size of the IPv6 record cache"))
+            .default("5242880")
+            .new_field("cache.dns.ptr.size")
+            .label("PTR Records")
+            .help(concat!("Maximum size of the PTR record cache"))
+            .default("1048576")
+            .new_field("cache.dns.tlsa.size")
+            .label("TLSA Records")
+            .help(concat!("Maximum size of the TLSA record cache"))
+            .default("1048576")
+            .new_field("cache.dns.mta-sts.size")
+            .label("MTA-STS Records")
+            .help(concat!("Maximum size of the MTA-STS record cache"))
+            .default("1048576")
+            .new_field("cache.dns.rbl.size")
+            .label("RBL Records")
+            .help(concat!("Maximum size of the DNSBl record cache"))
+            .default("5242880")
+            .new_field("cache.access-token.size")
+            .label("Access Tokens")
+            .help(concat!("Maximum size of the access tokens cache"))
+            .default("10485760")
+            .new_field("cache.http-auth.size")
+            .label("HTTP Authorization")
+            .help(concat!(
+                "Maximum size of the HTTP authorization headers cache"
+            ))
+            .default("1048576")
+            .new_field("cache.permission.size")
+            .label("Permissions")
+            .help(concat!("Maximum size of the effective permissions cache"))
+            .default("5242880")
             .new_field("cache.account.size")
-            .label("Account")
-            .help("The size of the account cache")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::MinValue(1.into())],
-            )
-            .default("2048")
-            .build()
+            .label("Account Data")
+            .help(concat!("Maximum size of the IMAP account data cache"))
+            .default("10485760")
             .new_field("cache.mailbox.size")
-            .label("Mailbox")
-            .help("The size of the mailbox cache")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::MinValue(1.into())],
-            )
-            .default("2048")
-            .build()
+            .label("Mailbox Data")
+            .help(concat!("Maximum size of the IMAP mailbox data cache"))
+            .default("10485760")
             .new_field("cache.thread.size")
-            .label("Thread Ids")
-            .help("The size of the thread id cache")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::MinValue(1.into())],
-            )
-            .default("2048")
+            .label("Thread Data")
+            .help(concat!("Maximum size of the message thread cache"))
+            .default("10485760")
+            .new_field("cache.bayes.size")
+            .label("Bayes Model")
+            .help(concat!("Maximum size of the Bayes model cache"))
+            .default("10485760")
             .build()
             .new_form_section()
-            .title("Cache settings")
-            .fields(["cache.capacity", "cache.shard"])
+            .title("Authorization Cache")
+            .fields([
+                "cache.access-token.size",
+                "cache.http-auth.size",
+                "cache.permission.size",
+            ])
             .build()
             .new_form_section()
-            .title("Message cache size")
+            .title("Message Cache")
             .fields([
                 "cache.account.size",
                 "cache.mailbox.size",
                 "cache.thread.size",
+            ])
+            .build()
+            .new_form_section()
+            .title("Spam Filter Cache")
+            .fields(["cache.bayes.size", "cache.dns.rbl.size"])
+            .build()
+            .new_form_section()
+            .title("DNS Record Cache")
+            .fields([
+                "cache.dns.txt.size",
+                "cache.dns.mx.size",
+                "cache.dns.ipv4.size",
+                "cache.dns.ipv6.size",
+                "cache.dns.ptr.size",
+                "cache.dns.tlsa.size",
+                "cache.dns.mta-sts.size",
             ])
             .build()
             .build()

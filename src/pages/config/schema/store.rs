@@ -56,8 +56,9 @@ impl Builder<Schemas, ()> {
                     ("elasticsearch", "ElasticSearch"),
                     ("azure", "Azure blob storage"),
                     ("fs", "Filesystem"),
-                    ("sql-read-replica", "SQL with Replicas ⭐"),
-                    ("distributed-blob", "Distributed Blob ⭐"),
+                    ("sql-read-replica", "SQL with Replicas"),
+                    ("sharded-blob", "Sharded Blob Store"),
+                    ("sharded-in-memory", "Sharded In-Memory Store"),
                 ]),
                 typ: SelectType::Single,
             })
@@ -570,11 +571,11 @@ impl Builder<Schemas, ()> {
             .source_filter(&["mysql", "postgresql"])
             .input_check([], [Validator::Required])
             .build()
-            // Distributed blobs
+            // Sharded blobs
             .new_field("stores")
             .label("Blob stores")
-            .help("Blob stores to use for the distributed blob store")
-            .display_if_eq("type", ["distributed-blob"])
+            .help("Blob stores to use for the sharded blob store")
+            .display_if_eq("type", ["sharded-blob"])
             .typ(Type::Select {
                 source: Source::DynamicSelf {
                     field: "type",
@@ -583,6 +584,21 @@ impl Builder<Schemas, ()> {
                 typ: SelectType::ManyWithSearch,
             })
             .source_filter(&["s3", "fs"])
+            .input_check([], [Validator::Required])
+            .build()
+            // Sharded In-memory
+            .new_field("stores")
+            .label("In-memory stores")
+            .help("In-memory stores to use for the sharded in-memory store")
+            .display_if_eq("type", ["sharded-in-memory"])
+            .typ(Type::Select {
+                source: Source::DynamicSelf {
+                    field: "type",
+                    filter: Default::default(),
+                },
+                typ: SelectType::ManyWithSearch,
+            })
+            .source_filter(&["redis"])
             .input_check([], [Validator::Required])
             .build()
             // Form layouts
@@ -651,7 +667,7 @@ impl Builder<Schemas, ()> {
                     "s3",
                     "azure",
                     "sql-read-replica",
-                    "distributed-blob",
+                    "sharded-blob",
                 ],
             )
             .fields([

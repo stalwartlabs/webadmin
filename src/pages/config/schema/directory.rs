@@ -62,17 +62,16 @@ impl Builder<Schemas, ()> {
             .input_check([], [Validator::Required])
             .build()
             // Caches
-            .new_field("cache.entries")
+            .new_field("cache.size")
             .label("Cache size")
-            .help("Maximum number of entries to cache")
-            .default("500")
-            .typ(Type::Input)
+            .help("Maximum cache size in bytes")
+            .default("1048576")
+            .typ(Type::Size)
             .input_check(
                 [Transformer::Trim],
                 [
-                    Validator::Required,
                     Validator::MinValue(0.into()),
-                    Validator::MaxValue((1024 * 1024).into()),
+                    Validator::MaxValue((1024 * 1024 * 1024).into()),
                 ],
             )
             .build()
@@ -499,7 +498,7 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .new_form_section()
-            .title("Lookup Filters")
+            .title("LDAP Filters")
             .display_if_eq("type", ["ldap"])
             .fields(["filter.name", "filter.email"])
             .build()
@@ -524,7 +523,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Caching")
-            .fields(["cache.entries", "cache.ttl.positive", "cache.ttl.negative"])
+            .fields(["cache.size", "cache.ttl.positive", "cache.ttl.negative"])
             .build()
             .new_form_section()
             .title("Limits")

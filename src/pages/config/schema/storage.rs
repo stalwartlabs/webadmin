@@ -58,7 +58,7 @@ impl Builder<Schemas, ()> {
                 "azure",
                 "fs",
                 "sql-read-replica",
-                "distributed-blob",
+                "sharded-blob",
             ])
             .input_check([], [Validator::Required])
             .build()
@@ -109,6 +109,7 @@ impl Builder<Schemas, ()> {
                 "rocksdb",
                 "redis",
                 "sql-read-replica",
+                "sharded-in-memory",
             ])
             .input_check([], [Validator::Required])
             .build()
@@ -166,7 +167,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Duration)
             .build()
             .new_field("storage.undelete.retention")
-            .label("Un-delete period ⭐")
+            .label("Un-delete period")
             .help(concat!(
                 "How long to keep deleted emails before they are permanently ",
                 "removed from the system. (Enterprise feature)"
@@ -192,7 +193,7 @@ impl Builder<Schemas, ()> {
             .fields(["storage.fts", "storage.full-text.default-language"])
             .build()
             .new_form_section()
-            .title("Lookup Store")
+            .title("In-Memory Store")
             .fields(["storage.lookup"])
             .build()
             .new_form_section()
