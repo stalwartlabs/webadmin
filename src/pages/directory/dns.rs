@@ -66,12 +66,7 @@ fn format_zonefile(records: &[DnsRecord], domain: &str) -> String {
             width2 = max_len[1]
         );
         if x[1] == "TXT" {
-            x[2].as_bytes()
-                .chunks(255)
-                .fold(key, |acc, x| {
-                    format!("{} \"{}\"", acc, String::from_utf8_lossy(x))
-                })
-                .add("\n")
+            format!("{} \"{}\"\n", key, String::from_utf8_lossy(x[2].as_bytes())).add("\n")
         } else {
             format!("{} {}\n", key, x[2])
         }
