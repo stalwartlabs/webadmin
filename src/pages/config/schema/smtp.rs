@@ -1700,6 +1700,167 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
+            // ASN & Geolocation
+            .new_schema("smtp-in-asn")
+            .new_field("server.asn.type")
+            .typ(Type::Select {
+                typ: SelectType::Single,
+                source: Source::Static(&[
+                    ("resource", "URL Resource"),
+                    ("dns", "DNS Lookup"),
+                    ("disable", "Disabled"),
+                ]),
+            })
+            .input_check([], [Validator::Required])
+            .label("ASN/Geo Source")
+            .help("Whether to obtain ASN and geolocation data from a URL or DNS lookup")
+            .default("disable")
+            .build()
+            .new_field("server.asn.urls.asn")
+            .label("ASN URLs")
+            .help(concat!(
+                "URLs to fetch CSV file containing the IP to ASN mappings.",
+            ))
+            .typ(Type::Array)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .display_if_eq("server.asn.type", ["resource"])
+            .build()
+            .new_field("server.asn.urls.geo")
+            .label("Geolocation URLs")
+            .help(concat!(
+                "URLs to fetch CSV file containing the IP to country code mappings.",
+            ))
+            .typ(Type::Array)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .display_if_eq("server.asn.type", ["resource"])
+            .build()
+            .new_field("server.asn.timeout")
+            .label("Timeout")
+            .help(concat!(
+                "Time after which the ASN/Geo resource fetch is considered failed.",
+            ))
+            .default("5m")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .display_if_eq("server.asn.type", ["resource"])
+            .build()
+            .new_field("server.asn.expires")
+            .label("Expiry")
+            .help(concat!("How often to refresh the ASN/Geo data.",))
+            .default("1d")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .display_if_eq("server.asn.type", ["resource"])
+            .build()
+            .new_field("server.asn.max-size")
+            .label("Max Size")
+            .help(concat!("Maximum size of the ASN/Geo data file.",))
+            .typ(Type::Size)
+            .input_check([], [Validator::Required])
+            .default("104857600")
+            .display_if_eq("server.asn.type", ["resource"])
+            .build()
+            .new_field("server.asn.headers")
+            .typ(Type::Array)
+            .label("HTTP Headers")
+            .help(concat!(
+                "Headers to send with the ASN/Geo resource fetch request.",
+            ))
+            .display_if_eq("server.asn.type", ["resource"])
+            .build()
+            .new_field("server.asn.zone.ipv4")
+            .label("IPv4 Zone")
+            .help(concat!(
+                "The DNS zone to query for IPv4 ASN and geolocation data.",
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .display_if_eq("server.asn.type", ["dns"])
+            .build()
+            .new_field("server.asn.zone.ipv6")
+            .label("IPv6 Zone")
+            .help(concat!(
+                "The DNS zone to query for IPv6 ASN and geolocation data.",
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .display_if_eq("server.asn.type", ["dns"])
+            .build()
+            .new_field("server.asn.separator")
+            .label("Separator")
+            .help(concat!(
+                "The separator character used in the DNS TXT record.",
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .display_if_eq("server.asn.type", ["dns"])
+            .default("|")
+            .build()
+            .new_field("server.asn.index.asn")
+            .label("ASN Index")
+            .help(concat!("The position of the ASN in the DNS TXT record.",))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .display_if_eq("server.asn.type", ["dns"])
+            .default("0")
+            .build()
+            .new_field("server.asn.index.asn-name")
+            .label("ASN Name Index")
+            .help(concat!(
+                "The position of the ASN Name in the DNS TXT record.",
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .display_if_eq("server.asn.type", ["dns"])
+            .build()
+            .new_field("server.asn.index.country")
+            .label("Country Index")
+            .help(concat!(
+                "The position of the country code in the DNS TXT record.",
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .display_if_eq("server.asn.type", ["dns"])
+            .build()
+            .new_form_section()
+            .title("ASN & Geolocation Settings")
+            .fields(["server.asn.type"])
+            .build()
+            .new_form_section()
+            .title("URL Resources")
+            .fields(["server.asn.urls.asn", "server.asn.urls.geo"])
+            .display_if_eq("server.asn.type", ["resource"])
+            .build()
+            .new_form_section()
+            .title("Retrieval")
+            .fields([
+                "server.asn.expires",
+                "server.asn.timeout",
+                "server.asn.max-size",
+            ])
+            .display_if_eq("server.asn.type", ["resource"])
+            .build()
+            .new_form_section()
+            .title("Authentication")
+            .fields(["server.asn.headers"])
+            .display_if_eq("server.asn.type", ["resource"])
+            .build()
+            .new_form_section()
+            .title("DNS Zones")
+            .fields(["server.asn.zone.ipv4", "server.asn.zone.ipv6"])
+            .display_if_eq("server.asn.type", ["dns"])
+            .build()
+            .new_form_section()
+            .title("TXT Record Format")
+            .fields([
+                "server.asn.separator",
+                "server.asn.index.asn",
+                "server.asn.index.asn-name",
+                "server.asn.index.country",
+            ])
+            .display_if_eq("server.asn.type", ["dns"])
+            .build()
+            .build()
     }
 }
 

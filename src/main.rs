@@ -669,7 +669,7 @@ impl LayoutBuilder {
             .route("/tracing/live")
             .insert(permissions.has_access(Permission::TracingLive))
             .insert(permissions.has_access_any(&[Permission::LogsView, Permission::TracingLive]))
-            .create("Antispam")
+            .create("Spam filter")
             .icon(view! { <IconShieldCheck/> })
             .create("Train")
             .route("/spam/train")

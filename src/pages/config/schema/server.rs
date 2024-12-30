@@ -117,6 +117,35 @@ impl Builder<Schemas, ()> {
             .typ(Type::Boolean)
             .default("false")
             .build()
+            // Webadmin auto-update
+            .new_field("webadmin.auto-update")
+            .label("Auto-update webadmin")
+            .help(concat!(
+                "Whether to automatically update the webadmin interface ",
+                "when a new version is available."
+            ))
+            .typ(Type::Boolean)
+            .default("false")
+            .build()
+            .new_field("webadmin.path")
+            .label("Unpack path")
+            .help(concat!(
+                "The local path to unpack the webadmin bundle to. ",
+                "If left empty, the webadmin will be unpacked to /tmp."
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("webadmin.resource")
+            .label("Update URL")
+            .help(concat!(
+                "Override the URL to download webadmin updates from. ",
+                "By default webadmin updates are downloaded from ",
+                "https://github.com/stalwartlabs/webadmin.",
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .build()
             // HTTP headers
             .new_field("server.http.headers")
             .label("Add headers")
@@ -139,6 +168,10 @@ impl Builder<Schemas, ()> {
                 "server.http.hsts",
                 "server.http.permissive-cors",
             ])
+            .build()
+            .new_form_section()
+            .title("Web-based Admin")
+            .fields(["webadmin.path", "webadmin.resource", "webadmin.auto-update"])
             .build()
             .build()
             // Common settings
@@ -189,6 +222,25 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
             .placeholder("8")
             .build()
+            // Rate limiter capacity
+            .new_field("limiter.capacity")
+            .label("Initial Capacity")
+            .help(concat!("The initial capacity of each rate limiter"))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .placeholder("100")
+            .build()
+            // Rate limiter sharding
+            .new_field("limiter.shard")
+            .label("Shards")
+            .help(concat!(
+                "The number of shards assigned to each rate limiter. ",
+                "Defaults to the number of CPU cores multiplied by 2."
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .placeholder("4")
+            .build()
             .new_form_section()
             .title("Local configuration keys")
             .fields(["config.local-keys"])
@@ -196,6 +248,10 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Thread pool")
             .fields(["global.thread-pool"])
+            .build()
+            .new_form_section()
+            .title("Rate limiters")
+            .fields(["limiter.capacity", "limiter.shard"])
             .build()
             .build()
             // Caching

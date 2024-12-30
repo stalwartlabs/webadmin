@@ -369,6 +369,9 @@ impl LayoutBuilder {
             .create("Extensions")
             .route("/smtp-in-extensions/edit")
             .insert(true)
+            .create("ASN & Geolocation")
+            .route("/smtp-in-asn/edit")
+            .insert(true)
             .create("Session Limits")
             .route("/smtp-in-limits/edit")
             .insert(true)
@@ -506,7 +509,7 @@ impl LayoutBuilder {
             .insert(true)
             .insert(true)
             // SPAM Filter
-            .create("Antispam")
+            .create("Spam filter")
             .icon(view! { <IconShieldCheck/> })
             .create("Settings")
             .route("/spam-settings/edit")
