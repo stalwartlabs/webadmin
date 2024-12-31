@@ -47,6 +47,10 @@ where
                     self.inc_arg_count();
                     self.output.push(ExpressionItem::Constant(c))
                 }
+                Token::Global(g) => {
+                    self.inc_arg_count();
+                    self.output.push(ExpressionItem::Global(g))
+                }
                 Token::Capture(c) => {
                     self.inc_arg_count();
                     self.output.push(ExpressionItem::Capture(c))

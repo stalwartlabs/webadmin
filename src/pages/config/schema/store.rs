@@ -737,5 +737,160 @@ impl Builder<Schemas, ()> {
             .list_subtitle("Manage data, blob, full-text, and lookup stores")
             .list_fields(["_id", "type"])
             .build()
+            // HTTP lookups
+            .new_schema("http-lookup")
+            .names("list", "lists")
+            .prefix("http-lookup")
+            .suffix("url")
+            .new_id_field()
+            .label("List ID")
+            .help("Unique identifier for the HTTP list")
+            .build()
+            .new_field("enable")
+            .label("Enable list")
+            .help("Whether to enable this HTTP list")
+            .default("true")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("url")
+            .label("URL")
+            .help("URL of the list")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
+            .build()
+            .new_field("format")
+            .label("Format")
+            .help("Format of the list")
+            .default("csv")
+            .typ(Type::Select {
+                source: Source::Static(&[("list", "List"), ("csv", "CSV")]),
+                typ: SelectType::Single,
+            })
+            .build()
+            .new_field("separator")
+            .label("Separator")
+            .help(concat!(
+                "The separator character used to parse the HTTP list.",
+            ))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .default(",")
+            .display_if_eq("format", ["csv"])
+            .build()
+            .new_field("index.key")
+            .label("Key Index")
+            .help(concat!("The position of the key field in the HTTP List.",))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .default("0")
+            .display_if_eq("format", ["csv"])
+            .build()
+            .new_field("index.value")
+            .label("Value Index")
+            .help(concat!("The position of the value field in the HTTP List.",))
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [])
+            .display_if_eq("format", ["csv"])
+            .build()
+            .new_field("skip-first")
+            .label("Skip header")
+            .help("Whether to skip the first line of the list")
+            .default("false")
+            .typ(Type::Boolean)
+            .display_if_eq("format", ["csv"])
+            .build()
+            .new_field("retry")
+            .label("Retry")
+            .help(concat!(
+                "How long to wait before retrying to download the list ",
+                "in case of failure."
+            ))
+            .default("1h")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .new_field("refresh")
+            .label("Refresh")
+            .help("How often to refresh the list")
+            .default("12h")
+            .new_field("timeout")
+            .label("Timeout")
+            .help("How long to wait for the list to download before timing out")
+            .default("30s")
+            .build()
+            .new_field("gzipped")
+            .label("Gzipped")
+            .help("Whether to use gzip compression when downloading the list")
+            .default("false")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("limits.size")
+            .label("Size")
+            .help(concat!(
+                "Maximum size of the list. ",
+                "The list is truncated if it exceeds this size."
+            ))
+            .default("104857600")
+            .typ(Type::Size)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::MinValue(10.into()),
+                    Validator::MaxValue((1024 * 1024 * 1024).into()),
+                    Validator::Required,
+                ],
+            )
+            .build()
+            .new_field("limits.entries")
+            .label("Max entries")
+            .help(concat!(
+                "Maximum number of entries allowed in the list. ",
+                "The list is truncated if it exceeds this limit."
+            ))
+            .default("100000")
+            .typ(Type::Size)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue((1024 * 1024).into()),
+                    Validator::Required,
+                ],
+            )
+            .build()
+            .new_field("limits.entry-size")
+            .label("Entry length")
+            .help(concat!("Maximum length of an entry in the list. "))
+            .default("512")
+            .typ(Type::Size)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue((1024 * 1024).into()),
+                    Validator::Required,
+                ],
+            )
+            .build()
+            .new_form_section()
+            .title("HTTP List Settings")
+            .fields(["_id", "url", "format", "gzipped", "enable"])
+            .build()
+            .new_form_section()
+            .title("CSV Parsing")
+            .fields(["separator", "index.key", "index.value", "skip-first"])
+            .display_if_eq("format", ["csv"])
+            .build()
+            .new_form_section()
+            .title("Configuration")
+            .fields(["retry", "refresh", "timeout"])
+            .build()
+            .new_form_section()
+            .title("Limits")
+            .fields(["limits.size", "limits.entries", "limits.entry-size"])
+            .build()
+            .list_title("HTTP Lists")
+            .list_subtitle("Manage HTTP list lookups")
+            .list_fields(["_id", "url", "enable"])
+            .build()
     }
 }

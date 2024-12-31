@@ -293,8 +293,15 @@ where
                 }
             }
 
-            if let Some(regex_capture) = buf.strip_prefix('$').and_then(|v| v.parse::<u32>().ok()) {
-                Ok(Token::Capture(regex_capture))
+            if let Some(variable) = buf.strip_prefix('$').filter(|s| !s.is_empty()) {
+                if variable.chars().all(|c| c.is_ascii_digit()) {
+                    Ok(variable
+                        .parse::<u32>()
+                        .map(Token::Capture)
+                        .unwrap_or_else(|_| Token::Global(variable.into())))
+                } else {
+                    Ok(Token::Global(variable.into()))
+                }
             } else if let Some((idx, (name, num_args))) = FUNCTIONS
                 .iter()
                 .enumerate()

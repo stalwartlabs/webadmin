@@ -20,6 +20,7 @@ pub struct Expression {
 pub enum ExpressionItem {
     Variable(u32),
     Capture(u32),
+    Global(String),
     Constant(Constant),
     BinaryOperator(BinaryOperator),
     UnaryOperator(UnaryOperator),
@@ -136,6 +137,7 @@ pub(super) const FUNCTIONS: &[(&str, u32)] = &[
     ("rsplit", 2),
     ("split_once", 2),
     ("rsplit_once", 2),
+    ("split_n", 3),
     ("split_words", 1),
     ("is_local_domain", 2),
     ("is_local_address", 2),
@@ -146,6 +148,8 @@ pub(super) const FUNCTIONS: &[(&str, u32)] = &[
     ("counter_get", 2),
     ("dns_query", 2),
     ("sql_query", 3),
+    ("hash", 2),
+    ("if_then", 3),
 ];
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -176,6 +180,7 @@ pub enum UnaryOperator {
 #[derive(Debug, Clone)]
 pub enum Token {
     Variable(u32),
+    Global(String),
     Capture(u32),
     Function {
         name: Cow<'static, str>,
