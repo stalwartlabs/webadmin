@@ -1910,10 +1910,6 @@ select {
   text-transform: uppercase;
 }
 
-.lowercase {
-  text-transform: lowercase;
-}
-
 .leading-none {
   line-height: 1;
 }

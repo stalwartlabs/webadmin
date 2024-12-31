@@ -35,6 +35,14 @@ impl UrlBuilder {
         self
     }
 
+    pub fn with_optional_subpath(self, subpath: Option<impl AsRef<str>>) -> Self {
+        if let Some(subpath) = subpath {
+            self.with_subpath(subpath)
+        } else {
+            self
+        }
+    }
+
     pub fn with_parameter(
         mut self,
         key: impl Into<Cow<'static, str>>,

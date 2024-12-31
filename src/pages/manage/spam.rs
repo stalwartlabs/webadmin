@@ -4,9 +4,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{net::IpAddr, sync::Arc};
+use std::{
+    collections::BTreeMap,
+    net::{IpAddr, Ipv4Addr},
+    sync::Arc,
+};
 
-use ahash::AHashMap;
 use leptos::*;
 use leptos_router::use_navigate;
 use serde::{Deserialize, Serialize};
@@ -15,7 +18,7 @@ use crate::{
     components::{
         form::{
             button::Button,
-            input::{InputSwitch, InputText, TextArea},
+            input::{InputText, TextArea},
             select::Select,
             stacked_input::StackedInput,
             Form, FormButtonBar, FormElement, FormItem, FormSection,
@@ -24,50 +27,50 @@ use crate::{
         Color,
     },
     core::{
-        form::FormValue,
         http::{Error, HttpRequest},
         oauth::use_authorization,
         schema::{Builder, Schemas, SelectType, Source, Transformer, Type, Validator},
+        url::UrlBuilder,
     },
 };
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "action")]
-#[serde(rename_all = "lowercase")]
-pub enum Response {
-    Accept {
-        modifications: Vec<Modification>,
-    },
-    Replace {
-        message: String,
-        modifications: Vec<Modification>,
-    },
-    Reject {
-        reason: String,
-    },
-    Discard,
+#[serde(rename_all = "camelCase")]
+pub struct SpamClassifyRequest {
+    pub message: String,
+
+    // Session details
+    pub remote_ip: IpAddr,
+    #[serde(default)]
+    pub ehlo_domain: String,
+    #[serde(default)]
+    pub authenticated_as: Option<String>,
+
+    // TLS
+    #[serde(default)]
+    pub is_tls: bool,
+
+    // Envelope
+    pub env_from: String,
+    pub env_from_flags: u64,
+    pub env_rcpt_to: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "action")]
 #[serde(rename_all = "camelCase")]
-pub enum Modification {
-    SetEnvelope { name: Envelope, value: String },
-    AddHeader { name: String, value: String },
+pub struct SpamClassifyResponse {
+    pub score: f64,
+    pub tags: BTreeMap<String, SpamFilterDisposition<f64>>,
+    pub disposition: SpamFilterDisposition<String>,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub enum Envelope {
-    From,
-    To,
-    ByTimeAbsolute,
-    ByTimeRelative,
-    ByMode,
-    ByTrace,
-    Notify,
-    Orcpt,
-    Ret,
-    Envid,
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "action")]
+pub enum SpamFilterDisposition<T> {
+    Allow { value: T },
+    Discard,
+    Reject,
 }
 
 #[component]
@@ -81,61 +84,67 @@ pub fn SpamTest() -> impl IntoView {
     data.apply_defaults(false);
     let data = data.into_signal();
 
-    let save_changes = create_action(
-        move |(variables, message): &(AHashMap<String, String>, String)| {
-            let auth = auth.get();
-            let variables = variables.clone();
-            let message = message.clone();
+    let start_classify = create_action(move |req: &Arc<SpamClassifyRequest>| {
+        let auth = auth.get();
+        let req = req.clone();
 
-            async move {
-                set_pending.set(true);
-                let result = HttpRequest::post("/api/sieve/spam-filter")
-                    .with_authorization(&auth)
-                    .with_parameters(variables)
-                    .with_raw_body(message)
-                    .send::<Response>()
-                    .await;
+        async move {
+            set_pending.set(true);
+            let result = HttpRequest::post("/api/spam-filter/classify")
+                .with_authorization(&auth)
+                .with_body(req.as_ref())
+                .unwrap()
+                .send::<SpamClassifyResponse>()
+                .await;
 
-                set_pending.set(false);
+            set_pending.set(false);
 
-                match result {
-                    Ok(
-                        Response::Accept { modifications }
-                        | Response::Replace { modifications, .. },
-                    ) => {
-                        alert.set(
-                            Alert::success("Message accepted by filter")
-                                .with_details_list(modifications.into_iter().filter_map(
-                                    |modification| {
-                                        if let Modification::AddHeader { name, value } =
-                                            modification
-                                        {
-                                            Some(format!("{name}: {value}"))
-                                        } else {
-                                            None
-                                        }
-                                    },
-                                ))
-                                .without_timeout(),
-                        );
-                    }
-                    Ok(Response::Reject { reason }) => {
-                        alert
-                            .set(Alert::warning("Message rejected by filter").with_details(reason));
-                    }
-                    Ok(Response::Discard) => {
-                        alert.set(Alert::warning("Message discarded by filter"));
-                    }
-                    Err(Error::Unauthorized) => {
-                        use_navigate()("/login", Default::default());
-                    }
-                    Err(err) => {
-                        alert.set(Alert::from(err));
-                    }
+            match result {
+                Ok(response) => {
+                    let title = match response.disposition {
+                        SpamFilterDisposition::Allow { value } => {
+                            format!(
+                                "Message was classified as {} with a score of {:.2}",
+                                if value.contains(": Yes") {
+                                    "SPAM"
+                                } else {
+                                    "HAM"
+                                },
+                                response.score
+                            )
+                        }
+                        SpamFilterDisposition::Discard => format!(
+                            "Message was discarded with a score of {:.2}",
+                            response.score
+                        ),
+                        SpamFilterDisposition::Reject => {
+                            format!("Message was rejected with a score of {:.2}", response.score)
+                        }
+                    };
+
+                    alert.set(
+                        Alert::success(title)
+                            .with_details_list(response.tags.into_iter().map(|(name, score)| {
+                                match score {
+                                    SpamFilterDisposition::Allow { value } => {
+                                        format!("{name}: {value:.2}")
+                                    }
+                                    SpamFilterDisposition::Discard => format!("{name}: DISCARD"),
+                                    SpamFilterDisposition::Reject => format!("{name}: REJECT"),
+                                }
+                            }))
+                            .without_timeout(),
+                    );
+                }
+                Err(Error::Unauthorized) => {
+                    use_navigate()("/login", Default::default());
+                }
+                Err(err) => {
+                    alert.set(Alert::from(err));
                 }
             }
-        },
-    );
+        }
+    });
 
     view! {
         <Form title="">
@@ -143,9 +152,6 @@ pub fn SpamTest() -> impl IntoView {
             <FormSection title="Test SPAM Filter".to_string()>
                 <FormItem label="IP Address" tooltip="IP address of the remote SMTP server">
                     <InputText element=FormElement::new("remote_ip", data)/>
-                </FormItem>
-                <FormItem label="PTR Address" is_optional=true tooltip="Reverse IP lookup">
-                    <InputText element=FormElement::new("iprev.ptr", data)/>
                 </FormItem>
                 <FormItem label="EHLO Domain" tooltip="Hostname specified at the EHLO stage">
                     <InputText element=FormElement::new("helo_domain", data)/>
@@ -164,50 +170,12 @@ pub fn SpamTest() -> impl IntoView {
                 </FormItem>
             </FormSection>
 
-            <FormSection title="Authentication Results".to_string()>
-                <FormItem label="SPF" tooltip="SPF authentication results">
-                    <Select element=FormElement::new("spf.result", data)/>
-                </FormItem>
-                <FormItem label="SPF EHLO" tooltip="SPF EHLO authentication results">
-                    <Select element=FormElement::new("spf_ehlo.result", data)/>
-                </FormItem>
-                <FormItem label="DKIM" tooltip="DKIM authentication results">
-                    <Select element=FormElement::new("dkim.result", data)/>
-                </FormItem>
-                <FormItem
-                    label="DKIM Domains"
-                    tooltip="Domain names passing DKIM validation"
-                    is_optional=true
-                >
-                    <InputText element=FormElement::new("dkim.domains", data)/>
-                </FormItem>
-                <FormItem label="ARC" tooltip="ARC authentication results">
-                    <Select element=FormElement::new("arc.result", data)/>
-                </FormItem>
-                <FormItem label="DMARC" tooltip="DMARC authentcation results">
-                    <Select element=FormElement::new("dmarc.result", data)/>
-                </FormItem>
-                <FormItem label="DMARC Policy" tooltip="DMARC policy of the sender domain">
-                    <Select element=FormElement::new("dmarc.policy", data)/>
-                </FormItem>
-                <FormItem label="Reverse IP" tooltip="Reverse IP validation results">
-                    <Select element=FormElement::new("iprev.result", data)/>
-                </FormItem>
-            </FormSection>
-
             <FormSection title="Message".to_string()>
                 <FormItem label="Contents" tooltip="Message body">
                     <TextArea element=FormElement::new("message", data)/>
                 </FormItem>
-                <FormItem label="Parameters" tooltip="SMTP BODY parameter">
-                    <Select element=FormElement::new("param.body", data)/>
-                </FormItem>
-                <FormItem label="">
-                    <InputSwitch
-                        label="SMTPUTF8"
-                        tooltip="Enable SMTPUTF8 support for the message"
-                        element=FormElement::new("param.smtputf8", data)
-                    />
+                <FormItem label="Parameters" tooltip="Body parameters">
+                    <Select element=FormElement::new("env_from_flags", data)/>
                 </FormItem>
             </FormSection>
 
@@ -219,38 +187,22 @@ pub fn SpamTest() -> impl IntoView {
                     on_click=Callback::new(move |_| {
                         data.update(|data| {
                             if data.validate_form() {
-                                let mut message = String::new();
-                                let mut variables = AHashMap::new();
-                                for (key, value) in data.values.iter() {
-                                    let value = match value {
-                                        FormValue::Value(value) if !value.is_empty() => value,
-                                        FormValue::Array(values) if !values.is_empty() => {
-                                            for (i, value) in values.iter().enumerate() {
-                                                variables.insert(format!("{key}_{i}"), value.clone());
-                                            }
-                                            continue;
-                                        }
-                                        _ => continue,
-                                    };
-                                    match key.as_str() {
-                                        "message" => {
-                                            message.clone_from(value);
-                                            continue;
-                                        }
-                                        "remote_ip" => {
-                                            if let Ok(ip) = value.parse::<IpAddr>() {
-                                                variables
-                                                    .insert(
-                                                        "remote_ip.reverse".to_string(),
-                                                        to_reverse_name(ip),
-                                                    );
-                                            }
-                                        }
-                                        _ => {}
-                                    }
-                                    variables.insert(key.clone(), value.clone());
-                                }
-                                save_changes.dispatch((variables, data.value("message").unwrap()));
+                                let req = SpamClassifyRequest {
+                                    message: data.value("message").unwrap(),
+                                    remote_ip: data
+                                        .value("remote_ip")
+                                        .unwrap_or(Ipv4Addr::UNSPECIFIED.into()),
+                                    ehlo_domain: data.value("helo_domain").unwrap_or_default(),
+                                    authenticated_as: None,
+                                    is_tls: true,
+                                    env_from: data.value("env_from").unwrap_or_default(),
+                                    env_from_flags: 0,
+                                    env_rcpt_to: data
+                                        .array_value("env_to")
+                                        .map(|v| v.to_string())
+                                        .collect(),
+                                };
+                                start_classify.dispatch(Arc::new(req));
                             }
                         });
                     })
@@ -274,34 +226,31 @@ pub fn SpamTrain() -> impl IntoView {
     data.apply_defaults(false);
     let data = data.into_signal();
 
-    let save_changes = create_action(move |(train, message): &(String, String)| {
+    let start_train = create_action(move |req: &Arc<SpamFilterTrain>| {
         let auth = auth.get();
-        let train = train.clone();
-        let message = message.clone();
+        let req = req.clone();
 
         async move {
             set_pending.set(true);
-            let result = HttpRequest::post("/api/sieve/train")
-                .with_authorization(&auth)
-                .with_parameter("train", train)
-                .with_raw_body(message)
-                .send::<Response>()
-                .await;
+            let result = HttpRequest::post(
+                UrlBuilder::new("/api/spam-filter/train")
+                    .with_subpath(req.train.as_str())
+                    .with_optional_subpath(req.account.as_deref())
+                    .finish(),
+            )
+            .with_authorization(&auth)
+            .with_raw_body(req.message.clone())
+            .send::<serde_json::Value>()
+            .await;
 
             set_pending.set(false);
 
             match result {
-                Ok(Response::Accept { .. }) => {
+                Ok(_) => {
                     data.update(|data| {
                         data.reset();
                     });
                     alert.set(Alert::success("Training successful"));
-                }
-                Ok(Response::Reject { reason }) => {
-                    alert.set(Alert::warning("Training failed").with_details(reason));
-                }
-                Ok(_) => {
-                    alert.set(Alert::error("Unexpected server response"));
                 }
                 Err(Error::Unauthorized) => {
                     use_navigate()("/login", Default::default());
@@ -314,11 +263,14 @@ pub fn SpamTrain() -> impl IntoView {
     });
 
     view! {
-        <Form title="Train SPAM filter" subtitle="Train the SPAM filter classifier">
+        <Form title="Train Spam filter" subtitle="Train the Bayes classifier">
 
             <FormSection>
                 <FormItem label="Train">
                     <Select element=FormElement::new("train", data)/>
+                </FormItem>
+                <FormItem label="Account Name" is_optional=true>
+                    <InputText element=FormElement::new("account", data)/>
                 </FormItem>
                 <FormItem label="Message">
                     <TextArea element=FormElement::new("message", data)/>
@@ -334,11 +286,14 @@ pub fn SpamTrain() -> impl IntoView {
                     on_click=Callback::new(move |_| {
                         data.update(|data| {
                             if data.validate_form() {
-                                save_changes
-                                    .dispatch((
-                                        data.value("train").unwrap(),
-                                        data.value("message").unwrap(),
-                                    ));
+                                start_train
+                                    .dispatch(
+                                        Arc::new(SpamFilterTrain {
+                                            train: data.value("train").unwrap(),
+                                            account: data.value("account"),
+                                            message: data.value("message").unwrap(),
+                                        }),
+                                    );
                             }
                         });
                     })
@@ -351,33 +306,10 @@ pub fn SpamTrain() -> impl IntoView {
     }
 }
 
-fn to_reverse_name(ip: IpAddr) -> String {
-    use std::fmt::Write;
-
-    match ip {
-        IpAddr::V4(ip) => {
-            let mut segments = String::with_capacity(15);
-            for octet in ip.octets().iter().rev() {
-                if !segments.is_empty() {
-                    segments.push('.');
-                }
-                let _ = write!(&mut segments, "{}", octet);
-            }
-            segments
-        }
-        IpAddr::V6(ip) => {
-            let mut segments = String::with_capacity(63);
-            for segment in ip.segments().iter().rev() {
-                for &p in format!("{segment:04x}").as_bytes().iter().rev() {
-                    if !segments.is_empty() {
-                        segments.push('.');
-                    }
-                    segments.push(char::from(p));
-                }
-            }
-            segments
-        }
-    }
+struct SpamFilterTrain {
+    train: String,
+    account: Option<String>,
+    message: String,
 }
 
 impl Builder<Schemas, ()> {
@@ -394,10 +326,6 @@ impl Builder<Schemas, ()> {
                 [Validator::Required, Validator::IsIpOrMask],
             )
             .build()
-            .new_field("iprev.ptr")
-            .typ(Type::Text)
-            .input_check([], [])
-            .build()
             .new_field("helo_domain")
             .typ(Type::Text)
             .input_check([Transformer::Trim], [Validator::Required])
@@ -410,60 +338,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Array)
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
-            .new_field("dkim.domains")
-            .typ(Type::Text)
-            .input_check([Transformer::Trim], [])
-            .build()
-            .new_field("iprev.result")
-            .typ(Type::Select {
-                typ: SelectType::Single,
-                source: Source::Static(IPREV_RESULT),
-            })
-            .default("none")
-            .build()
-            .new_field("spf.result")
-            .typ(Type::Select {
-                typ: SelectType::Single,
-                source: Source::Static(SPF_RESULT),
-            })
-            .default("none")
-            .build()
-            .new_field("spf_ehlo.result")
-            .typ(Type::Select {
-                typ: SelectType::Single,
-                source: Source::Static(SPF_RESULT),
-            })
-            .default("none")
-            .build()
-            .new_field("arc.result")
-            .typ(Type::Select {
-                typ: SelectType::Single,
-                source: Source::Static(DKIM_RESULT),
-            })
-            .default("none")
-            .build()
-            .new_field("dkim.result")
-            .typ(Type::Select {
-                typ: SelectType::Single,
-                source: Source::Static(DKIM_RESULT),
-            })
-            .default("none")
-            .build()
-            .new_field("dmarc.result")
-            .typ(Type::Select {
-                typ: SelectType::Single,
-                source: Source::Static(DMARC_RESULT),
-            })
-            .default("none")
-            .build()
-            .new_field("dmarc.policy")
-            .typ(Type::Select {
-                typ: SelectType::Single,
-                source: Source::Static(DMARC_POLICY),
-            })
-            .default("none")
-            .build()
-            .new_field("param.body")
+            .new_field("env_from_flags")
             .typ(Type::Select {
                 typ: SelectType::Single,
                 source: Source::Static(MAIL_BODY),
@@ -477,6 +352,9 @@ impl Builder<Schemas, ()> {
             .typ(Type::Text)
             .input_check([], [Validator::Required])
             .build()
+            .new_field("account")
+            .typ(Type::Text)
+            .build()
             .new_field("train")
             .default("spam")
             .typ(Type::Select {
@@ -488,50 +366,10 @@ impl Builder<Schemas, ()> {
     }
 }
 
-pub static SPF_RESULT: &[(&str, &str)] = &[
-    ("pass", "Pass"),
-    ("fail", "Fail"),
-    ("softfail", "Soft Fail"),
-    ("neutral", "Neutral"),
-    ("temperror", "Temporary Error"),
-    ("permerror", "Permanent Error"),
-    ("none", "None"),
-];
-
-pub static IPREV_RESULT: &[(&str, &str)] = &[
-    ("pass", "Pass"),
-    ("fail", "Fail"),
-    ("temperror", "Temporary Error"),
-    ("permerror", "Permanent Error"),
-    ("none", "None"),
-];
-
-pub static DKIM_RESULT: &[(&str, &str)] = &[
-    ("pass", "Pass"),
-    ("fail", "Fail"),
-    ("neutral", "Neutral"),
-    ("none", "None"),
-    ("permerror", "Permanent Error"),
-    ("temperror", "Temporary Error"),
-];
-
-pub static DMARC_RESULT: &[(&str, &str)] = &[
-    ("pass", "Pass"),
-    ("fail", "Fail"),
-    ("temperror", "Temporary Error"),
-    ("permerror", "Permanent Error"),
-    ("none", "None"),
-];
-
-pub static DMARC_POLICY: &[(&str, &str)] = &[
-    ("reject", "Reject"),
-    ("quarantine", "Quarantine"),
-    ("none", "None"),
-];
-
 pub static MAIL_BODY: &[(&str, &str)] = &[
     ("", "Not specified"),
     ("7bit", "7bit"),
     ("8bitmime", "8bit MIME"),
     ("binarymime", "Binary MIME"),
+    ("smtputf8", "SMTPUTF8"),
 ];
