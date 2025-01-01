@@ -15,7 +15,7 @@ use crate::components::messages::alert::Alert;
 
 use super::{
     http::{self, HttpRequest},
-    AccessToken, Permission,
+    AccessToken, Permission, Semver, MINIMUM_API_VERSION,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,7 +44,10 @@ pub struct OAuthCodeResponse {
     #[serde(rename = "isEnterprise")]
     pub is_enterprise: bool,
 
-    // Deprecated - remove in future
+    #[serde(default)]
+    pub version: Option<String>,
+
+    // TODO - Deprecated - remove in future
     #[serde(default)]
     pub is_admin: bool,
 }
@@ -174,7 +177,38 @@ pub async fn oauth_user_authentication(
         .send::<OAuthCodeResponse>()
         .await
     {
-        Ok(response) => AuthenticationResult::Success(response.legacy_admin()),
+        Ok(response) => {
+            let server_version: Semver = response
+                .version
+                .as_deref()
+                .unwrap_or_default()
+                .try_into()
+                .unwrap_or_default();
+
+            if server_version >= MINIMUM_API_VERSION {
+                AuthenticationResult::Success(response.legacy_admin())
+            } else if server_version.is_valid() {
+                AuthenticationResult::Error(
+                    Alert::error("Unsupported server version").with_details(format!(
+                        concat!(
+                            "This webadmin release requires Stalwart Mail Server version {} ",
+                            "or later. Your server is running version {}. ",
+                        ),
+                        MINIMUM_API_VERSION, server_version
+                    )),
+                )
+            } else {
+                AuthenticationResult::Error(
+                    Alert::error("Unsupported server version").with_details(format!(
+                        concat!(
+                            "This webadmin release requires Stalwart Mail Server version {} ",
+                            "or later. Your server is running an unknown version. ",
+                        ),
+                        MINIMUM_API_VERSION
+                    )),
+                )
+            }
+        }
         Err(http::Error::Unauthorized) => AuthenticationResult::Error(
             Alert::warning("Incorrect username or password").with_timeout(Duration::from_secs(3)),
         ),
@@ -185,6 +219,16 @@ pub async fn oauth_user_authentication(
             // Password matched but TOTP required
             AuthenticationResult::TotpRequired
         }
+        Err(http::Error::Serializer { .. }) => AuthenticationResult::Error(
+            Alert::error("Invalid server response").with_details(format!(
+                concat!(
+                    "This error could be to an incompatible server version. ",
+                    "Make sure you are running Stalwart Mail Server version {} or later. ",
+                    "For additional information check your server logs."
+                ),
+                MINIMUM_API_VERSION
+            )),
+        ),
         Err(err) => AuthenticationResult::Error(Alert::from(err)),
     }
 }
