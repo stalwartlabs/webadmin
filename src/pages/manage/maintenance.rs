@@ -10,8 +10,8 @@ use leptos_router::use_navigate;
 use crate::{
     components::{
         icon::{
-            IconCheckCircle, IconComputerDesktop, IconDocumentMagnifyingGlass, IconPower,
-            IconRefresh, IconShieldCheck,
+            IconCancel, IconCheckCircle, IconComputerDesktop, IconDocumentMagnifyingGlass,
+            IconPower, IconRefresh, IconShieldCheck,
         },
         messages::alert::{use_alerts, Alert, Alerts},
     },
@@ -59,8 +59,8 @@ const ACTIONS: &[Action] = &[
         permission: Permission::Restart,
     },
     Action {
-        title: "Update SPAM rules",
-        description: "Downloads and installs the latest SPAM rules from the Github repository.",
+        title: "Update Spam rules",
+        description: "Downloads and installs the latest Spam filter rules from the Github repository.",
         icon: "shield_check",
         url: "/api/update/spam-filter",
         success_message: "Successfully updated SPAM rules to the latest version",
@@ -81,6 +81,14 @@ const ACTIONS: &[Action] = &[
         url: "/api/store/reindex",
         success_message: "Successfully requested FTS reindex",
         permission: Permission::FtsReindex,
+    },
+    Action {
+        title: "Delete Bayes Model",
+        description: "Deletes the Bayes model used for Spam filtering. This will reset the Spam filter.",
+        icon: "cancel",
+        url: "/api/store/purge/in-memory/default/bayes-global",
+        success_message: "Successfully requested Bayes model deletion",
+        permission: Permission::PurgeInMemoryStore,
     },
 
 ];
@@ -152,6 +160,7 @@ pub fn Maintenance() -> impl IntoView {
             "shield_check" => view! { <IconShieldCheck attr:class=icon_class/> },
             "computer_desktop" => view! { <IconComputerDesktop attr:class=icon_class/> },
             "document_magnifying_glass" => view! { <IconDocumentMagnifyingGlass attr:class=icon_class/> },
+            "cancel" => view! { <IconCancel attr:class=icon_class/> },
             _ => unreachable!("No icon specified"),
         };
 

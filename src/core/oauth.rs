@@ -20,6 +20,7 @@ use super::{
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
 pub enum OAuthCodeRequest {
     Code {
         client_id: String,

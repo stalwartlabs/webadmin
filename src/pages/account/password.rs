@@ -52,7 +52,7 @@ pub fn ChangePassword() -> impl IntoView {
                     password: new_password,
                 }])
                 .unwrap()
-                .send::<()>()
+                .send::<serde_json::Value>()
                 .await;
             set_pending.set(false);
 

@@ -34,12 +34,15 @@ pub type Settings = AHashMap<String, String>;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
 pub enum UpdateSettings {
     Delete {
         keys: Vec<String>,
     },
     Clear {
         prefix: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        filter: Option<String>,
     },
     Insert {
         prefix: Option<String>,
@@ -56,6 +59,7 @@ pub struct ReloadSettings {
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
 pub enum ConfigWarning {
     Missing,
     AppliedDefault { default: String },
@@ -66,6 +70,7 @@ pub enum ConfigWarning {
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
 pub enum ConfigError {
     Parse { error: String },
     Build { error: String },
@@ -83,6 +88,7 @@ impl FormData {
                 if self.is_update {
                     updates.push(UpdateSettings::Clear {
                         prefix: format!("{prefix}.{}.", self.value_as_str("_id").unwrap()),
+                        filter: None,
                     });
                 } else {
                     assert_empty = true;
@@ -108,6 +114,7 @@ impl FormData {
                         if field.is_multivalue() {
                             updates.push(UpdateSettings::Clear {
                                 prefix: format!("{}.", field.id),
+                                filter: None,
                             });
                             delete_keys.push(field.id.to_string());
                         } else if self.value_is_empty(field.id) {

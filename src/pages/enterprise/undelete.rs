@@ -9,7 +9,7 @@
  * Unauthorized use, modification, or distribution is strictly prohibited.
  */
 
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use chrono_humanize::HumanTime;
@@ -24,7 +24,7 @@ use crate::{
         icon::{IconArrowUTurnLeft, IconEnvelope},
         list::{
             header::ColumnList, pagination::Pagination, row::SelectItem, toolbar::ToolbarButton,
-            Footer, ListItem, ListSection, ListTable, Toolbar, ZeroResults,
+            Footer, ItemSelection, ListItem, ListSection, ListTable, Toolbar, ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -88,7 +88,7 @@ pub fn UndeleteList() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let modal = use_modals();
-    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
+    let selected = create_rw_signal::<ItemSelection>(ItemSelection::None);
     provide_context(selected);
 
     let blobs = create_resource(
@@ -162,36 +162,51 @@ pub fn UndeleteList() -> impl IntoView {
         },
     );
 
-    let restore_action = create_action(move |items: &Arc<HashSet<String>>| {
+    let total_results = create_rw_signal(None::<u32>);
+
+    let restore_action = create_action(move |items: &Arc<ItemSelection>| {
         let items = items.clone();
         let account = params.get().get("id").cloned().unwrap_or_default();
         let auth = auth.get();
         let results = results.get_untracked();
 
         async move {
-            let mut request = Vec::with_capacity(items.len());
-            for item in items.iter() {
-                if let Some(blob) = results
-                    .items
-                    .iter()
-                    .find(|b: &&DeletedBlob| &b.hash == item)
-                {
-                    request.push(UndeleteRequest {
-                        hash: blob.hash.clone(),
-                        collection: blob.collection.clone(),
-                        time: blob.deleted_at,
-                        cancel_deletion: blob.expires_at,
-                    });
+            let response = match items.as_ref() {
+                ItemSelection::All => {
+                    HttpRequest::post(("/api/store/undelete", account))
+                        .with_authorization(&auth)
+                        .with_body(())
+                        .unwrap()
+                        .send::<Vec<UndeleteResponse>>()
+                        .await
                 }
-            }
+                ItemSelection::Some(items) => {
+                    let mut request = Vec::with_capacity(items.len());
+                    for item in items.iter() {
+                        if let Some(blob) = results
+                            .items
+                            .iter()
+                            .find(|b: &&DeletedBlob| &b.hash == item)
+                        {
+                            request.push(UndeleteRequest {
+                                hash: blob.hash.clone(),
+                                collection: blob.collection.clone(),
+                                time: blob.deleted_at,
+                                cancel_deletion: blob.expires_at,
+                            });
+                        }
+                    }
+                    HttpRequest::post(("/api/store/undelete", account))
+                        .with_authorization(&auth)
+                        .with_body(request)
+                        .unwrap()
+                        .send::<Vec<UndeleteResponse>>()
+                        .await
+                }
+                ItemSelection::None => unimplemented!(),
+            };
 
-            match HttpRequest::post(("/api/store/undelete", account))
-                .with_authorization(&auth)
-                .with_body(request)
-                .unwrap()
-                .send::<Vec<UndeleteResponse>>()
-                .await
-            {
+            match response {
                 Ok(responses) => {
                     blobs.refetch();
                     let mut success = 0;
@@ -252,7 +267,7 @@ pub fn UndeleteList() -> impl IntoView {
                     <Toolbar slot>
                         <ToolbarButton
                             text=Signal::derive(move || {
-                                let ns = selected.get().len();
+                                let ns = selected.get().total_selected(total_results.get());
                                 if ns > 0 {
                                     format!("Restore ({ns})")
                                 } else {
@@ -262,7 +277,7 @@ pub fn UndeleteList() -> impl IntoView {
 
                             color=Color::Red
                             on_click=Callback::new(move |_| {
-                                let to_delete = selected.get().len();
+                                let to_delete = selected.get().total_selected(total_results.get());
                                 if to_delete > 0 {
                                     let text = maybe_plural(to_delete, "blob", "blobs");
                                     modal
@@ -305,8 +320,8 @@ pub fn UndeleteList() -> impl IntoView {
                                 Some(view! { <Skeleton/> }.into_view())
                             }
                             Some(Ok(blobs)) if !blobs.items.is_empty() => {
+                                total_results.set(Some(blobs.total as u32));
                                 results.set(blobs.clone());
-                                let blobs_ = blobs.clone();
                                 Some(
                                     view! {
                                         <ColumnList
@@ -318,13 +333,7 @@ pub fn UndeleteList() -> impl IntoView {
                                                 "".to_string(),
                                             ]
 
-                                            select_all=Callback::new(move |_| {
-                                                blobs_
-                                                    .items
-                                                    .iter()
-                                                    .map(|p| p.hash.to_string())
-                                                    .collect::<Vec<_>>()
-                                            })
+                                            has_select_all=true
                                         >
 
                                             <For

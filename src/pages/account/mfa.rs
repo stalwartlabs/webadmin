@@ -73,7 +73,7 @@ pub fn ManageMfa() -> impl IntoView {
                     .with_base_url(&auth)
                     .with_body(vec![request])
                     .unwrap()
-                    .send::<()>()
+                    .send::<serde_json::Value>()
                     .await;
                 set_pending.set(false);
 

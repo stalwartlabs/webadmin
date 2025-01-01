@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
+use ahash::AHashSet;
 use humansize::{format_size, DECIMAL};
 use leptos::*;
 use leptos_router::*;
@@ -19,7 +20,8 @@ use crate::{
             pagination::Pagination,
             row::SelectItem,
             toolbar::{SearchBox, ToolbarButton},
-            Footer, ListItem, ListSection, ListTable, ListTextItem, Toolbar, ZeroResults,
+            Footer, ItemSelection, ListItem, ListSection, ListTable, ListTextItem, Toolbar,
+            ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -43,7 +45,7 @@ const PAGE_SIZE: u32 = 10;
 
 #[component]
 pub fn PrincipalList() -> impl IntoView {
-    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
+    let selected = create_rw_signal::<ItemSelection>(ItemSelection::None);
     provide_context(selected);
 
     let params = use_params_map();
@@ -110,46 +112,88 @@ pub fn PrincipalList() -> impl IntoView {
         },
     );
 
-    let delete_action = create_action(move |items: &Arc<HashSet<String>>| {
+    let total_results = create_rw_signal(None::<u32>);
+    let delete_action = create_action(move |items: &Arc<ItemSelection>| {
         let items = items.clone();
         let auth = auth.get();
+        let filter = filter.get();
 
         async move {
-            for item in items.iter() {
-                if let Err(err) = HttpRequest::delete(("/api/principal", item))
-                    .with_authorization(&auth)
-                    .send::<()>()
-                    .await
-                {
-                    alert.set(Alert::from(err));
-                    return;
+            match items.as_ref() {
+                ItemSelection::Some(items) => {
+                    for item in items.iter() {
+                        if let Err(err) = HttpRequest::delete(("/api/principal", item))
+                            .with_authorization(&auth)
+                            .send::<serde_json::Value>()
+                            .await
+                        {
+                            alert.set(Alert::from(err));
+                            return;
+                        }
+                    }
+                    principals.refetch();
+                    alert.set(Alert::success(format!(
+                        "Deleted {}.",
+                        maybe_plural(
+                            items.len(),
+                            selected_type.get().item_name(false),
+                            selected_type.get().item_name(true)
+                        )
+                    )));
                 }
+                ItemSelection::All => {
+                    match HttpRequest::delete("/api/principal")
+                        .with_authorization(&auth)
+                        .with_parameter("type", selected_type.get().id())
+                        .with_optional_parameter("filter", filter)
+                        .with_parameter("confirm", "true")
+                        .send::<serde_json::Value>()
+                        .await
+                    {
+                        Ok(_) => {
+                            let total = total_results.get_untracked();
+                            principals.refetch();
+                            alert.set(Alert::success(format!(
+                                "Deleted {}.",
+                                maybe_plural(
+                                    total.unwrap_or_default() as usize,
+                                    selected_type.get().item_name(false),
+                                    selected_type.get().item_name(true)
+                                )
+                            )));
+                        }
+                        Err(err) => {
+                            alert.set(Alert::from(err));
+                        }
+                    }
+                }
+                ItemSelection::None => unreachable!(),
             }
-            principals.refetch();
-            alert.set(Alert::success(format!(
-                "Deleted {}.",
-                maybe_plural(
-                    items.len(),
-                    selected_type.get().item_name(false),
-                    selected_type.get().item_name(true)
-                )
-            )));
         }
     });
-    let purge_action = create_action(move |item: &String| {
-        let item = item.clone();
+    let api_action = create_action(move |item: &ApiAction| {
+        let (message, api_path, item) = match item {
+            ApiAction::PurgeAccount(item) => (
+                "Account purge",
+                "/api/store/purge/account",
+                item.to_string(),
+            ),
+            ApiAction::DeleteBayes(item) => (
+                "Bayes model deletion",
+                "/api/store/purge/in-memory/default/bayes-account",
+                item.to_string(),
+            ),
+        };
         let auth = auth.get();
 
         async move {
-            match HttpRequest::get(("/api/store/purge/account", &item))
+            match HttpRequest::get((api_path, &item))
                 .with_authorization(&auth)
-                .send::<()>()
+                .send::<serde_json::Value>()
                 .await
             {
                 Ok(_) => {
-                    alert.set(Alert::success(format!(
-                        "Account purge requested for {item}.",
-                    )));
+                    alert.set(Alert::success(format!("{message} requested for {item}.",)));
                 }
                 Err(err) => {
                     alert.set(Alert::from(err));
@@ -158,7 +202,6 @@ pub fn PrincipalList() -> impl IntoView {
         }
     });
 
-    let total_results = create_rw_signal(None::<u32>);
     let title = Signal::derive(move || {
         match selected_type.get() {
             PrincipalType::Individual => "Accounts",
@@ -213,13 +256,13 @@ pub fn PrincipalList() -> impl IntoView {
 
                     <ToolbarButton
                         text=Signal::derive(move || {
-                            let ns = selected.get().len();
+                            let ns = selected.get().total_selected(total_results.get());
                             if ns > 0 { format!("Delete ({ns})") } else { "Delete".to_string() }
                         })
 
                         color=Color::Red
                         on_click=Callback::new(move |_| {
-                            let to_delete = selected.get().len();
+                            let to_delete = selected.get().total_selected(total_results.get());
                             if to_delete > 0 {
                                 let text = maybe_plural(
                                     to_delete,
@@ -287,7 +330,6 @@ pub fn PrincipalList() -> impl IntoView {
                         }
                         Some(Ok(principals)) if !principals.items.is_empty() => {
                             total_results.set(Some(principals.total as u32));
-                            let principals_ = principals.clone();
                             let headers = match selected_type.get() {
                                 PrincipalType::Individual => {
                                     vec![
@@ -359,16 +401,7 @@ pub fn PrincipalList() -> impl IntoView {
                             };
                             Some(
                                 view! {
-                                    <ColumnList
-                                        headers=headers
-                                        select_all=Callback::new(move |_| {
-                                            principals_
-                                                .items
-                                                .iter()
-                                                .map(|p| p.name_or_empty())
-                                                .collect::<Vec<_>>()
-                                        })
-                                    >
+                                    <ColumnList headers=headers has_select_all=true>
 
                                         <For
                                             each=move || principals.items.clone()
@@ -380,7 +413,7 @@ pub fn PrincipalList() -> impl IntoView {
                                                 params=Parameters {
                                                     selected_type: selected_type.get(),
                                                     delete_action,
-                                                    purge_action,
+                                                    api_action,
                                                     modal,
                                                     show_dropdown,
                                                 }
@@ -452,10 +485,15 @@ pub fn PrincipalList() -> impl IntoView {
 
 struct Parameters {
     selected_type: PrincipalType,
-    delete_action: Action<Arc<HashSet<String>>, ()>,
-    purge_action: Action<String, ()>,
+    delete_action: Action<Arc<ItemSelection>, ()>,
+    api_action: Action<ApiAction, ()>,
     modal: RwSignal<Modal>,
     show_dropdown: RwSignal<String>,
+}
+
+enum ApiAction {
+    PurgeAccount(String),
+    DeleteBayes(String),
 }
 
 #[component]
@@ -713,8 +751,12 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                 on:click=move |_| {
                                     show_dropdown.set(String::new());
                                     params
-                                        .purge_action
-                                        .dispatch(principal.get_untracked().name_or_empty());
+                                        .api_action
+                                        .dispatch(
+                                            ApiAction::PurgeAccount(
+                                                principal.get_untracked().name_or_empty(),
+                                            ),
+                                        );
                                 }
 
                                 class:hidden=move || {
@@ -725,7 +767,30 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                 }
                             >
 
-                                Purge deleted
+                                Empty Trash
+                            </a>
+                            <a
+                                class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+                                on:click=move |_| {
+                                    show_dropdown.set(String::new());
+                                    params
+                                        .api_action
+                                        .dispatch(
+                                            ApiAction::DeleteBayes(
+                                                principal.get_untracked().name_or_empty(),
+                                            ),
+                                        );
+                                }
+
+                                class:hidden=move || {
+                                    !matches!(
+                                        selected_type,
+                                        PrincipalType::Individual | PrincipalType::Group
+                                    )
+                                }
+                            >
+
+                                Delete Bayes model
                             </a>
                             <a
                                 class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
@@ -765,7 +830,11 @@ fn PrincipalItem(principal: Principal, params: Parameters) -> impl IntoView {
                                                 .with_dangerous_callback(move || {
                                                     params
                                                         .delete_action
-                                                        .dispatch(Arc::new(HashSet::from_iter([id.clone()])));
+                                                        .dispatch(
+                                                            Arc::new(
+                                                                ItemSelection::Some(AHashSet::from_iter([id.clone()])),
+                                                            ),
+                                                        );
                                                 }),
                                         );
                                 }

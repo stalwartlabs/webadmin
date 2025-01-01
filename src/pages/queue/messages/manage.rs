@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{collections::HashSet, vec};
+use std::vec;
 
 use chrono::Utc;
 use chrono_humanize::HumanTime;
@@ -21,8 +21,8 @@ use crate::{
             IconScale,
         },
         list::{
-            header::ColumnList, row::SelectItem, toolbar::ToolbarButton, Footer, ListItem,
-            ListTable, ListTextItem, Toolbar,
+            header::ColumnList, row::SelectItem, toolbar::ToolbarButton, Footer, ItemSelection,
+            ListItem, ListTable, ListTextItem, Toolbar,
         },
         messages::{
             alert::{use_alerts, Alert, Alerts},
@@ -182,7 +182,7 @@ pub fn QueueManage() -> impl IntoView {
             alert.set(Alert::success("Successfully requested immediate delivery."));
         }
     });
-    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
+    let selected = create_rw_signal::<ItemSelection>(ItemSelection::None);
     provide_context(selected);
 
     view! {
@@ -335,7 +335,9 @@ pub fn QueueManage() -> impl IntoView {
                                     <Toolbar slot>
                                         <ToolbarButton
                                             text=Signal::derive(move || {
-                                                let ns = selected.get().len();
+                                                let ns = selected
+                                                    .get()
+                                                    .total_selected((num_recipients as u32).into());
                                                 if ns > 0 {
                                                     format!("Retry ({ns})")
                                                 } else {
@@ -345,28 +347,33 @@ pub fn QueueManage() -> impl IntoView {
 
                                             color=Color::Gray
                                             on_click=Callback::new(move |_| {
-                                                let to_delete = selected.get().len();
-                                                if to_delete > 0 {
-                                                    let mut domains = Vec::<String>::new();
-                                                    for rcpt in selected
-                                                        .try_update(std::mem::take)
-                                                        .unwrap_or_default()
-                                                    {
-                                                        if let Some((_, domain)) = rcpt.split_once('@') {
-                                                            let domain = domain.to_string();
-                                                            if !domains.contains(&domain) {
-                                                                domains.push(domain);
+                                                match selected
+                                                    .try_update(std::mem::take)
+                                                    .unwrap_or_default()
+                                                {
+                                                    ItemSelection::All => {
+                                                        retry_action.dispatch(vec!["".to_string()]);
+                                                    }
+                                                    ItemSelection::Some(rcpts) => {
+                                                        let mut domains = Vec::<String>::new();
+                                                        for rcpt in rcpts {
+                                                            if let Some((_, domain)) = rcpt.split_once('@') {
+                                                                let domain = domain.to_string();
+                                                                if !domains.contains(&domain) {
+                                                                    domains.push(domain);
+                                                                }
                                                             }
                                                         }
+                                                        retry_action
+                                                            .dispatch(
+                                                                if domains.len() != num_domains {
+                                                                    domains
+                                                                } else {
+                                                                    vec!["".to_string()]
+                                                                },
+                                                            );
                                                     }
-                                                    retry_action
-                                                        .dispatch(
-                                                            if domains.len() != num_domains {
-                                                                domains
-                                                            } else {
-                                                                vec!["".to_string()]
-                                                            },
-                                                        );
+                                                    ItemSelection::None => {}
                                                 }
                                             })
                                         >
@@ -375,7 +382,9 @@ pub fn QueueManage() -> impl IntoView {
                                         </ToolbarButton>
                                         <ToolbarButton
                                             text=Signal::derive(move || {
-                                                let ns = selected.get().len();
+                                                let ns = selected
+                                                    .get()
+                                                    .total_selected((num_recipients as u32).into());
                                                 if ns > 0 {
                                                     format!("Cancel ({ns})")
                                                 } else {
@@ -385,7 +394,9 @@ pub fn QueueManage() -> impl IntoView {
 
                                             color=Color::Red
                                             on_click=Callback::new(move |_| {
-                                                let to_delete = selected.get().len();
+                                                let to_delete = selected
+                                                    .get()
+                                                    .total_selected((num_recipients as u32).into());
                                                 if to_delete > 0 {
                                                     let text = maybe_plural(
                                                         to_delete,
@@ -402,15 +413,23 @@ pub fn QueueManage() -> impl IntoView {
                                                                 )
                                                                 .with_button(format!("Cancel for {text}"))
                                                                 .with_dangerous_callback(move || {
-                                                                    let selected = selected
+                                                                    match selected
                                                                         .try_update(std::mem::take)
-                                                                        .unwrap_or_default();
-                                                                    let selected = if selected.len() == num_recipients {
-                                                                        vec!["".to_string()]
-                                                                    } else {
-                                                                        selected.into_iter().collect()
-                                                                    };
-                                                                    cancel_action.dispatch(selected);
+                                                                        .unwrap_or_default()
+                                                                    {
+                                                                        ItemSelection::All => {
+                                                                            cancel_action.dispatch(vec!["".to_string()]);
+                                                                        }
+                                                                        ItemSelection::Some(selected) => {
+                                                                            let selected = if selected.len() == num_recipients {
+                                                                                vec!["".to_string()]
+                                                                            } else {
+                                                                                selected.into_iter().collect()
+                                                                            };
+                                                                            cancel_action.dispatch(selected);
+                                                                        }
+                                                                        ItemSelection::None => {}
+                                                                    }
                                                                 }),
                                                         )
                                                 }
@@ -429,15 +448,7 @@ pub fn QueueManage() -> impl IntoView {
                                             "Next/Last Retry".to_string(),
                                         ]
 
-                                        select_all=Callback::new(move |_| {
-                                            message
-                                                .domains
-                                                .iter()
-                                                .flat_map(|d| {
-                                                    d.recipients.iter().map(|r| r.address.clone())
-                                                })
-                                                .collect::<Vec<_>>()
-                                        })
+                                        has_select_all=true
                                     >
 
                                         <For

@@ -19,7 +19,7 @@ pub enum AccountAuthRequest {
     EnableOtpAuth { url: String },
     DisableOtpAuth { url: Option<String> },
     AddAppPassword { name: String, password: String },
-    RemoveAppPassword { name: String },
+    RemoveAppPassword { name: Option<String> },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

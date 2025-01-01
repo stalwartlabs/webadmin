@@ -6,20 +6,22 @@
 
 use leptos::*;
 use leptos_router::*;
-use std::collections::HashSet;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 use crate::{
     components::{
         badge::Badge,
         icon::{
-            IconAlertTriangle, IconCancel, IconCheckCircle, IconClock, IconLaunch, IconRefresh,
+            IconAlertTriangle, IconCancel, IconCheckCircle, IconClock, IconLaunch, IconPauseCircle,
+            IconPlayCircle, IconRefresh,
         },
         list::{
             header::ColumnList,
             pagination::Pagination,
             row::SelectItem,
             toolbar::{SearchBox, ToolbarButton},
-            Footer, ListItem, ListSection, ListTable, Toolbar, ZeroResults,
+            Footer, ItemSelection, ListItem, ListSection, ListTable, Toolbar, ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -36,13 +38,19 @@ use crate::{
     pages::{
         maybe_plural,
         queue::messages::{Message, Status},
-        List,
     },
 };
 
 use chrono_humanize::HumanTime;
 
 const PAGE_SIZE: u32 = 10;
+
+#[derive(Clone, Serialize, Deserialize, Default)]
+pub struct List<T> {
+    pub items: Vec<T>,
+    pub total: u64,
+    pub status: bool,
+}
 
 #[component]
 pub fn QueueList() -> impl IntoView {
@@ -69,7 +77,7 @@ pub fn QueueList() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let modal = use_modals();
-    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
+    let selected = create_rw_signal::<ItemSelection>(ItemSelection::None);
     provide_context(selected);
 
     let messages = create_resource(
@@ -91,27 +99,53 @@ pub fn QueueList() -> impl IntoView {
         },
     );
 
-    let cancel_action = create_action(move |items: &HashSet<String>| {
+    let total_results = create_rw_signal(None::<u32>);
+    let is_active = create_rw_signal(true);
+
+    let cancel_action = create_action(move |items: &Arc<ItemSelection>| {
         let items = items.clone();
         let auth = auth.get();
+        let filter = filter.get();
 
         async move {
             let mut total_deleted = 0;
-            for id in items {
-                match HttpRequest::delete(("/api/queue/messages", &id))
-                    .with_authorization(&auth)
-                    .send::<bool>()
-                    .await
-                {
-                    Ok(true) => {
-                        total_deleted += 1;
-                    }
-                    Ok(false) | Err(http::Error::NotFound) => {}
-                    Err(err) => {
-                        alert.set(Alert::from(err));
-                        return;
+
+            match items.as_ref() {
+                ItemSelection::All => {
+                    match HttpRequest::delete("/api/queue/messages")
+                        .with_authorization(&auth)
+                        .with_optional_parameter("text", filter)
+                        .send::<serde_json::Value>()
+                        .await
+                    {
+                        Ok(_) => {
+                            total_deleted = total_results.get().unwrap_or_default() as usize;
+                        }
+                        Err(err) => {
+                            alert.set(Alert::from(err));
+                            return;
+                        }
                     }
                 }
+                ItemSelection::Some(items) => {
+                    for id in items {
+                        match HttpRequest::delete(("/api/queue/messages", id.as_str()))
+                            .with_authorization(&auth)
+                            .send::<bool>()
+                            .await
+                        {
+                            Ok(true) => {
+                                total_deleted += 1;
+                            }
+                            Ok(false) | Err(http::Error::NotFound) => {}
+                            Err(err) => {
+                                alert.set(Alert::from(err));
+                                return;
+                            }
+                        }
+                    }
+                }
+                ItemSelection::None => unreachable!(),
             }
 
             if total_deleted > 0 {
@@ -123,27 +157,51 @@ pub fn QueueList() -> impl IntoView {
             }
         }
     });
-    let retry_action = create_action(move |items: &HashSet<String>| {
+    let retry_action = create_action(move |items: &Arc<ItemSelection>| {
         let items = items.clone();
         let auth = auth.get();
+        let filter = filter.get();
 
         async move {
             let mut total_rescheduled = 0;
-            for id in items {
-                match HttpRequest::patch(("/api/queue/messages", &id))
-                    .with_authorization(&auth)
-                    .send::<bool>()
-                    .await
-                {
-                    Ok(true) => {
-                        total_rescheduled += 1;
-                    }
-                    Ok(false) | Err(http::Error::NotFound) => {}
-                    Err(err) => {
-                        alert.set(Alert::from(err));
-                        return;
+
+            match items.as_ref() {
+                ItemSelection::All => {
+                    match HttpRequest::patch("/api/queue/messages")
+                        .with_authorization(&auth)
+                        .with_optional_parameter("filter", filter)
+                        .send::<bool>()
+                        .await
+                    {
+                        Ok(true) => {
+                            total_rescheduled = total_results.get().unwrap_or_default() as usize;
+                        }
+                        Ok(false) | Err(http::Error::NotFound) => {}
+                        Err(err) => {
+                            alert.set(Alert::from(err));
+                            return;
+                        }
                     }
                 }
+                ItemSelection::Some(items) => {
+                    for id in items {
+                        match HttpRequest::patch(("/api/queue/messages", id.as_str()))
+                            .with_authorization(&auth)
+                            .send::<bool>()
+                            .await
+                        {
+                            Ok(true) => {
+                                total_rescheduled += 1;
+                            }
+                            Ok(false) | Err(http::Error::NotFound) => {}
+                            Err(err) => {
+                                alert.set(Alert::from(err));
+                                return;
+                            }
+                        }
+                    }
+                }
+                ItemSelection::None => unreachable!(),
             }
 
             if total_rescheduled > 0 {
@@ -155,8 +213,33 @@ pub fn QueueList() -> impl IntoView {
             }
         }
     });
+    let set_status = create_action(move |status: &bool| {
+        let auth = auth.get();
+        let status = *status;
 
-    let total_results = create_rw_signal(None::<u32>);
+        async move {
+            match HttpRequest::patch(if status {
+                "/api/queue/status/start"
+            } else {
+                "/api/queue/status/stop"
+            })
+            .with_authorization(&auth)
+            .send::<serde_json::Value>()
+            .await
+            {
+                Ok(_) => {
+                    alert.set(Alert::success(if status {
+                        "Queue processing has been resumed."
+                    } else {
+                        "Queue processing has been paused."
+                    }));
+                }
+                Err(err) => {
+                    alert.set(Alert::from(err));
+                }
+            }
+        }
+    });
 
     view! {
         <ListSection>
@@ -186,19 +269,55 @@ pub fn QueueList() -> impl IntoView {
                         <IconRefresh/>
                     </ToolbarButton>
 
+                    {move || {
+                        if is_active.get() {
+                            view! {
+                                <ToolbarButton
+                                    text="Pause"
+
+                                    color=Color::Gray
+                                    on_click=Callback::new(move |_| {
+                                        set_status.dispatch(false);
+                                        is_active.set(false);
+                                    })
+                                >
+
+                                    <IconPauseCircle/>
+                                </ToolbarButton>
+                            }
+                        } else {
+                            view! {
+                                <ToolbarButton
+                                    text="Resume"
+
+                                    color=Color::Gray
+                                    on_click=Callback::new(move |_| {
+                                        set_status.dispatch(true);
+                                        is_active.set(true);
+                                    })
+                                >
+
+                                    <IconPlayCircle/>
+                                </ToolbarButton>
+                            }
+                        }
+                    }}
+
                     <ToolbarButton
                         text=Signal::derive(move || {
-                            let ns = selected.get().len();
+                            let ns = selected.get().total_selected(total_results.get());
                             if ns > 0 { format!("Retry ({ns})") } else { "Retry".to_string() }
                         })
 
                         color=Color::Gray
                         on_click=Callback::new(move |_| {
-                            let to_delete = selected.get().len();
+                            let to_delete = selected.get().total_selected(total_results.get());
                             if to_delete > 0 {
                                 retry_action
                                     .dispatch(
-                                        selected.try_update(std::mem::take).unwrap_or_default(),
+                                        Arc::new(
+                                            selected.try_update(std::mem::take).unwrap_or_default(),
+                                        ),
                                     );
                             }
                         })
@@ -209,13 +328,13 @@ pub fn QueueList() -> impl IntoView {
 
                     <ToolbarButton
                         text=Signal::derive(move || {
-                            let ns = selected.get().len();
+                            let ns = selected.get().total_selected(total_results.get());
                             if ns > 0 { format!("Cancel ({ns})") } else { "Cancel".to_string() }
                         })
 
                         color=Color::Red
                         on_click=Callback::new(move |_| {
-                            let to_delete = selected.get().len();
+                            let to_delete = selected.get().total_selected(total_results.get());
                             if to_delete > 0 {
                                 let text = maybe_plural(to_delete, "message", "messages");
                                 modal
@@ -230,7 +349,9 @@ pub fn QueueList() -> impl IntoView {
                                             .with_dangerous_callback(move || {
                                                 cancel_action
                                                     .dispatch(
-                                                        selected.try_update(std::mem::take).unwrap_or_default(),
+                                                        Arc::new(
+                                                            selected.try_update(std::mem::take).unwrap_or_default(),
+                                                        ),
                                                     );
                                             }),
                                     )
@@ -257,7 +378,7 @@ pub fn QueueList() -> impl IntoView {
                         }
                         Some(Ok(messages)) if !messages.items.is_empty() => {
                             total_results.set(Some(messages.total as u32));
-                            let messages_ = messages.clone();
+                            is_active.set(messages.status);
                             Some(
                                 view! {
                                     <ColumnList
@@ -269,13 +390,7 @@ pub fn QueueList() -> impl IntoView {
                                             "".to_string(),
                                         ]
 
-                                        select_all=Callback::new(move |_| {
-                                            messages_
-                                                .items
-                                                .iter()
-                                                .map(|p| p.id.to_string())
-                                                .collect::<Vec<_>>()
-                                        })
+                                        has_select_all=true
                                     >
 
                                         <For
@@ -291,8 +406,9 @@ pub fn QueueList() -> impl IntoView {
                                     .into_view(),
                             )
                         }
-                        Some(Ok(_)) => {
+                        Some(Ok(messages)) => {
                             total_results.set(Some(0));
+                            is_active.set(messages.status);
                             Some(
                                 view! {
                                     <ZeroResults

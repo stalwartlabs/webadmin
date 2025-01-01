@@ -252,8 +252,9 @@ pub fn PrincipalEdit() -> impl IntoView {
                         .with_authorization(&auth)
                         .with_body(updates)
                         .unwrap()
-                        .send::<()>()
+                        .send::<serde_json::Value>()
                         .await
+                        .map(|_| ())
                 } else {
                     Ok(())
                 }
@@ -282,7 +283,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                                 ..Default::default()
                             })
                             .unwrap()
-                            .send::<()>()
+                            .send::<serde_json::Value>()
                             .await;
                     }
                 }

@@ -70,7 +70,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("spam-filter.score.spam")
             .label("Spam threshold")
-            .help("Mark as SPAM messages with a score above this threshold")
+            .help("Mark as Spam messages with a score above this threshold")
             .default("5.0")
             .typ(Type::Input)
             .input_check(
@@ -285,7 +285,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("spam-filter.bayes.score.spam")
             .label("Spam threshold")
-            .help("Classify as SPAM messages with a score above this threshold")
+            .help("Classify as Spam messages with a score above this threshold")
             .default("0.7")
             .typ(Type::Input)
             .input_check(
@@ -299,7 +299,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("spam-filter.bayes.score.ham")
             .label("Ham threshold")
-            .help("Classify as HAM messages with a score below this threshold")
+            .help("Classify as Ham messages with a score below this threshold")
             .default("0.5")
             .typ(Type::Input)
             .input_check(
@@ -313,7 +313,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("spam-filter.bayes.account.score.spam")
             .label("Spam threshold")
-            .help("Classify as SPAM messages with a score above this threshold")
+            .help("Classify as Spam messages with a score above this threshold")
             .default("0.7")
             .typ(Type::Input)
             .input_check(
@@ -1079,7 +1079,7 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .field("_id")
             .build()
-            .list_title("SPAM trap addresses")
+            .list_title("Spam trap addresses")
             .list_subtitle("Manage e-mail addresses designated as SPAM traps")
             .list_fields(["_id"])
             .no_list_action(Action::Modify)
@@ -1104,7 +1104,7 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .fields(["_id", "_value"])
             .build()
-            .list_title("SPAM Scores")
+            .list_title("Spam Scores")
             .list_subtitle("Manage scores assigned to spam tags")
             .list_fields(["_id", "_value"])
             .build()

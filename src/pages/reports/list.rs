@@ -6,7 +6,7 @@
 
 use leptos::*;
 use leptos_router::*;
-use std::collections::HashSet;
+use std::sync::Arc;
 
 use super::ReportType;
 use crate::{
@@ -17,7 +17,8 @@ use crate::{
             pagination::Pagination,
             row::SelectItem,
             toolbar::{SearchBox, ToolbarButton},
-            Footer, ListItem, ListSection, ListTable, ListTextItem, Toolbar, ZeroResults,
+            Footer, ItemSelection, ListItem, ListSection, ListTable, ListTextItem, Toolbar,
+            ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -81,7 +82,7 @@ pub fn IncomingReportList() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let modal = use_modals();
-    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
+    let selected = create_rw_signal::<ItemSelection>(ItemSelection::None);
     provide_context(selected);
 
     let reports = create_resource(
@@ -132,28 +133,53 @@ pub fn IncomingReportList() -> impl IntoView {
         },
     );
 
-    let delete_action = create_action(move |items: &HashSet<String>| {
+    let total_results = create_rw_signal(None::<u32>);
+
+    let delete_action = create_action(move |items: &Arc<ItemSelection>| {
         let items = items.clone();
         let auth = auth.get();
         let report_class = report_type.get().as_str();
+        let filter = filter.get();
 
         async move {
             let mut total_deleted = 0;
-            for id in items {
-                match HttpRequest::delete(format!("/api/reports/{report_class}/{id}"))
-                    .with_authorization(&auth)
-                    .send::<bool>()
-                    .await
-                {
-                    Ok(true) => {
-                        total_deleted += 1;
-                    }
-                    Ok(false) | Err(http::Error::NotFound) => {}
-                    Err(err) => {
-                        alert.set(Alert::from(err));
-                        return;
+
+            match items.as_ref() {
+                ItemSelection::All => {
+                    match HttpRequest::delete(format!("/api/reports/{report_class}"))
+                        .with_authorization(&auth)
+                        .with_optional_parameter("filter", filter)
+                        .send::<serde_json::Value>()
+                        .await
+                    {
+                        Ok(_) => {
+                            total_deleted = total_results.get().unwrap_or_default() as usize;
+                        }
+                        Err(err) => {
+                            alert.set(Alert::from(err));
+                            return;
+                        }
                     }
                 }
+                ItemSelection::Some(items) => {
+                    for id in items {
+                        match HttpRequest::delete(format!("/api/reports/{report_class}/{id}"))
+                            .with_authorization(&auth)
+                            .send::<bool>()
+                            .await
+                        {
+                            Ok(true) => {
+                                total_deleted += 1;
+                            }
+                            Ok(false) | Err(http::Error::NotFound) => {}
+                            Err(err) => {
+                                alert.set(Alert::from(err));
+                                return;
+                            }
+                        }
+                    }
+                }
+                ItemSelection::None => unreachable!(),
             }
 
             if total_deleted > 0 {
@@ -165,8 +191,6 @@ pub fn IncomingReportList() -> impl IntoView {
             }
         }
     });
-
-    let total_results = create_rw_signal(None::<u32>);
 
     let title = create_memo(move |_| {
         match report_type.get() {
@@ -217,13 +241,13 @@ pub fn IncomingReportList() -> impl IntoView {
 
                     <ToolbarButton
                         text=Signal::derive(move || {
-                            let ns = selected.get().len();
+                            let ns = selected.get().total_selected(total_results.get());
                             if ns > 0 { format!("Delete ({ns})") } else { "Delete".to_string() }
                         })
 
                         color=Color::Red
                         on_click=Callback::new(move |_| {
-                            let to_delete = selected.get().len();
+                            let to_delete = selected.get().total_selected(total_results.get());
                             if to_delete > 0 {
                                 let text = maybe_plural(to_delete, "report", "reports");
                                 modal
@@ -238,7 +262,9 @@ pub fn IncomingReportList() -> impl IntoView {
                                             .with_dangerous_callback(move || {
                                                 delete_action
                                                     .dispatch(
-                                                        selected.try_update(std::mem::take).unwrap_or_default(),
+                                                        Arc::new(
+                                                            selected.try_update(std::mem::take).unwrap_or_default(),
+                                                        ),
                                                     );
                                             }),
                                     )
@@ -265,7 +291,6 @@ pub fn IncomingReportList() -> impl IntoView {
                         }
                         Some(Ok(reports)) if !reports.items.is_empty() => {
                             total_results.set(Some(reports.total as u32));
-                            let reports_ = reports.clone();
                             let headers = match report_type.get() {
                                 ReportType::Dmarc => {
                                     vec![
@@ -301,17 +326,7 @@ pub fn IncomingReportList() -> impl IntoView {
                             };
                             Some(
                                 view! {
-                                    <ColumnList
-                                        headers=headers
-
-                                        select_all=Callback::new(move |_| {
-                                            reports_
-                                                .items
-                                                .iter()
-                                                .map(|p| p.id().to_string())
-                                                .collect::<Vec<_>>()
-                                        })
-                                    >
+                                    <ColumnList headers=headers has_select_all=true>
 
                                         <For
                                             each=move || reports.items.clone()

@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
 pub enum AggregateReport {
     Tls {
         id: String,

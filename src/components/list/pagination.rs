@@ -39,17 +39,73 @@ pub fn Pagination(
                             }
                         >
 
-                            <For each=move || (1..=total_pages.get()) key=|page| *page let:page>
-                                <option selected=move || current_page.get() == page>{page}</option>
-
-                            </For>
+                            {move || {
+                                let total_pages = total_pages.get();
+                                let current_page = current_page.get();
+                                let mut views = Vec::with_capacity(10);
+                                if total_pages > 10 {
+                                    let start = if current_page > 6 { current_page - 5 } else { 1 };
+                                    let end = if current_page + 5 > total_pages {
+                                        total_pages
+                                    } else {
+                                        current_page + 5
+                                    };
+                                    if start > 1 {
+                                        views
+                                            .push(
+                                                view! { <option selected=current_page == 1>{1}</option> }
+                                                    .into_view(),
+                                            );
+                                        if start > 2 {
+                                            views
+                                                .push(
+                                                    view! { <option disabled=true>...</option> }.into_view(),
+                                                );
+                                        }
+                                    }
+                                    for page in start..=end {
+                                        views
+                                            .push(
+                                                view! {
+                                                    <option selected=current_page == page>{page}</option>
+                                                }
+                                                    .into_view(),
+                                            );
+                                    }
+                                    if end < total_pages {
+                                        if end < total_pages - 1 {
+                                            views
+                                                .push(
+                                                    view! { <option disabled=true>...</option> }.into_view(),
+                                                );
+                                        }
+                                        views
+                                            .push(
+                                                view! {
+                                                    <option selected=current_page
+                                                        == total_pages>{total_pages}</option>
+                                                }
+                                                    .into_view(),
+                                            );
+                                    }
+                                } else {
+                                    for page in 1..=total_pages {
+                                        views
+                                            .push(
+                                                view! {
+                                                    <option selected=current_page == page>{page}</option>
+                                                }
+                                                    .into_view(),
+                                            );
+                                    }
+                                }
+                                views.collect_view()
+                            }}
 
                         </select>
                     </div>
 
-                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                        "of " {total_pages}
-                    </p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">"of " {total_pages}</p>
                 </div>
 
             </Show>

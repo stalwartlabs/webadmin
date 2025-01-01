@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 use leptos::*;
 use leptos_router::*;
@@ -17,7 +17,8 @@ use crate::{
             pagination::Pagination,
             row::SelectItem,
             toolbar::{SearchBox, ToolbarButton},
-            Footer, ListItem, ListSection, ListTable, ListTextItem, Toolbar, ZeroResults,
+            Footer, ItemSelection, ListItem, ListSection, ListTable, ListTextItem, Toolbar,
+            ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -61,7 +62,7 @@ pub fn SettingsList() -> impl IntoView {
             })
         })
     });
-    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
+    let selected = create_rw_signal::<ItemSelection>(ItemSelection::None);
     let params = use_params_map();
     let current_schema = create_memo(move |_| {
         if let Some(schema) = params
@@ -69,7 +70,7 @@ pub fn SettingsList() -> impl IntoView {
             .get("object")
             .and_then(|id| schemas.schemas.get(id.as_str()))
         {
-            selected.set(HashSet::new());
+            selected.set(ItemSelection::None);
             schema.clone()
         } else {
             use_navigate()("/404", Default::default());
@@ -128,43 +129,67 @@ pub fn SettingsList() -> impl IntoView {
         }
     });
 
-    let delete_action = create_action(move |items: &Arc<HashSet<String>>| {
+    let total_results = create_rw_signal(None::<u32>);
+    let delete_action = create_action(move |items: &Arc<ItemSelection>| {
         let items = items.clone();
         let auth = auth.get();
         let schema = current_schema.get();
+        let filter = filter.get();
 
         async move {
-            let mut updates = Vec::with_capacity(items.len());
-            for item in items.iter() {
-                if !item.is_empty() {
-                    match schema.typ {
-                        SchemaType::Record { prefix, .. } => {
-                            updates.push(UpdateSettings::Clear {
-                                prefix: format!("{prefix}.{item}."),
-                            });
-                        }
-                        SchemaType::Entry { prefix } => {
-                            updates.push(UpdateSettings::Delete {
-                                keys: vec![format!("{prefix}.{item}")],
-                            });
+            let updates = match items.as_ref() {
+                ItemSelection::All => {
+                    vec![match schema.typ {
+                        SchemaType::Record { prefix, .. } | SchemaType::Entry { prefix } => {
+                            UpdateSettings::Clear {
+                                prefix: format!("{prefix}."),
+                                filter,
+                            }
                         }
                         SchemaType::List => panic!("List schema type is not supported."),
-                    }
+                    }]
                 }
-            }
+                ItemSelection::Some(items) => {
+                    let mut updates = Vec::with_capacity(items.len());
+                    for item in items.iter() {
+                        if !item.is_empty() {
+                            match schema.typ {
+                                SchemaType::Record { prefix, .. } => {
+                                    updates.push(UpdateSettings::Clear {
+                                        prefix: format!("{prefix}.{item}."),
+                                        filter: None,
+                                    });
+                                }
+                                SchemaType::Entry { prefix } => {
+                                    updates.push(UpdateSettings::Delete {
+                                        keys: vec![format!("{prefix}.{item}")],
+                                    });
+                                }
+                                SchemaType::List => panic!("List schema type is not supported."),
+                            }
+                        }
+                    }
+                    updates
+                }
+                ItemSelection::None => unreachable!(),
+            };
 
             match HttpRequest::post("/api/settings")
                 .with_authorization(&auth)
                 .with_body(updates)
                 .unwrap()
-                .send::<()>()
+                .send::<serde_json::Value>()
                 .await
             {
                 Ok(_) => {
                     settings.refetch();
                     alert.set(Alert::success(format!(
                         "Deleted {}.",
-                        maybe_plural(items.len(), schema.name_singular, schema.name_plural,)
+                        maybe_plural(
+                            items.total_selected(total_results.get_untracked()),
+                            schema.name_singular,
+                            schema.name_plural,
+                        )
                     )));
                 }
                 Err(err) => {
@@ -174,7 +199,6 @@ pub fn SettingsList() -> impl IntoView {
         }
     });
 
-    let total_results = create_rw_signal(None::<u32>);
     view! {
         <ListSection>
             <ListTable
@@ -197,13 +221,13 @@ pub fn SettingsList() -> impl IntoView {
 
                     <ToolbarButton
                         text=Signal::derive(move || {
-                            let ns = selected.get().len();
+                            let ns = selected.get().total_selected(total_results.get());
                             if ns > 0 { format!("Delete ({ns})") } else { "Delete".to_string() }
                         })
 
                         color=Color::Red
                         on_click=Callback::new(move |_| {
-                            let to_delete = selected.get().len();
+                            let to_delete = selected.get().total_selected(total_results.get());
                             if to_delete > 0 {
                                 let schema = current_schema.get();
                                 let text = maybe_plural(
@@ -282,7 +306,6 @@ pub fn SettingsList() -> impl IntoView {
                         Some(Ok(settings)) if !settings.items.is_empty() => {
                             total_results.set(Some(settings.total as u32));
                             let schema = current_schema.get();
-                            let settings_ = settings.clone();
                             let mut headers = schema
                                 .list
                                 .fields
@@ -294,17 +317,7 @@ pub fn SettingsList() -> impl IntoView {
                             }
                             Some(
                                 view! {
-                                    <ColumnList
-                                        headers=headers
-
-                                        select_all=Callback::new(move |_| {
-                                            settings_
-                                                .items
-                                                .iter()
-                                                .filter_map(|p| p.get("_id").map(|id| id.to_string()))
-                                                .collect::<Vec<_>>()
-                                        })
-                                    >
+                                    <ColumnList headers=headers has_select_all=true>
 
                                         <For
                                             each=move || settings.items.clone()

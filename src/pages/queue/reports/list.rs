@@ -6,7 +6,7 @@
 
 use leptos::*;
 use leptos_router::*;
-use std::collections::HashSet;
+use std::sync::Arc;
 
 use crate::{
     components::{
@@ -17,7 +17,8 @@ use crate::{
             pagination::Pagination,
             row::SelectItem,
             toolbar::{SearchBox, ToolbarButton},
-            Footer, ListItem, ListSection, ListTable, ListTextItem, Toolbar, ZeroResults,
+            Footer, ItemSelection, ListItem, ListSection, ListTable, ListTextItem, Toolbar,
+            ZeroResults,
         },
         messages::{
             alert::{use_alerts, Alert},
@@ -67,7 +68,7 @@ pub fn ReportList() -> impl IntoView {
     let auth = use_authorization();
     let alert = use_alerts();
     let modal = use_modals();
-    let selected = create_rw_signal::<HashSet<String>>(HashSet::new());
+    let selected = create_rw_signal::<ItemSelection>(ItemSelection::None);
     provide_context(selected);
 
     let reports = create_resource(
@@ -102,27 +103,53 @@ pub fn ReportList() -> impl IntoView {
         },
     );
 
-    let cancel_action = create_action(move |items: &HashSet<String>| {
+    let total_results = create_rw_signal(None::<u32>);
+
+    let cancel_action = create_action(move |items: &Arc<ItemSelection>| {
         let items = items.clone();
         let auth = auth.get();
+        let filter = filter.get();
 
         async move {
             let mut total_deleted = 0;
-            for id in items {
-                match HttpRequest::delete(("/api/queue/reports", &id))
-                    .with_authorization(&auth)
-                    .send::<bool>()
-                    .await
-                {
-                    Ok(true) => {
-                        total_deleted += 1;
-                    }
-                    Ok(false) | Err(http::Error::NotFound) => {}
-                    Err(err) => {
-                        alert.set(Alert::from(err));
-                        return;
+
+            match items.as_ref() {
+                ItemSelection::All => {
+                    match HttpRequest::delete("/api/queue/reports")
+                        .with_authorization(&auth)
+                        .with_optional_parameter("filter", filter)
+                        .send::<serde_json::Value>()
+                        .await
+                    {
+                        Ok(_) => {
+                            total_deleted = total_results.get().unwrap_or_default() as usize;
+                        }
+
+                        Err(err) => {
+                            alert.set(Alert::from(err));
+                            return;
+                        }
                     }
                 }
+                ItemSelection::Some(items) => {
+                    for id in items {
+                        match HttpRequest::delete(("/api/queue/reports", id.as_str()))
+                            .with_authorization(&auth)
+                            .send::<bool>()
+                            .await
+                        {
+                            Ok(true) => {
+                                total_deleted += 1;
+                            }
+                            Ok(false) | Err(http::Error::NotFound) => {}
+                            Err(err) => {
+                                alert.set(Alert::from(err));
+                                return;
+                            }
+                        }
+                    }
+                }
+                ItemSelection::None => unreachable!(),
             }
 
             if total_deleted > 0 {
@@ -134,8 +161,6 @@ pub fn ReportList() -> impl IntoView {
             }
         }
     });
-
-    let total_results = create_rw_signal(None::<u32>);
 
     view! {
         <ListSection>
@@ -170,13 +195,13 @@ pub fn ReportList() -> impl IntoView {
 
                     <ToolbarButton
                         text=Signal::derive(move || {
-                            let ns = selected.get().len();
+                            let ns = selected.get().total_selected(total_results.get());
                             if ns > 0 { format!("Cancel ({ns})") } else { "Cancel".to_string() }
                         })
 
                         color=Color::Red
                         on_click=Callback::new(move |_| {
-                            let to_delete = selected.get().len();
+                            let to_delete = selected.get().total_selected(total_results.get());
                             if to_delete > 0 {
                                 let text = maybe_plural(to_delete, "report", "reports");
                                 modal
@@ -191,7 +216,9 @@ pub fn ReportList() -> impl IntoView {
                                             .with_dangerous_callback(move || {
                                                 cancel_action
                                                     .dispatch(
-                                                        selected.try_update(std::mem::take).unwrap_or_default(),
+                                                        Arc::new(
+                                                            selected.try_update(std::mem::take).unwrap_or_default(),
+                                                        ),
                                                     );
                                             }),
                                     )
@@ -218,7 +245,6 @@ pub fn ReportList() -> impl IntoView {
                         }
                         Some(Ok(reports)) if !reports.items.is_empty() => {
                             total_results.set(Some(reports.total as u32));
-                            let reports_ = reports.clone();
                             Some(
                                 view! {
                                     <ColumnList
@@ -230,13 +256,7 @@ pub fn ReportList() -> impl IntoView {
                                             "".to_string(),
                                         ]
 
-                                        select_all=Callback::new(move |_| {
-                                            reports_
-                                                .items
-                                                .iter()
-                                                .map(|p| p.id.to_string())
-                                                .collect::<Vec<_>>()
-                                        })
+                                        has_select_all=true
                                     >
 
                                         <For

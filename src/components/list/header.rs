@@ -4,43 +4,36 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::collections::HashSet;
-
 use leptos::*;
+
+use crate::components::list::ItemSelection;
 
 #[component]
 pub fn ColumnList(
     #[prop(into)] headers: MaybeSignal<Vec<String>>,
-    #[prop(into, optional)] select_all: Option<Callback<(), Vec<String>>>,
+    #[prop(into, optional)] has_select_all: bool,
     children: Children,
 ) -> impl IntoView {
     let headers_ = headers.clone();
     let total_columns = create_memo(move |_| headers_.get().len());
-    let has_select_all = select_all.is_some();
 
     view! {
         <thead class="bg-gray-50 dark:bg-slate-800">
             <tr>
-                {select_all
-                    .map(|select_all| {
-                        let selected = use_context::<RwSignal<HashSet<String>>>().unwrap();
+                {has_select_all
+                    .then_some(|| {
+                        let selection = use_context::<RwSignal<ItemSelection>>().unwrap();
                         view! {
                             <th scope="col" class="ps-6 py-3 text-start">
                                 <label for="hs-at-with-checkboxes-main" class="flex">
                                     <input
                                         type="checkbox"
+                                        prop:checked=move || selection.get().is_all()
                                         class="shrink-0 border-gray-300 rounded text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-600 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                                        on:change=move |ev| {
-                                            selected
+                                        on:change=move |_| {
+                                            selection
                                                 .update(|t| {
-                                                    let items = select_all.call(());
-                                                    if event_target_checked(&ev) {
-                                                        t.extend(items);
-                                                    } else {
-                                                        for item in items {
-                                                            t.remove(&item);
-                                                        }
-                                                    }
+                                                    t.toggle_all();
                                                 });
                                         }
                                     />

@@ -9,7 +9,7 @@
  * Unauthorized use, modification, or distribution is strictly prohibited.
  */
 
-use std::{collections::HashSet, vec};
+use std::vec;
 
 use chrono::{DateTime, Utc};
 use chrono_humanize::{Accuracy, HumanTime, Tense};
@@ -25,6 +25,7 @@ use crate::{
             IconAlertTriangle, IconChatBubbleBottom, IconClock, IconDocumentChartBar,
             IconExclamationCircle,
         },
+        list::ItemSelection,
         messages::alert::{use_alerts, Alert, Alerts},
         report::ReportView,
         skeleton::Skeleton,
@@ -59,7 +60,7 @@ pub fn SpanDisplay() -> impl IntoView {
         },
     );
 
-    provide_context(create_rw_signal::<HashSet<String>>(HashSet::new()));
+    provide_context(create_rw_signal::<ItemSelection>(ItemSelection::None));
 
     view! {
         <Alerts/>

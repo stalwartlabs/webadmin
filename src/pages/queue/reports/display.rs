@@ -4,13 +4,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use std::{collections::HashSet, vec};
+use std::vec;
 
 use leptos::*;
 use leptos_router::{use_navigate, use_params_map};
 
 use crate::{
     components::{
+        list::ItemSelection,
         messages::alert::{use_alerts, Alert, Alerts},
         skeleton::Skeleton,
     },
@@ -71,7 +72,7 @@ pub fn ReportDisplay() -> impl IntoView {
         },
     );
 
-    provide_context(create_rw_signal::<HashSet<String>>(HashSet::new()));
+    provide_context(create_rw_signal::<ItemSelection>(ItemSelection::None));
 
     view! {
         <Alerts/>

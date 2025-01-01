@@ -32,6 +32,7 @@ use crate::{
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
 pub enum EncryptionType {
     PGP {
         algo: Algorithm,

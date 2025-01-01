@@ -10,6 +10,7 @@ pub mod row;
 pub mod table;
 pub mod toolbar;
 
+use ahash::AHashSet;
 use leptos::*;
 
 use crate::components::{icon::IconPlus, messages::alert::Alerts};
@@ -22,6 +23,14 @@ pub struct Toolbar {
 #[slot]
 pub struct Footer {
     children: Children,
+}
+
+#[derive(Clone, Default)]
+pub enum ItemSelection {
+    All,
+    #[default]
+    None,
+    Some(AHashSet<String>),
 }
 
 #[component]
@@ -160,5 +169,55 @@ pub fn ZeroResults(
 
             </Show>
         </div>
+    }
+}
+
+impl ItemSelection {
+    pub fn is_selected(&self, id: &str) -> bool {
+        match self {
+            ItemSelection::All => true,
+            ItemSelection::None => false,
+            ItemSelection::Some(set) => set.contains(id),
+        }
+    }
+
+    pub fn toggle_all(&mut self) {
+        *self = match self {
+            ItemSelection::All => ItemSelection::None,
+            ItemSelection::None | ItemSelection::Some(_) => ItemSelection::All,
+        }
+    }
+
+    pub fn toggle_item(&mut self, item: &str) {
+        match self {
+            ItemSelection::None | ItemSelection::All => {
+                *self = ItemSelection::Some(AHashSet::from_iter([item.to_string()]));
+            }
+            ItemSelection::Some(set) => {
+                if !set.remove(item) {
+                    set.insert(item.to_string());
+                }
+            }
+        }
+    }
+
+    pub fn has_selection(&self) -> bool {
+        match self {
+            ItemSelection::Some(set) => !set.is_empty(),
+            ItemSelection::All => true,
+            _ => false,
+        }
+    }
+
+    pub fn total_selected(&self, total_results: Option<u32>) -> usize {
+        match self {
+            ItemSelection::Some(set) => set.len(),
+            ItemSelection::All => total_results.unwrap_or(0) as usize,
+            _ => 0,
+        }
+    }
+
+    pub fn is_all(&self) -> bool {
+        matches!(self, ItemSelection::All)
     }
 }
