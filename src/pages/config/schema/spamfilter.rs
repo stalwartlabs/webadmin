@@ -141,7 +141,7 @@ impl Builder<Schemas, ()> {
             .new_field("spam-filter.dnsbl.max-check.ip")
             .label("IP Checks")
             .help("Maximum number of DNSBL checks for IP addresses")
-            .default("20")
+            .default("50")
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
@@ -151,7 +151,7 @@ impl Builder<Schemas, ()> {
             .new_field("spam-filter.dnsbl.max-check.domain")
             .label("Domain Checks")
             .help("Maximum number of DNSBL checks for domain names")
-            .default("20")
+            .default("50")
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
@@ -161,7 +161,7 @@ impl Builder<Schemas, ()> {
             .new_field("spam-filter.dnsbl.max-check.email")
             .label("E-mail Checks")
             .help("Maximum number of DNSBL checks for E-mail addresses")
-            .default("20")
+            .default("50")
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],
@@ -171,7 +171,7 @@ impl Builder<Schemas, ()> {
             .new_field("spam-filter.dnsbl.max-check.url")
             .label("URL Checks")
             .help("Maximum number of DNSBL checks for URLs")
-            .default("20")
+            .default("50")
             .typ(Type::Input)
             .input_check(
                 [Transformer::Trim],

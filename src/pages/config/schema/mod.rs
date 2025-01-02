@@ -211,8 +211,10 @@ pub const SPAM_FILTER_VARS: &[&str] = &[
     "body.text",
     "body.html",
     "body.raw",
+    "body.words",
     "subject",
     "subject.thread",
+    "subject.words",
     "location",
     // URL-related variables
     "url",
