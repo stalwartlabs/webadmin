@@ -44,8 +44,8 @@ use crate::{
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct DataPoint {
-    x: u64,
-    y: [u64; 4],
+    x: u128,
+    y: [u128; 4],
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -98,8 +98,8 @@ pub enum LiveMetric {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 struct MetricSummary {
-    sum: u64,
-    count: u64,
+    sum: u128,
+    count: u128,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -212,7 +212,7 @@ pub fn Dashboard() -> impl IntoView {
                         LiveMetric::Gauge { id, value } => (id, value, 1),
                         LiveMetric::Histogram { id, count, sum } => (id, sum, count),
                     };
-                    summary_.insert(id, MetricSummary { sum, count });
+                    summary_.insert(id, MetricSummary { sum: sum as u128, count: count as u128 });
                 }
                 live_summary.set(MetricSummaries(summary_));
             });
@@ -242,15 +242,15 @@ pub fn Dashboard() -> impl IntoView {
                 let entry = summary_.entry(metric.id().to_string()).or_default();
                 match metric {
                     Metric::Counter { value, .. } => {
-                        entry.sum += *value;
+                        entry.sum = entry.sum.saturating_add(*value as u128);
                         entry.count += 1;
                     }
                     Metric::Histogram { sum, count, .. } => {
-                        entry.sum += *sum;
-                        entry.count += *count;
+                        entry.sum = entry.sum.saturating_add(*sum as u128);
+                        entry.count += *count as u128;
                     }
                     Metric::Gauge { value, .. } => {
-                        entry.sum += *value;
+                        entry.sum = entry.sum.saturating_add(*value as u128);
                         entry.count += 1;
                     }
                 }
@@ -513,7 +513,7 @@ pub fn Dashboard() -> impl IntoView {
                 <CardSimpleItem
                     title="Server Memory"
                     contents=Signal::derive(move || {
-                        format_size(live_summary.get().sum(&["server.memory"]), DECIMAL)
+                        format_size(live_summary.get().sum(&["server.memory"]) as u64, DECIMAL)
                     })
                 >
 
@@ -863,7 +863,7 @@ pub fn Dashboard() -> impl IntoView {
                 <CardSimpleItem
                     title="Server Memory"
                     contents=Signal::derive(move || {
-                        format_size(live_summary.get().sum(&["server.memory"]), DECIMAL)
+                        format_size(live_summary.get().sum(&["server.memory"]) as u64, DECIMAL)
                     })
                 >
 
@@ -938,7 +938,7 @@ impl Bucket {
         };
 
         for (x, item) in bucket.iter_mut().enumerate() {
-            item.x = x as u64;
+            item.x = x as u128;
         }
 
         Bucket {
@@ -990,8 +990,11 @@ impl Bucket {
             _ => return,
         };
 
-        self.value[index].y[y_num] += value;
-        self.count[index].y[y_num] += count;
+        let acc_value = &mut  self.value[index].y[y_num];
+        let acc_count = &mut self.count[index].y[y_num];
+
+        *acc_value = acc_value.saturating_add(value as u128);
+        *acc_count = acc_count.saturating_add(count as u128);
     }
 
     fn finish_sum(self) -> Vec<DataPoint> {
@@ -1010,7 +1013,7 @@ impl Bucket {
         self.value
     }
 
-    fn finish_avg_with_filter(mut self, filter: impl Fn(u64) -> u64) -> Vec<DataPoint> {
+    fn finish_avg_with_filter(mut self, filter: impl Fn(u128) -> u128) -> Vec<DataPoint> {
         for (value, count) in self.value.iter_mut().zip(self.count.iter()) {
             if count.y[0] > 0 {
                 value.y[0] = filter(value.y[0] / count.y[0]);
@@ -1052,7 +1055,7 @@ impl Metric {
 }
 
 impl MetricSummaries {
-    fn average(&self, ids: &[&str]) -> u64 {
+    fn average(&self, ids: &[&str]) -> u128 {
         let mut sum = 0;
         let mut count = 0;
 
@@ -1070,7 +1073,7 @@ impl MetricSummaries {
         }
     }
 
-    fn sum(&self, ids: &[&str]) -> u64 {
+    fn sum(&self, ids: &[&str]) -> u128 {
         let mut sum = 0;
 
         for id in ids {
@@ -1083,7 +1086,7 @@ impl MetricSummaries {
     }
 }
 
-fn duration(time: u64) -> String {
-    HumanTime::from(Duration::from_std(std::time::Duration::from_millis(time)).unwrap_or_default())
+fn duration(time: u128) -> String {
+    HumanTime::from(Duration::from_std(std::time::Duration::from_millis(time as u64)).unwrap_or_default())
         .to_text_en(Accuracy::Precise, Tense::Present)
 }

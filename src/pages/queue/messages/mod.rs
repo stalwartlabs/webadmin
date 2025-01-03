@@ -82,7 +82,7 @@ impl Message {
                     .as_ref()
                     .map_or(false, |next_retry| next_retry < &next_event.unwrap())
             {
-                next_event = domain.next_retry.unwrap().into();
+                next_event = domain.next_retry;
             }
         }
 
@@ -104,7 +104,7 @@ impl Message {
                     .as_ref()
                     .map_or(false, |next_notify| next_notify < &next_event.unwrap())
             {
-                next_event = domain.next_notify.unwrap().into();
+                next_event = domain.next_notify;
             }
         }
 
