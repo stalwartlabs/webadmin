@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.21] - 2024-01-06
+
+## Added
+- New Spam filter configuration sections and options.
+
+### Changed
+
+### Fixed
+- UI improvements handling large lists (stalwartlabs/mail-server#925).
+- Remove None from MTA-STS modes (#48).
+
 ## [0.1.20] - 2024-12-04
 
 ## Added

@@ -379,7 +379,7 @@ impl LayoutBuilder {
             .create("Extensions")
             .route("/smtp-in-extensions/edit")
             .insert(true)
-            .create("ASN & Geolocation")
+            .create("ASN & GeoIP")
             .route("/smtp-in-asn/edit")
             .insert(true)
             .create("Session Limits")

@@ -1700,7 +1700,7 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
-            // ASN & Geolocation
+            // ASN & GeoIP
             .new_schema("smtp-in-asn")
             .new_field("asn.type")
             .typ(Type::Select {
@@ -1823,7 +1823,7 @@ impl Builder<Schemas, ()> {
             .display_if_eq("asn.type", ["dns"])
             .build()
             .new_form_section()
-            .title("ASN & Geolocation Settings")
+            .title("ASN & GeoIP Settings")
             .fields(["asn.type"])
             .build()
             .new_form_section()
