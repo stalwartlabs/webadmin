@@ -188,12 +188,12 @@ impl Permissions {
                 Permission::MessageQueueList,
                 Permission::OutgoingReportList,
                 Permission::IncomingReportList,
-                Permission::SpamFilterTrain,
                 Permission::LogsView,
                 Permission::TracingList,
                 Permission::TracingLive,
                 Permission::ManageEncryption,
                 Permission::ManagePasswords,
+                Permission::SpamFilterTrain,
             ]
             .iter()
             {
