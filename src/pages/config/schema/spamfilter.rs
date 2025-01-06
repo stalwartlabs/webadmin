@@ -1042,27 +1042,6 @@ impl Builder<Schemas, ()> {
             .list_fields(["_id"])
             .no_list_action(Action::Modify)
             .build()
-            // DMARC allow list
-            .new_schema("spam-dmarc")
-            .reload_prefix("lookup")
-            .names("domain", "domains")
-            .prefix("lookup.known-dmarc-domains")
-            .new_id_field()
-            .label("Domain Name")
-            .help("The domain name to be added to the DMARC domains allow list")
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::IsRegex],
-            )
-            .build()
-            .new_form_section()
-            .field("_id")
-            .build()
-            .list_title("DMARC domain names")
-            .list_subtitle("Manage domain names that are known to have valid DMARC records")
-            .list_fields(["_id"])
-            .no_list_action(Action::Modify)
-            .build()
             // SPAM trap addresses
             .new_schema("spam-trap")
             .reload_prefix("lookup")
