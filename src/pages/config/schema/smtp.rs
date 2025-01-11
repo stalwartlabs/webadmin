@@ -1150,7 +1150,7 @@ impl Builder<Schemas, ()> {
             .new_field("session.rcpt.max-recipients")
             .label("Max Recipients")
             .help("Maximum number of recipients per message")
-            .default("25")
+            .default("100")
             .new_field("session.rcpt.rewrite")
             .label("Recipient Rewriting")
             .help("Expression to rewrite the recipient address")
