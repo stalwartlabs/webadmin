@@ -559,7 +559,7 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
-            // Pyzor settings
+            // Reputation settings
             .new_schema("spam-reputation")
             .new_field("spam-filter.reputation.enable")
             .label("Enable Reputation tracking")
@@ -567,7 +567,7 @@ impl Builder<Schemas, ()> {
                 "Whether to enable the tracking the reputation of ",
                 "IP addresses, domains, senders and ASNs."
             ))
-            .default("true")
+            .default("false")
             .typ(Type::Boolean)
             .build()
             .new_field("spam-filter.reputation.expiry")
