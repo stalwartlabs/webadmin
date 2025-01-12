@@ -531,6 +531,41 @@ impl Builder<Schemas, ()> {
             ))
             .typ(Type::Secret)
             .build()
+            // Roles
+            .new_field("cluster.roles.purge.stores")
+            .label("Purge Stores")
+            .help(concat!(
+                "List of node ids that are responsible for purging stores"
+            ))
+            .typ(Type::Array)
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::MinValue(1.into()),
+                    Validator::MaxValue(65534.into()),
+                ],
+            )
+            .new_field("cluster.roles.purge.accounts")
+            .label("Purge Accounts")
+            .help(concat!(
+                "List of node ids that are responsible for purging accounts"
+            ))
+            .new_field("cluster.roles.acme.renew")
+            .label("Renew ACME")
+            .help(concat!(
+                "List of node ids that are responsible for renewing ACME certificates"
+            ))
+            .new_field("cluster.roles.metrics.calculate")
+            .label("Calculate Metrics")
+            .help(concat!(
+                "List of node ids that are responsible for calculating metrics"
+            ))
+            .new_field("cluster.roles.metrics.push")
+            .label("Push Metrics")
+            .help(concat!(
+                "List of node ids that are responsible for pushing metrics"
+            ))
+            .build()
             // Forms
             .new_form_section()
             .title("Cluster settings")
@@ -547,6 +582,16 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Membership protocol")
             .fields(["cluster.key", "cluster.heartbeat", "cluster.seed-nodes"])
+            .build()
+            .new_form_section()
+            .title("Node Roles")
+            .fields([
+                "cluster.roles.purge.stores",
+                "cluster.roles.purge.accounts",
+                "cluster.roles.acme.renew",
+                "cluster.roles.metrics.calculate",
+                "cluster.roles.metrics.push",
+            ])
             .build()
             .build()
             // Web hooks
