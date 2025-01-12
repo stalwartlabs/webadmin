@@ -21,7 +21,7 @@ pub fn Pagination(
 
     view! {
         <div class="px-6 py-4 grid gap-3 md:flex md:justify-between md:items-center border-t border-gray-200 dark:border-gray-700">
-            <Show when=move || { total_results.get().map_or(false, |r| r > 0) }>
+            <Show when=move || { total_results.get().is_some_and( |r| r > 0) }>
                 <div class="inline-flex items-center gap-x-2">
 
                     <p class="text-sm text-gray-600 dark:text-gray-400">

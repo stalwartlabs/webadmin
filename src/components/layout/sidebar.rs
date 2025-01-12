@@ -50,14 +50,14 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                             i
                                                 .route
                                                 .as_ref()
-                                                .map_or(false, |f| current_route.get().starts_with(f))
+                                                .is_some_and( |f| current_route.get().starts_with(f))
                                                 || i
                                                     .children
                                                     .iter()
                                                     .any(|i| {
                                                         i.route
                                                             .as_ref()
-                                                            .map_or(false, |f| current_route.get().starts_with(f))
+                                                            .is_some_and( |f| current_route.get().starts_with(f))
                                                     })
                                         })
                             });
@@ -138,7 +138,7 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                                                     || i
                                                                         .route
                                                                         .as_ref()
-                                                                        .map_or(false, |f| current_route.get().starts_with(f))
+                                                                        .is_some_and( |f| current_route.get().starts_with(f))
                                                             })
                                                     });
                                                     view! {

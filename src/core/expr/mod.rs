@@ -150,6 +150,7 @@ pub(super) const FUNCTIONS: &[(&str, u32)] = &[
     ("sql_query", 3),
     ("hash", 2),
     ("if_then", 3),
+    ("config_get", 1),
 ];
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

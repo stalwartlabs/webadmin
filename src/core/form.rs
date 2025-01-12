@@ -417,7 +417,7 @@ impl FormData {
                             .checks
                             .default
                             .as_ref()
-                            .map_or(false, |d| d.validators.contains(&Validator::Required))))
+                            .is_some_and(|d| d.validators.contains(&Validator::Required))))
             {
                 if let Some(default) = field.default.default.as_ref() {
                     let value = match (&field.typ_, default) {

@@ -69,14 +69,16 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "Delivery Status Notifications (DSN) reports"
             ))
-            .default("'MAILER-DAEMON@' + key_get('default', 'domain')")
+            .default("'MAILER-DAEMON@' + config_get('report.domain')")
             .new_field("report.dsn.sign")
             .label("Signature")
             .help(concat!(
                 "List of DKIM signatures to use when signing Delivery Status ",
                 "Notifications"
             ))
-            .default("['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]")
+            .default(
+                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
+            )
             .build()
             .new_form_section()
             .title("Queue Schedule")
@@ -104,6 +106,7 @@ impl Builder<Schemas, ()> {
                 " to remote SMTP servers"
             ))
             .typ(Type::Expression)
+            .default("config_get('server.hostname')")
             .input_check([], [Validator::IsValidExpression(sender_vars)])
             .new_field("queue.outbound.next-hop")
             .label("Next hop")
@@ -111,7 +114,10 @@ impl Builder<Schemas, ()> {
                 "Can either point to a remote host or 'false' which indicates",
                 " that the message delivery should be done through DNS resolution"
             ))
-            .default(Expression::new([("is_local_domain('*', rcpt_domain)", "'local'")], "false"))
+            .default(Expression::new(
+                [("is_local_domain('*', rcpt_domain)", "'local'")],
+                "false",
+            ))
             .input_check(
                 [],
                 [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
@@ -195,7 +201,10 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "Whether to allow connections to servers with invalid TLS certificates"
             ))
-            .default(Expression::new([("retry_num > 0 && last_error == 'tls'", "true")], "false"))
+            .default(Expression::new(
+                [("retry_num > 0 && last_error == 'tls'", "true")],
+                "false",
+            ))
             .input_check(
                 [],
                 [Validator::Required, Validator::IsValidExpression(mx_vars)],
@@ -222,7 +231,7 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "the TLS aggregate report email"
             ))
-            .default("'noreply-tls@' + key_get('default', 'domain')")
+            .default("'noreply-tls@' + config_get('report.domain')")
             .new_field("report.tls.aggregate.subject")
             .label("Subject")
             .help(concat!(
@@ -235,13 +244,15 @@ impl Builder<Schemas, ()> {
                 "List of DKIM signatures to use when signing the TLS ",
                 "aggregate report"
             ))
-            .default("['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]")
+            .default(
+                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
+            )
             .new_field("report.tls.aggregate.org-name")
             .label("Organization")
             .help(concat!(
                 "Name of the organization to be included in the report"
             ))
-            .default("key_get('default', 'domain')")
+            .default("config_get('report.domain')")
             .new_field("report.tls.aggregate.contact-info")
             .label("Contact")
             .help(concat!("Contact information to be included in the report"))
@@ -292,15 +303,10 @@ impl Builder<Schemas, ()> {
             .new_schema("smtp-out-limits")
             .new_field("queue.outbound.concurrency")
             .label("Outbound")
-            .help(concat!(
-                "Maximum number of concurrent outbound connections"
-            ))
+            .help(concat!("Maximum number of concurrent outbound connections"))
             .default("25")
             .typ(Type::Input)
-            .input_check(
-                [],
-                [Validator::Required, Validator::MinValue(1.into())],
-            )
+            .input_check([], [Validator::Required, Validator::MinValue(1.into())])
             .build()
             .new_field("queue.outbound.limits.mx")
             .label("MX Hosts")
@@ -420,7 +426,9 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("resolver.custom")
             .label("DNS Servers")
-            .help(concat!("List of custom DNS server URLs to use for resolution"))
+            .help(concat!(
+                "List of custom DNS server URLs to use for resolution"
+            ))
             .default("udp://127.0.0.1:53")
             .typ(Type::Array)
             .input_check([], [Validator::Required])
@@ -745,7 +753,7 @@ impl Builder<Schemas, ()> {
             .new_field("session.connect.greeting")
             .label("SMTP greeting")
             .help("The greeting message sent by the SMTP/LMTP server")
-            .default("key_get('default', 'hostname') + ' Stalwart ESMTP at your service'")
+            .default("config_get('server.hostname') + ' Stalwart ESMTP at your service'")
             .new_field("session.connect.hostname")
             .label("Server hostname")
             .help("The SMTP server hostname")
@@ -756,7 +764,7 @@ impl Builder<Schemas, ()> {
                     Validator::IsValidExpression(has_conn_vars),
                 ],
             )
-            .default("key_get('default', 'hostname')")
+            .default("config_get('server.hostname')")
             .build()
             .new_field("auth.iprev.verify")
             .typ(Type::Expression)

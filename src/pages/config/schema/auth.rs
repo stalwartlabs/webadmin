@@ -214,7 +214,7 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "the DKIM report email"
             ))
-            .default("'noreply-dkim@' + key_get('default', 'domain')")
+            .default("'noreply-dkim@' + config_get('report.domain')")
             .new_field("report.dkim.subject")
             .label("Subject")
             .help(concat!(
@@ -228,7 +228,7 @@ impl Builder<Schemas, ()> {
                 "report"
             ))
             .default(
-                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
+                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
             )
             .new_field("report.dkim.send")
             .label("Send rate")
@@ -275,10 +275,7 @@ impl Builder<Schemas, ()> {
                 ],
             )
             .new_field("auth.arc.seal")
-            .default(Expression::new(
-                [],
-                "'rsa-' + key_get('default', 'domain')",
-            ))
+            .default(Expression::new([], "'rsa-' + config_get('report.domain')"))
             .label("Signature")
             .help(concat!("List of DKIM signatures to use for sealing"))
             .input_check(
@@ -343,7 +340,7 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "the SPF authentication failure report email"
             ))
-            .default("'noreply-spf@' + key_get('default', 'domain')")
+            .default("'noreply-spf@' + config_get('report.domain')")
             .new_field("report.spf.subject")
             .label("Subject")
             .help(concat!(
@@ -357,7 +354,7 @@ impl Builder<Schemas, ()> {
                 "authentication failure report"
             ))
             .default(
-                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
+                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
             )
             .new_field("report.spf.send")
             .label("Send rate")
@@ -415,7 +412,7 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "the DMARC authentication failure report email"
             ))
-            .default("'noreply-dmarc@' + key_get('default', 'domain')")
+            .default("'noreply-dmarc@' + config_get('report.domain')")
             .new_field("report.dmarc.subject")
             .label("Subject")
             .help(concat!(
@@ -429,7 +426,7 @@ impl Builder<Schemas, ()> {
                 "authentication failure report"
             ))
             .default(
-                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
+                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
             )
             .new_field("report.dmarc.send")
             .label("Send rate")
@@ -459,7 +456,7 @@ impl Builder<Schemas, ()> {
                 "Email address that will be used in the From header of ",
                 "the DMARC aggregate report email"
             ))
-            .default("'noreply-dmarc@' + key_get('default', 'domain')")
+            .default("'noreply-dmarc@' + config_get('report.domain')")
             .new_field("report.dmarc.aggregate.subject")
             .label("Subject")
             .help(concat!(
@@ -473,14 +470,14 @@ impl Builder<Schemas, ()> {
                 "aggregate report"
             ))
             .default(
-                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
+                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
             )
             .new_field("report.dmarc.aggregate.org-name")
             .label("Organization")
             .help(concat!(
                 "Name of the organization to be included in the report"
             ))
-            .default("key_get('default', 'domain')")
+            .default("config_get('report.domain')")
             .new_field("report.dmarc.aggregate.contact-info")
             .label("Contact")
             .help(concat!("Contact information to be included in the report"))
@@ -536,11 +533,14 @@ impl Builder<Schemas, ()> {
             .build()
             // Reporting
             .new_schema("report")
-            .new_field("lookup.default.domain")
+            .new_field("report.domain")
             .label("Default Domain")
-            .help("The default domain name used for DSNs and other reports")
+            .help(concat!(
+                "The default domain name used for DSNs and other reports. ",
+                "If left empty, the server hostname's domain will be used."
+            ))
             .placeholder("example.com")
-            .input_check([Transformer::Trim], [Validator::Required, Validator::IsDomain])
+            .input_check([Transformer::Trim], [Validator::IsDomain])
             .build()
             .new_field("report.analysis.addresses")
             .label("Report Addresses")
@@ -583,7 +583,7 @@ impl Builder<Schemas, ()> {
                     &[],
                 ))],
             )
-            .default("key_get('default', 'hostname')")
+            .default("config_get('server.hostname')")
             .build()
             .new_form_section()
             .title("Inbound Report Analysis")
@@ -595,7 +595,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Outbound Report Settings")
-            .fields(["lookup.default.domain", "report.submitter"])
+            .fields(["report.domain", "report.submitter"])
             .build()
             .build()
     }

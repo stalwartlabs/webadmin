@@ -72,7 +72,7 @@ where
                     self.is_eof = true;
                     break;
                 }
-                b'-' if self.buf.last().map_or(false, |c| *c == b'[') => {
+                b'-' if self.buf.last().is_some_and( |c| *c == b'[') => {
                     self.buf.push(ch);
                 }
                 b':' if self.buf.contains(&b'.') => {
@@ -81,7 +81,7 @@ where
                 b']' if self.buf.contains(&b'[') => {
                     self.buf.push(b']');
                 }
-                b'*' if self.buf.last().map_or(false, |&c| c == b'[' || c == b'.') => {
+                b'*' if self.buf.last().is_some_and( |&c| c == b'[' || c == b'.') => {
                     self.buf.push(ch);
                 }
                 _ => {

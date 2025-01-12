@@ -173,14 +173,11 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(
-                                    false,
-                                    |p| {
-                                        p.has_access_all(
-                                            &[Permission::MetricsList, Permission::MetricsLive],
-                                        )
-                                    },
-                                )
+                                .is_some_and(|p| {
+                                    p.has_access_all(
+                                        &[Permission::MetricsList, Permission::MetricsLive],
+                                    )
+                                })
                         }
                     />
 
@@ -191,23 +188,20 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(
-                                    false,
-                                    |p| {
-                                        p.has_access_any(
-                                            &[
-                                                Permission::IndividualList,
-                                                Permission::GroupList,
-                                                Permission::RoleList,
-                                                Permission::TenantList,
-                                                Permission::DomainList,
-                                                Permission::MailingListList,
-                                                Permission::OauthClientList,
-                                                Permission::ApiKeyList,
-                                            ],
-                                        )
-                                    },
-                                )
+                                .is_some_and(|p| {
+                                    p.has_access_any(
+                                        &[
+                                            Permission::IndividualList,
+                                            Permission::GroupList,
+                                            Permission::RoleList,
+                                            Permission::TenantList,
+                                            Permission::DomainList,
+                                            Permission::MailingListList,
+                                            Permission::OauthClientList,
+                                            Permission::ApiKeyList,
+                                        ],
+                                    )
+                                })
                         }
                     />
 
@@ -218,23 +212,20 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(
-                                    false,
-                                    |p| {
-                                        p.has_access_any(
-                                            &[
-                                                Permission::IndividualList,
-                                                Permission::GroupList,
-                                                Permission::RoleList,
-                                                Permission::TenantList,
-                                                Permission::DomainList,
-                                                Permission::MailingListList,
-                                                Permission::OauthClientList,
-                                                Permission::ApiKeyList,
-                                            ],
-                                        )
-                                    },
-                                )
+                                .is_some_and(|p| {
+                                    p.has_access_any(
+                                        &[
+                                            Permission::IndividualList,
+                                            Permission::GroupList,
+                                            Permission::RoleList,
+                                            Permission::TenantList,
+                                            Permission::DomainList,
+                                            Permission::MailingListList,
+                                            Permission::OauthClientList,
+                                            Permission::ApiKeyList,
+                                        ],
+                                    )
+                                })
                         }
                     />
 
@@ -245,14 +236,11 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(
-                                    false,
-                                    |p| {
-                                        p.has_access_all(
-                                            &[Permission::DkimSignatureGet, Permission::DomainGet],
-                                        )
-                                    },
-                                )
+                                .is_some_and(|p| {
+                                    p.has_access_all(
+                                        &[Permission::DkimSignatureGet, Permission::DomainGet],
+                                    )
+                                })
                         }
                     />
 
@@ -263,7 +251,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::MessageQueueList) })
+                                .is_some_and(|p| { p.has_access(Permission::MessageQueueList) })
                         }
                     />
 
@@ -274,7 +262,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::MessageQueueGet) })
+                                .is_some_and(|p| { p.has_access(Permission::MessageQueueGet) })
                         }
                     />
 
@@ -285,7 +273,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::OutgoingReportList) })
+                                .is_some_and(|p| { p.has_access(Permission::OutgoingReportList) })
                         }
                     />
 
@@ -296,7 +284,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::OutgoingReportGet) })
+                                .is_some_and(|p| { p.has_access(Permission::OutgoingReportGet) })
                         }
                     />
 
@@ -307,7 +295,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::IncomingReportList) })
+                                .is_some_and(|p| { p.has_access(Permission::IncomingReportList) })
                         }
                     />
 
@@ -318,7 +306,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::IncomingReportGet) })
+                                .is_some_and(|p| { p.has_access(Permission::IncomingReportGet) })
                         }
                     />
 
@@ -329,7 +317,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::LogsView) })
+                                .is_some_and(|p| { p.has_access(Permission::LogsView) })
                         }
                     />
 
@@ -340,7 +328,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::SpamFilterTrain) })
+                                .is_some_and(|p| { p.has_access(Permission::SpamFilterTrain) })
                         }
                     />
 
@@ -351,7 +339,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::SpamFilterTrain) })
+                                .is_some_and(|p| { p.has_access(Permission::SpamFilterTrain) })
                         }
                     />
 
@@ -362,19 +350,16 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(
-                                    false,
-                                    |p| {
-                                        p.has_access_any(
-                                            &[
-                                                Permission::SettingsReload,
-                                                Permission::Restart,
-                                                Permission::SpamFilterUpdate,
-                                                Permission::WebadminUpdate,
-                                            ],
-                                        )
-                                    },
-                                )
+                                .is_some_and(|p| {
+                                    p.has_access_any(
+                                        &[
+                                            Permission::SettingsReload,
+                                            Permission::Restart,
+                                            Permission::SpamFilterUpdate,
+                                            Permission::WebadminUpdate,
+                                        ],
+                                    )
+                                })
                         }
                     />
 
@@ -385,7 +370,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::Undelete) })
+                                .is_some_and(|p| { p.has_access(Permission::Undelete) })
                         }
                     />
 
@@ -396,7 +381,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::TracingGet) })
+                                .is_some_and(|p| { p.has_access(Permission::TracingGet) })
                         }
                     />
 
@@ -407,7 +392,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::TracingLive) })
+                                .is_some_and(|p| { p.has_access(Permission::TracingLive) })
                         }
                     />
 
@@ -418,7 +403,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::TracingList) })
+                                .is_some_and(|p| { p.has_access(Permission::TracingList) })
                         }
                     />
 
@@ -429,7 +414,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::Troubleshoot) })
+                                .is_some_and(|p| { p.has_access(Permission::Troubleshoot) })
                         }
                     />
 
@@ -440,7 +425,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::Troubleshoot) })
+                                .is_some_and(|p| { p.has_access(Permission::Troubleshoot) })
                         }
                     />
 
@@ -462,7 +447,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::SettingsList) })
+                                .is_some_and(|p| { p.has_access(Permission::SettingsList) })
                         }
                     />
 
@@ -473,7 +458,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::SettingsUpdate) })
+                                .is_some_and(|p| { p.has_access(Permission::SettingsUpdate) })
                         }
                     />
 
@@ -484,7 +469,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::SettingsList) })
+                                .is_some_and(|p| { p.has_access(Permission::SettingsList) })
                         }
                     />
 
@@ -508,7 +493,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::ManageEncryption) })
+                                .is_some_and(|p| { p.has_access(Permission::ManageEncryption) })
                         }
                     />
 
@@ -519,7 +504,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::ManagePasswords) })
+                                .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
                         }
                     />
 
@@ -530,7 +515,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::ManagePasswords) })
+                                .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
                         }
                     />
 
@@ -541,7 +526,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::ManagePasswords) })
+                                .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
                         }
                     />
 
@@ -552,7 +537,7 @@ pub fn App() -> impl IntoView {
                         condition=move || {
                             permissions
                                 .get()
-                                .map_or(false, |p| { p.has_access(Permission::ManagePasswords) })
+                                .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
                         }
                     />
 

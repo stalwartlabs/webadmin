@@ -95,7 +95,7 @@ impl Builder<Schemas, ()> {
                 "Default email address to use for the from field in email ",
                 "notifications sent from a Sieve script"
             ))
-            .default("'MAILER-DAEMON@' + key_get('default', 'domain')")
+            .default("'MAILER-DAEMON@' + config_get('report.domain')")
             .new_field("sieve.trusted.return-path")
             .label("Return Path")
             .help(concat!(
@@ -110,7 +110,7 @@ impl Builder<Schemas, ()> {
                 "a Sieve script"
             ))
             .default(
-                "['rsa-' + key_get('default', 'domain'), 'ed25519-' + key_get('default', 'domain')]",
+                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
             )
             .build()
             .new_field("sieve.trusted.hostname")

@@ -14,7 +14,7 @@ impl Builder<Schemas, ()> {
 
         self.new_schema("network")
             // Default hostname
-            .new_field("lookup.default.hostname")
+            .new_field("server.hostname")
             .label("Hostname")
             .help("The default fully-qualified system hostname")
             .placeholder("mail.example.com")
@@ -40,7 +40,7 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Network settings")
             .fields([
-                "lookup.default.hostname",
+                "server.hostname",
                 "server.max-connections",
                 "server.proxy.trusted-networks",
             ])
@@ -71,7 +71,7 @@ impl Builder<Schemas, ()> {
                 [],
                 [Validator::Required, Validator::IsValidExpression(http_expr)],
             )
-            .default("protocol + '://' + key_get('default', 'hostname') + ':' + local_port")
+            .default("protocol + '://' + config_get('server.hostname') + ':' + local_port")
             .build()
             // HTTP endpoint security
             .new_field("server.http.allowed-endpoint")
@@ -205,7 +205,6 @@ impl Builder<Schemas, ()> {
                     "storage.fts",
                     "storage.directory",
                     "authentication.fallback-admin.*",
-                    "lookup.default.hostname",
                     "enterprise.license-key",
                 ][..],
             )

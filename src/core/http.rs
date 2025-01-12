@@ -66,7 +66,7 @@ pub trait IntoUrlBuilder {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-impl<'x> HttpRequest {
+impl HttpRequest {
     pub fn new(method: Method, url: impl IntoUrlBuilder) -> Self {
         Self {
             method,

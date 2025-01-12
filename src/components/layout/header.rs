@@ -31,7 +31,7 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                 <div class="w-full flex items-center justify-end ms-auto sm:justify-between sm:gap-x-3 sm:order-3">
 
                     <Show when=move || {
-                        permissions.get().map_or(false, |p| p.has_access(Permission::SettingsList))
+                        permissions.get().is_some_and( |p| p.has_access(Permission::SettingsList))
                     }>
                         <div class="sm:hidden">
                             <button

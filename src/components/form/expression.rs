@@ -73,7 +73,7 @@ pub fn InputExpression(
         .checks
         .default
         .as_ref()
-        .map_or(false, |checks| {
+        .is_some_and( |checks| {
             checks.validators.contains(&Validator::MaxItems(1))
         });
 

@@ -80,7 +80,7 @@ impl Message {
                 || domain
                     .next_retry
                     .as_ref()
-                    .map_or(false, |next_retry| next_retry < &next_event.unwrap())
+                    .is_some_and( |next_retry| next_retry < &next_event.unwrap())
             {
                 next_event = domain.next_retry;
             }
@@ -102,7 +102,7 @@ impl Message {
                 || domain
                     .next_notify
                     .as_ref()
-                    .map_or(false, |next_notify| next_notify < &next_event.unwrap())
+                    .is_some_and( |next_notify| next_notify < &next_event.unwrap())
             {
                 next_event = domain.next_notify;
             }

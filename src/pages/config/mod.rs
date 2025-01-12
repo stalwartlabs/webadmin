@@ -240,7 +240,7 @@ impl SettingsValues for Settings {
                 .map(|(_, v)| v.to_string())
                 .unwrap_or_default(),
             Type::Boolean => {
-                if self.get(field.id).map_or(false, |s| s == "true") {
+                if self.get(field.id).is_some_and( |s| s == "true") {
                     "Yes".to_string()
                 } else {
                     "No".to_string()
