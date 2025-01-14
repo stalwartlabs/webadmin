@@ -548,7 +548,7 @@ impl Builder<Schemas, ()> {
                 "List of addresses (which may include wildcards) from which ",
                 "reports will be intercepted and analyzed"
             ))
-            .default(&["dmarc@*", "abuse@*", "postmaster@*"][..])
+            .default(&["postmaster@*"][..])
             .typ(Type::Array)
             .input_check([Transformer::Trim], [])
             .build()
