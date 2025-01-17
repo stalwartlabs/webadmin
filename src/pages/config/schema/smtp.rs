@@ -301,12 +301,20 @@ impl Builder<Schemas, ()> {
             .build()
             // Limits & Timeouts
             .new_schema("smtp-out-limits")
-            .new_field("queue.outbound.concurrency")
-            .label("Outbound")
-            .help(concat!("Maximum number of concurrent outbound connections"))
+            .new_field("queue.threads.remote")
+            .label("Remote")
+            .help(concat!(
+                "Maximum number of threads to use for outbound delivery"
+            ))
             .default("25")
             .typ(Type::Input)
             .input_check([], [Validator::Required, Validator::MinValue(1.into())])
+            .new_field("queue.threads.local")
+            .label("Local")
+            .help(concat!(
+                "Maximum number of threads to use for local delivery"
+            ))
+            .default("10")
             .build()
             .new_field("queue.outbound.limits.mx")
             .label("MX Hosts")
@@ -380,8 +388,8 @@ impl Builder<Schemas, ()> {
             .default("2m")
             .build()
             .new_form_section()
-            .title("Concurrency")
-            .fields(["queue.outbound.concurrency"])
+            .title("Delivery Threads")
+            .fields(["queue.threads.remote", "queue.threads.local"])
             .build()
             .new_form_section()
             .title("Limits")

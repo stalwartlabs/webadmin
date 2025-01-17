@@ -381,7 +381,7 @@ impl Builder<Schemas, ()> {
             .prefix("server.allowed-ip")
             .new_id_field()
             .label("IP Address(es)")
-            .help("The IP address or mask to block")
+            .help("The IP address or mask to allow")
             .input_check(
                 [Transformer::Trim],
                 [Validator::Required, Validator::IsIpOrMask],
