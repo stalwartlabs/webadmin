@@ -221,25 +221,6 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
             .placeholder("8")
             .build()
-            // Rate limiter capacity
-            .new_field("limiter.capacity")
-            .label("Initial Capacity")
-            .help(concat!("The initial capacity of each rate limiter"))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
-            .placeholder("100")
-            .build()
-            // Rate limiter sharding
-            .new_field("limiter.shard")
-            .label("Shards")
-            .help(concat!(
-                "The number of shards assigned to each rate limiter. ",
-                "Defaults to the number of CPU cores multiplied by 2."
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
-            .placeholder("4")
-            .build()
             .new_form_section()
             .title("Local configuration keys")
             .fields(["config.local-keys"])
@@ -247,10 +228,6 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Thread pool")
             .fields(["global.thread-pool"])
-            .build()
-            .new_form_section()
-            .title("Rate limiters")
-            .fields(["limiter.capacity", "limiter.shard"])
             .build()
             .build()
             // Caching

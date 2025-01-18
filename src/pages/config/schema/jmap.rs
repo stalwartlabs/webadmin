@@ -172,33 +172,6 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
-            // Session
-            .new_schema("jmap-session")
-            .new_field("cache.session.ttl")
-            .label("Session TTL")
-            .help(concat!(
-                "Specifies the Time-To-Live (TTL) for each session, after which ",
-                "the session is deleted"
-            ))
-            .default("1h")
-            .typ(Type::Duration)
-            .input_check([], [Validator::Required])
-            .build()
-            .new_field("jmap.session.purge.frequency")
-            .label("Purge frequency")
-            .help(concat!(
-                "Specifies how often expired sessions are deleted ",
-                "from the server memory"
-            ))
-            .default("15 * *")
-            .typ(Type::Cron)
-            .input_check([], [Validator::Required])
-            .build()
-            .new_form_section()
-            .title("JMAP Session")
-            .fields(["cache.session.ttl", "jmap.session.purge.frequency"])
-            .build()
-            .build()
             // Rate limit
             .new_schema("jmap-rate-limit")
             .new_field("jmap.rate-limit.account")

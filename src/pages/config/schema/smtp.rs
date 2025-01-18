@@ -589,17 +589,17 @@ impl Builder<Schemas, ()> {
             .title("Authentication")
             .fields(["auth.username", "auth.secret"])
             .build()
-            .list_title("Remote SMTP Servers")
+            .list_title("Relay Hosts")
             .list_subtitle("Manage remote SMTP and LMTP servers for message delivery")
             .list_fields(["_id", "protocol", "address", "port"])
             .build()
-            // Outbound throttle
+            // Outbound rate limiter
             .new_schema("smtp-out-throttle")
-            .prefix("queue.throttle")
+            .prefix("queue.limiter.outbound")
             .names("throttle", "throttles")
             .suffix("enable")
             .new_id_field()
-            .label("Throttle ID")
+            .label("Limiter ID")
             .help("Unique identifier for the throttle")
             .build()
             .new_field("enable")
@@ -644,30 +644,22 @@ impl Builder<Schemas, ()> {
                 ],
             )
             .build()
-            .new_field("concurrency")
-            .label("Concurrency")
-            .help(concat!(
-                "Maximum number of concurrent connections that ",
-                "the throttle will allow"
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
-            .build()
             .new_field("rate")
             .label("Rate limit")
             .help(concat!(
                 "Number of incoming requests over a period of time ",
                 "that the rate limiter will allow"
             ))
+            .input_check([], [Validator::Required])
             .typ(Type::Rate)
             .build()
             .new_form_section()
-            .title("Throttle")
-            .fields(["_id", "key", "concurrency", "rate", "match", "enable"])
+            .title("Outbound Rate Limiter")
+            .fields(["_id", "key", "rate", "match", "enable"])
             .build()
-            .list_title("Outbound Throttles")
-            .list_subtitle("Manage outbound concurrency and rate limits")
-            .list_fields(["_id", "concurrency", "rate", "enable"])
+            .list_title("Outbound Rate Limits")
+            .list_subtitle("Manage outbound rate limits")
+            .list_fields(["_id", "rate", "enable"])
             .build()
             // Queue quotas
             .new_schema("smtp-out-quota")
@@ -1309,13 +1301,13 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
-            // Throttle
+            // Inbound rate limiter
             .new_schema("smtp-in-throttle")
-            .prefix("session.throttle")
+            .prefix("queue.limiter.inbound")
             .names("throttle", "throttles")
             .suffix("enable")
             .new_id_field()
-            .label("Throttle ID")
+            .label("Limiter ID")
             .help("Unique identifier for the throttle")
             .build()
             .new_field("enable")
@@ -1360,15 +1352,6 @@ impl Builder<Schemas, ()> {
                 ],
             )
             .build()
-            .new_field("concurrency")
-            .label("Concurrency")
-            .help(concat!(
-                "Maximum number of concurrent connections that ",
-                "the throttle will allow"
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
-            .build()
             .new_field("rate")
             .label("Rate limit")
             .help(concat!(
@@ -1376,14 +1359,15 @@ impl Builder<Schemas, ()> {
                 "that the rate limiter will allow"
             ))
             .typ(Type::Rate)
+            .input_check([], [Validator::Required])
             .build()
             .new_form_section()
-            .title("Throttle")
-            .fields(["_id", "key", "concurrency", "rate", "match", "enable"])
+            .title("Inbound Rate Limiter")
+            .fields(["_id", "key", "rate", "match", "enable"])
             .build()
-            .list_title("Inbound Throttles")
-            .list_subtitle("Manage inbound concurrency and rate limits")
-            .list_fields(["_id", "concurrency", "rate", "enable"])
+            .list_title("Inbound Rate Limits")
+            .list_subtitle("Manage inbound rate limits")
+            .list_fields(["_id", "rate", "enable"])
             .build()
             // Milter
             .new_schema("milter")
