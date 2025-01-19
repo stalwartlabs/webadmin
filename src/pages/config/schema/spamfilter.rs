@@ -937,48 +937,6 @@ impl Builder<Schemas, ()> {
             .list_subtitle("Manage DNS block and allowlists")
             .list_fields(["_id", "scope", "enable"])
             .build()
-            // SPAM free domains
-            .new_schema("spam-free")
-            .reload_prefix("lookup")
-            .names("domain", "domains")
-            .prefix("lookup.freemail-providers")
-            .new_id_field()
-            .label("Domain Name")
-            .help("The domain name to be added to the free domains list")
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::IsRegex],
-            )
-            .build()
-            .new_form_section()
-            .field("_id")
-            .build()
-            .list_title("Free domain names")
-            .list_subtitle("Manage domain names from free e-mail providers")
-            .list_fields(["_id"])
-            .no_list_action(Action::Modify)
-            .build()
-            // Disposable domains
-            .new_schema("spam-disposable")
-            .reload_prefix("lookup")
-            .names("domain", "domains")
-            .prefix("lookup.disposable-providers")
-            .new_id_field()
-            .label("Domain Name")
-            .help("The domain name to be added to the disposable domains list")
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::IsRegex],
-            )
-            .build()
-            .new_form_section()
-            .field("_id")
-            .build()
-            .list_title("Disposable domain names")
-            .list_subtitle("Manage domain names from disposable e-mail providers")
-            .list_fields(["_id"])
-            .no_list_action(Action::Modify)
-            .build()
             // URL Redirectors
             .new_schema("spam-redirect")
             .reload_prefix("lookup")
