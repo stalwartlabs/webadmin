@@ -387,7 +387,13 @@ impl PrincipalValue {
         match self {
             PrincipalValue::Integer(v) => *v as usize,
             PrincipalValue::IntegerList(l) => l.len(),
-            PrincipalValue::String(_) => 1,
+            PrincipalValue::String(s) => {
+                if s.is_empty() {
+                    0
+                } else {
+                    1
+                }
+            }
             PrincipalValue::StringList(l) => l.len(),
         }
     }
