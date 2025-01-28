@@ -7,7 +7,7 @@ homepage = "https://stalw.art"
 keywords = ["web", "admin", "email", "mail", "server"]
 categories = ["email"]
 license = "AGPL-3.0-only OR LicenseRef-SEL"
-version = "0.1.22"
+version = "0.1.23"
 edition = "2021"
 resolver = "2"
 
@@ -36,7 +36,7 @@ form_urlencoded = "1.1.0"
 serde_urlencoded = "0.7.1"
 totp-rs = { version = "5.5.1", features = ["otpauth", "qr", "gen_secret"] }
 web-time = "1.1.0"
-rand = "0.8.5"
+rand = "0.9.5"
 leptos-chartistry = "0.1.7"
 
 [features]
