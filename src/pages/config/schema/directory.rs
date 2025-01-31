@@ -331,7 +331,6 @@ impl Builder<Schemas, ()> {
             // OIDC
             // Type
             .new_field("endpoint.url")
-            .enterprise_feature()
             .label("URL")
             .help(concat!(
                 "URL of the OpenID Connect provider. This is used to ",
@@ -343,7 +342,6 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [Validator::Required, Validator::IsUrl])
             .build()
             .new_field("endpoint.method")
-            .enterprise_feature()
             .label("Type")
             .help(concat!(
                 "Type of endpoint to use for user information. ",
@@ -361,7 +359,6 @@ impl Builder<Schemas, ()> {
             })
             .build()
             .new_field("fields.email")
-            .enterprise_feature()
             .label("E-mail field")
             .help(concat!(
                 "Field name in the OpenID Connect provider response ",
@@ -373,7 +370,6 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_field("fields.username")
-            .enterprise_feature()
             .label("Username field")
             .help(concat!(
                 "Field name in the OpenID Connect provider response ",
@@ -386,7 +382,6 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [])
             .build()
             .new_field("fields.full-name")
-            .enterprise_feature()
             .label("Name field")
             .help(concat!(
                 "Field name in the OpenID Connect provider response ",
@@ -398,7 +393,6 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [])
             .build()
             .new_field("auth.method")
-            .enterprise_feature()
             .label("Method")
             .help(concat!(
                 "Type of endpoint to use for user information. ",
@@ -420,14 +414,12 @@ impl Builder<Schemas, ()> {
             .new_field("auth.token")
             .label("Auth token")
             .typ(Type::Secret)
-            .enterprise_feature()
             .help(concat!(
                 "Bearer token used to authenticate with the OAuth introspect endpoint.",
             ))
             .display_if_eq("auth.method", ["token"])
             .build()
             .new_field("auth.username")
-            .enterprise_feature()
             .label("Auth username")
             .help(concat!(
                 "Username used to authenticate with the OAuth introspect endpoint.",
@@ -436,7 +428,6 @@ impl Builder<Schemas, ()> {
             .display_if_eq("auth.method", ["basic"])
             .build()
             .new_field("auth.secret")
-            .enterprise_feature()
             .label("Auth secret")
             .help(concat!(
                 "Password used to authenticate with the OAuth introspect endpoint.",
