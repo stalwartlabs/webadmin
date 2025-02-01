@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.24] - 2024-02-01
+
+## Added
+
+### Changed
+- Open source third party OIDC support.
+
+### Fixed
+
 ## [0.1.23] - 2024-01-29
 
 ## Added
