@@ -485,13 +485,6 @@ impl Builder<Schemas, ()> {
                 "S3-compatible services, you will need to specify the endpoint explicitly"
             ))
             .label("Endpoint")
-            .new_field("profile")
-            .label("Profile")
-            .help(concat!(
-                "Used when retrieving credentials from a shared credentials file. If specified, ",
-                "the server will use the access key ID, secret access key, and session token (if ",
-                "available) associated with the given profile"
-            ))
             .new_field("access-key")
             .label("Access Key")
             .help("Identifies the S3 account")
@@ -501,6 +494,15 @@ impl Builder<Schemas, ()> {
             .typ(Type::Secret)
             .new_field("security-token")
             .label("Security Token")
+            .input_check([Transformer::Trim], [])
+            .new_field("profile")
+            .label("Profile")
+            .typ(Type::Input)
+            .help(concat!(
+                "Used when retrieving credentials from a shared credentials file. If specified, ",
+                "the server will use the access key ID, secret access key, and session token (if ",
+                "available) associated with the given profile"
+            ))
             .build()
             // Azure specific
             .new_field("storage-account")
