@@ -308,8 +308,22 @@ impl Builder<Schemas, ()> {
             .default("description")
             .new_field("attributes.secret")
             .label("Secret")
-            .help("LDAP attribute for the user's password")
+            .help(concat!(
+                "LDAP attribute for the user's password hash. ",
+                "This setting is required when binding as a service user. ",
+                "When using bind authentication, configure the secret-changed ",
+                "attribute instead."
+            ))
             .default("userPassword")
+            .new_field("attributes.secret-changed")
+            .label("Secret Changed")
+            .help(concat!(
+                "LDAP attribute that provides a password change hash or a timestamp ",
+                "indicating when the password was last changed. ",
+                "When using bind authentication, this attribute is used to ",
+                "determine when to invalidate OAuth tokens."
+            ))
+            .default("pwdChangeTime")
             .new_field("attributes.groups")
             .label("Groups")
             .help("LDAP attributes for the groups that a user belongs to")
@@ -501,6 +515,7 @@ impl Builder<Schemas, ()> {
                 "attributes.class",
                 "attributes.description",
                 "attributes.secret",
+                "attributes.secret-changed",
                 "attributes.groups",
                 "attributes.email",
                 "attributes.email-alias",
