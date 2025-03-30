@@ -169,9 +169,7 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                                             }
 
                                             class:hidden=move || {
-                                                permissions
-                                                    .get()
-                                                    .map_or(true, |p| { !p.has_admin_access() })
+                                                permissions.get().is_none_or(|p| { !p.has_admin_access() })
                                             }
                                         >
 
@@ -185,7 +183,7 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                                             class:hidden=move || {
                                                 permissions
                                                     .get()
-                                                    .map_or(true, |p| !p.has_access(Permission::SettingsList))
+                                                    .is_none_or(|p| !p.has_access(Permission::SettingsList))
                                             }
                                         >
 
@@ -280,15 +278,12 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                                             class:hidden=move || {
                                                 permissions
                                                     .get()
-                                                    .map_or(
-                                                        true,
-                                                        |p| {
-                                                            !p
-                                                                .has_access_any(
-                                                                    &[Permission::ManageEncryption, Permission::ManagePasswords],
-                                                                )
-                                                        },
-                                                    )
+                                                    .is_none_or(|p| {
+                                                        !p
+                                                            .has_access_any(
+                                                                &[Permission::ManageEncryption, Permission::ManagePasswords],
+                                                            )
+                                                    })
                                             }
                                         >
 

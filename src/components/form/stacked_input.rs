@@ -121,7 +121,7 @@ pub fn StackedInput(
                 type="button"
                 class="py-1.5 px-2 inline-flex items-center gap-x-1 text-xs font-medium rounded-full border border-dashed border-gray-200 bg-white text-gray-800 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                 on:click=move |_| {
-                    if values.get().last().map_or(true, |(_, v, _)| !v.is_empty()) {
+                    if values.get().last().is_none_or( |(_, v, _)| !v.is_empty()) {
                         element
                             .data
                             .update(|data| {

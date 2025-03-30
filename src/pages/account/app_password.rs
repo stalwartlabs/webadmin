@@ -130,7 +130,7 @@ pub fn AppPasswords() -> impl IntoView {
 
                     if filter
                         .as_ref()
-                        .map_or(true, |filter| app_password.name.contains(filter))
+                        .is_none_or(|filter| app_password.name.contains(filter))
                     {
                         if offset == 0 {
                             items.push(app_password);

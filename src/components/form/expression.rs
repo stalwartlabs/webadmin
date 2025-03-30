@@ -219,7 +219,7 @@ pub fn InputExpression(
                     if if_thens
                         .get()
                         .last()
-                        .map_or(true, |(_, v, _)| !v.if_.is_empty() && !v.then_.is_empty())
+                        .is_none_or( |(_, v, _)| !v.if_.is_empty() && !v.then_.is_empty())
                     {
                         element
                             .data

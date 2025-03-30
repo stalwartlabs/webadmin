@@ -35,7 +35,7 @@ pub fn Authorize() -> impl IntoView {
     let query = use_query_map();
     let params = use_params_map();
     let is_device_auth =
-        create_memo(move |_| params.get().get("type").map_or(true, |t| t != "code"));
+        create_memo(move |_| params.get().get("type").is_none_or(|t| t != "code"));
     let redirect_uri = create_memo(move |_| query.get().get("redirect_uri").cloned());
     let client_id = create_memo(move |_| query.get().get("client_id").cloned());
     let nonce = create_memo(move |_| query.get().get("nonce").cloned());

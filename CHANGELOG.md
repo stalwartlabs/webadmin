@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.25] - 2024-03-40
+
+## Added
+- LDAP attribute to indicate password change (stalwartlabs/mail-server#1156)
+
+### Changed
+
+### Fixed
+- Make Profile and Security token S3 settings optional (stalwartlabs/mail-server#1166)
+
 ## [0.1.24] - 2024-02-01
 
 ## Added

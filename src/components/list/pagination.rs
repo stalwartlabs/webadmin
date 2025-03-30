@@ -21,7 +21,7 @@ pub fn Pagination(
 
     view! {
         <div class="px-6 py-4 grid gap-3 md:flex md:justify-between md:items-center border-t border-gray-200 dark:border-gray-700">
-            <Show when=move || { total_results.get().is_some_and( |r| r > 0) }>
+            <Show when=move || { total_results.get().is_some_and(|r| r > 0) }>
                 <div class="inline-flex items-center gap-x-2">
 
                     <p class="text-sm text-gray-600 dark:text-gray-400">
@@ -116,7 +116,7 @@ pub fn Pagination(
                         type="button"
                         class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-slate-900 dark:border-gray-700 dark:text-white dark:hover:bg-gray-800 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
                         disabled=move || {
-                            total_results.get().map_or(true, |r| r == 0) || current_page.get() <= 1
+                            total_results.get().is_none_or(|r| r == 0) || current_page.get() <= 1
                         }
 
                         on:click=move |_| {

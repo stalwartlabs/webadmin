@@ -122,7 +122,7 @@ impl FormData {
     }
 
     pub fn value_is_empty(&self, id: &str) -> bool {
-        self.values.get(id).map_or(true, |v| match v {
+        self.values.get(id).is_none_or(|v| match v {
             FormValue::Value(v) => v.is_empty(),
             FormValue::Array(v) => v.is_empty(),
             FormValue::Expression(v) => v.is_empty(),
