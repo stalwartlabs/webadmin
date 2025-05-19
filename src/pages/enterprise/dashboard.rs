@@ -212,7 +212,13 @@ pub fn Dashboard() -> impl IntoView {
                         LiveMetric::Gauge { id, value } => (id, value, 1),
                         LiveMetric::Histogram { id, count, sum } => (id, sum, count),
                     };
-                    summary_.insert(id, MetricSummary { sum: sum as u128, count: count as u128 });
+                    summary_.insert(
+                        id,
+                        MetricSummary {
+                            sum: sum as u128,
+                            count: count as u128,
+                        },
+                    );
                 }
                 live_summary.set(MetricSummaries(summary_));
             });
@@ -990,7 +996,7 @@ impl Bucket {
             _ => return,
         };
 
-        let acc_value = &mut  self.value[index].y[y_num];
+        let acc_value = &mut self.value[index].y[y_num];
         let acc_count = &mut self.count[index].y[y_num];
 
         *acc_value = acc_value.saturating_add(value as u128);
@@ -1087,6 +1093,8 @@ impl MetricSummaries {
 }
 
 fn duration(time: u128) -> String {
-    HumanTime::from(Duration::from_std(std::time::Duration::from_millis(time as u64)).unwrap_or_default())
-        .to_text_en(Accuracy::Precise, Tense::Present)
+    HumanTime::from(
+        Duration::from_std(std::time::Duration::from_millis(time as u64)).unwrap_or_default(),
+    )
+    .to_text_en(Accuracy::Precise, Tense::Present)
 }

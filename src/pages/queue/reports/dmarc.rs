@@ -695,27 +695,27 @@ impl Record {
                 .identifiers
                 .envelope_to
                 .as_ref()
-                .is_some_and( |to| to.contains(filter))
+                .is_some_and(|to| to.contains(filter))
             || self.auth_results.dkim.iter().any(|dkim| {
                 dkim.domain.contains(filter)
                     || dkim.selector.contains(filter)
                     || dkim
                         .human_result
                         .as_ref()
-                        .is_some_and( |r| r.contains(filter))
+                        .is_some_and(|r| r.contains(filter))
             })
             || self.auth_results.spf.iter().any(|spf| {
                 spf.domain.contains(filter)
                     || spf
                         .human_result
                         .as_ref()
-                        .is_some_and( |r| r.contains(filter))
+                        .is_some_and(|r| r.contains(filter))
             })
             || self
                 .row
                 .source_ip
                 .as_ref()
-                .is_some_and( |ip| ip.to_string().contains(filter))
+                .is_some_and(|ip| ip.to_string().contains(filter))
     }
 
     pub fn id(&self) -> u64 {

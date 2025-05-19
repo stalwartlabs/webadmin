@@ -529,26 +529,26 @@ impl FailureDetails {
         filter.is_empty()
             || self
                 .sending_mta_ip
-                .is_some_and( |s| s.to_string().contains(filter))
+                .is_some_and(|s| s.to_string().contains(filter))
             || self
                 .receiving_ip
-                .is_some_and( |s| s.to_string().contains(filter))
+                .is_some_and(|s| s.to_string().contains(filter))
             || self
                 .receiving_mx_hostname
                 .as_ref()
-                .is_some_and( |s| s.contains(filter))
+                .is_some_and(|s| s.contains(filter))
             || self
                 .receiving_mx_helo
                 .as_ref()
-                .is_some_and( |s| s.contains(filter))
+                .is_some_and(|s| s.contains(filter))
             || self
                 .additional_information
                 .as_ref()
-                .is_some_and( |s| s.contains(filter))
+                .is_some_and(|s| s.contains(filter))
             || self
                 .failure_reason_code
                 .as_ref()
-                .is_some_and( |s| s.contains(filter))
+                .is_some_and(|s| s.contains(filter))
     }
 
     pub fn id(&self) -> u64 {

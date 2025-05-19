@@ -73,9 +73,7 @@ pub fn InputExpression(
         .checks
         .default
         .as_ref()
-        .is_some_and( |checks| {
-            checks.validators.contains(&Validator::MaxItems(1))
-        });
+        .is_some_and(|checks| checks.validators.contains(&Validator::MaxItems(1)));
 
     view! {
         <div class="space-y-3">

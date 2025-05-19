@@ -26,7 +26,7 @@ pub fn ToggleNavigation(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>)
             if item
                 .route
                 .as_ref()
-                .is_some_and( |route| route == &current_route)
+                .is_some_and(|route| route == &current_route)
             {
                 path.push(BreadCrumb::child(&item.name));
                 break;
@@ -35,7 +35,7 @@ pub fn ToggleNavigation(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>)
                     if child
                         .route
                         .as_ref()
-                        .is_some_and( |route| route == &current_route)
+                        .is_some_and(|route| route == &current_route)
                     {
                         path.push(BreadCrumb::parent(&item.name));
                         path.push(BreadCrumb::child(&child.name));
@@ -45,7 +45,7 @@ pub fn ToggleNavigation(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>)
                             if subchild
                                 .route
                                 .as_ref()
-                                .is_some_and( |route| route == &current_route)
+                                .is_some_and(|route| route == &current_route)
                             {
                                 path.push(BreadCrumb::parent(&item.name));
                                 path.push(BreadCrumb::parent(&child.name));

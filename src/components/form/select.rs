@@ -423,7 +423,7 @@ impl FormData {
                 [(String::new(), "-- None --".to_string())]
                     .into_iter()
                     .chain(source.iter().filter_map(|(id, value)| {
-                        if filter.is_none_or( |values| values.contains(&value.as_str())) {
+                        if filter.is_none_or(|values| values.contains(&value.as_str())) {
                             (
                                 id.to_string(),
                                 if !value.is_empty() {

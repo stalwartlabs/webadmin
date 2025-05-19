@@ -263,11 +263,11 @@ impl Schema {
     }
 
     pub fn has_list_action(&self, action: Action) -> bool {
-        self.list.actions.iter().any(|a| *a == action)
+        self.list.actions.contains(&action)
     }
 
     pub fn has_form_action(&self, action: Action) -> bool {
-        self.form.actions.iter().any(|a| *a == action)
+        self.form.actions.contains(&action)
     }
 
     pub fn unwrap_prefix(&self) -> &str {
@@ -329,7 +329,7 @@ impl Field {
         matches!(self.typ_, Type::Boolean | Type::Select { .. })
             || self
                 .input_check(settings)
-                .map(|c| c.validators.iter().any(|v| *v == Validator::Required))
+                .map(|c| c.validators.contains(&Validator::Required))
                 .unwrap_or_default()
     }
 
