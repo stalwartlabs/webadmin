@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use ahash::AHashSet;
 use leptos::{expect_context, RwSignal};
-use rand::{distr::Alphanumeric, rng, Rng};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
 use crate::components::messages::alert::Alert;
@@ -119,7 +119,7 @@ pub async fn oauth_authenticate(
         &OAuthCodeRequest::Code {
             client_id: "webadmin".to_string(),
             redirect_uri: REDIRECT_URI.to_string().into(),
-            nonce: rng()
+            nonce: thread_rng()
                 .sample_iter(Alphanumeric)
                 .take(10)
                 .map(char::from)

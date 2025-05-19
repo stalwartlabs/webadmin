@@ -6,12 +6,10 @@
 
 use crate::core::schema::*;
 
-use super::{tracing::EVENT_NAMES, HTTP_VARS};
+use super::tracing::EVENT_NAMES;
 
 impl Builder<Schemas, ()> {
     pub fn build_server(self) -> Self {
-        let http_expr = ExpressionValidator::new(HTTP_VARS, &[]);
-
         self.new_schema("network")
             // Default hostname
             .new_field("server.hostname")
@@ -60,120 +58,6 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
-            // HTTP settings
-            .new_schema("http")
-            // HTTP base URL
-            .new_field("server.http.url")
-            .label("Base URL")
-            .help("The base URL for the HTTP server")
-            .typ(Type::Expression)
-            .input_check(
-                [],
-                [Validator::Required, Validator::IsValidExpression(http_expr)],
-            )
-            .default("protocol + '://' + config_get('server.hostname') + ':' + local_port")
-            .build()
-            // HTTP endpoint security
-            .new_field("server.http.allowed-endpoint")
-            .label("Allowed endpoints")
-            .help(concat!(
-                "An expression that determines whether access to an endpoint is allowed. ",
-                "The expression should an HTTP status code (200, 403, etc.)"
-            ))
-            .typ(Type::Expression)
-            .input_check(
-                [],
-                [Validator::Required, Validator::IsValidExpression(http_expr)],
-            )
-            .default("200")
-            .build()
-            // Use X-Forwarded-For
-            .new_field("server.http.use-x-forwarded")
-            .label("Obtain remote IP from Forwarded header")
-            .help(concat!(
-                "Specifies whether to use the Forwarded or X-Forwarded-For header to ",
-                "determine the client's IP address"
-            ))
-            .typ(Type::Boolean)
-            .default("false")
-            .build()
-            // Permissive CORS
-            .new_field("server.http.permissive-cors")
-            .label("Permissive CORS policy")
-            .help(concat!(
-                "Specifies whether to allow all origins in the CORS policy ",
-                "for the HTTP server"
-            ))
-            .typ(Type::Boolean)
-            .default("false")
-            .build()
-            // HTTPS Strict Transport Security
-            .new_field("server.http.hsts")
-            .label("Enable HTTP Strict Transport Security")
-            .help(concat!(
-                "Specifies whether to enable HTTP Strict Transport Security ",
-                "for the HTTP server."
-            ))
-            .typ(Type::Boolean)
-            .default("false")
-            .build()
-            // Webadmin auto-update
-            .new_field("webadmin.auto-update")
-            .label("Auto-update webadmin")
-            .help(concat!(
-                "Whether to automatically update the webadmin interface ",
-                "when a new version is available."
-            ))
-            .typ(Type::Boolean)
-            .default("false")
-            .build()
-            .new_field("webadmin.path")
-            .label("Unpack path")
-            .help(concat!(
-                "The local path to unpack the webadmin bundle to. ",
-                "If left empty, the webadmin will be unpacked to /tmp."
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
-            .build()
-            .new_field("webadmin.resource")
-            .label("Update URL")
-            .help(concat!(
-                "Override the URL to download webadmin updates from. ",
-                "By default webadmin updates are downloaded from ",
-                "https://github.com/stalwartlabs/webadmin.",
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
-            .build()
-            // HTTP headers
-            .new_field("server.http.headers")
-            .label("Add headers")
-            .help("Additional headers to include in HTTP responses")
-            .typ(Type::Array)
-            .input_check([Transformer::Trim], [])
-            .build()
-            .new_form_section()
-            .title("HTTP Settings")
-            .fields([
-                "server.http.url",
-                "server.http.headers",
-                "server.http.use-x-forwarded",
-            ])
-            .build()
-            .new_form_section()
-            .title("HTTP Security")
-            .fields([
-                "server.http.allowed-endpoint",
-                "server.http.hsts",
-                "server.http.permissive-cors",
-            ])
-            .build()
-            .new_form_section()
-            .title("Web-based Admin")
-            .fields(["webadmin.path", "webadmin.resource", "webadmin.auto-update"])
-            .build()
-            .build()
             // Common settings
             .new_schema("system")
             // Local keys
@@ -197,7 +81,6 @@ impl Builder<Schemas, ()> {
                     "server.*",
                     "config.local-keys.*",
                     "certificate.*",
-                    "!cluster.key",
                     "cluster.*",
                     "storage.data",
                     "storage.blob",
@@ -280,17 +163,23 @@ impl Builder<Schemas, ()> {
             .label("Permissions")
             .help(concat!("Maximum size of the effective permissions cache"))
             .default("5242880")
-            .new_field("cache.account.size")
-            .label("Account Data")
-            .help(concat!("Maximum size of the IMAP account data cache"))
+            .new_field("cache.message.size")
+            .label("Emails")
+            .help(concat!("Maximum size of the e-mail data cache"))
+            .default("52428800")
+            .new_field("cache.files.size")
+            .label("Files")
+            .help(concat!("Maximum size of the file storage data cache"))
             .default("10485760")
-            .new_field("cache.mailbox.size")
-            .label("Mailbox Data")
-            .help(concat!("Maximum size of the IMAP mailbox data cache"))
+            .new_field("cache.events.size")
+            .label("Calendars")
+            .help(concat!("Maximum size of the calendar and events cache"))
             .default("10485760")
-            .new_field("cache.thread.size")
-            .label("Thread Data")
-            .help(concat!("Maximum size of the message thread cache"))
+            .new_field("cache.contacts.size")
+            .label("Contacts")
+            .help(concat!(
+                "Maximum size of the address books and contacts cache"
+            ))
             .default("10485760")
             .new_field("cache.bayes.size")
             .label("Bayes Model")
@@ -298,19 +187,20 @@ impl Builder<Schemas, ()> {
             .default("10485760")
             .build()
             .new_form_section()
+            .title("Data Cache")
+            .fields([
+                "cache.message.size",
+                "cache.events.size",
+                "cache.contacts.size",
+                "cache.files.size",
+            ])
+            .build()
+            .new_form_section()
             .title("Authorization Cache")
             .fields([
                 "cache.access-token.size",
                 "cache.http-auth.size",
                 "cache.permission.size",
-            ])
-            .build()
-            .new_form_section()
-            .title("Message Cache")
-            .fields([
-                "cache.account.size",
-                "cache.mailbox.size",
-                "cache.thread.size",
             ])
             .build()
             .new_form_section()
@@ -454,59 +344,22 @@ impl Builder<Schemas, ()> {
                 [Validator::Required, Validator::MinValue(0.into())],
             )
             .build()
-            // Bind address
-            .new_field("cluster.bind-addr")
-            .label("Bind Address")
-            .help(concat!("The address the gossip protocol will bind to"))
-            .placeholder("[::]")
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
-            .build()
-            // Advertise address
-            .new_field("cluster.advertise-addr")
-            .label("Advertise Address")
+            // Pubsub
+            .new_field("cluster.pubsub")
+            .label("PubSub Server")
             .help(concat!(
-                "The address the gossip protocol will advertise",
-                " to other nodes in the cluster"
+                "The id of the PubSub server to use for distributing events",
+                " in the cluster. Leave blank to disable."
             ))
-            .placeholder("10.0.0.1")
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::IsIpOrMask])
-            .build()
-            // Bind port
-            .new_field("cluster.bind-port")
-            .label("Port")
-            .help(concat!(
-                "The UDP port the gossip protocol will bind to. ",
-                "Must be the same on all nodes"
-            ))
-            .default("1179")
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::IsPort])
-            .build()
-            // Seed nodes
-            .new_field("cluster.seed-nodes")
-            .label("Seed Nodes")
-            .help(concat!("The initial nodes to connect to in the cluster"))
-            .typ(Type::Array)
-            .input_check([Transformer::Trim], [Validator::IsIpOrMask])
-            .build()
-            // Heartbeat interval
-            .new_field("cluster.heartbeat")
-            .label("Heartbeat")
-            .help(concat!("The interval between heartbeats in the cluster"))
-            .default("1s")
-            .typ(Type::Duration)
-            .input_check([], [])
-            .build()
-            // Encryption key
-            .new_field("cluster.key")
-            .label("Encryption Key")
-            .help(concat!(
-                "The key used to encrypt gossip messages. ",
-                "Must be the same on all nodes"
-            ))
-            .typ(Type::Secret)
+            .typ(Type::Select {
+                source: Source::Dynamic {
+                    schema: "store",
+                    field: "type",
+                    filter: Default::default(),
+                },
+                typ: SelectType::Single,
+            })
+            .source_filter(&["redis", "nats"])
             .build()
             // Roles
             .new_field("cluster.roles.purge.stores")
@@ -546,19 +399,7 @@ impl Builder<Schemas, ()> {
             // Forms
             .new_form_section()
             .title("Cluster settings")
-            .fields(["cluster.node-id"])
-            .build()
-            .new_form_section()
-            .title("Cluster service")
-            .fields([
-                "cluster.bind-addr",
-                "cluster.advertise-addr",
-                "cluster.bind-port",
-            ])
-            .build()
-            .new_form_section()
-            .title("Membership protocol")
-            .fields(["cluster.key", "cluster.heartbeat", "cluster.seed-nodes"])
+            .fields(["cluster.node-id", "cluster.pubsub"])
             .build()
             .new_form_section()
             .title("Node Roles")
@@ -712,139 +553,6 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Branding")
             .fields(["enterprise.logo-url"])
-            .build()
-            .build()
-            // Contact form settings
-            .new_schema("form")
-            .new_field("form.deliver-to")
-            .label("Recipients")
-            .help(concat!(
-                "List of local e-mail addresses to deliver the contact form to.",
-            ))
-            .typ(Type::Array)
-            .input_check([Transformer::Trim], [Validator::IsEmail])
-            .build()
-            .new_field("form.email.field")
-            .label("E-mail field")
-            .help(concat!(
-                "The name of the field in the contact form that contains the ",
-                "e-mail address of the sender."
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::IsEmail])
-            .build()
-            .new_field("form.name.field")
-            .label("Name field")
-            .help(concat!(
-                "The name of the field in the contact form that contains the ",
-                "name of the sender."
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
-            .build()
-            .new_field("form.subject.field")
-            .label("Subject field")
-            .help(concat!(
-                "The name of the field in the contact form that contains the ",
-                "subject of the message."
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
-            .build()
-            .new_field("form.honey-pot.field")
-            .label("Honey Pot field")
-            .help(concat!(
-                "The name of the field in the contact form that is used as a ",
-                "honey pot to catch spam bots."
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
-            .build()
-            .new_field("form.email.default")
-            .label("E-mail default")
-            .help(concat!(
-                "The default e-mail address to use when the sender does not ",
-                "provide one."
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::IsEmail])
-            .default("postmaster@localhost")
-            .build()
-            .new_field("form.subject.default")
-            .label("Subject default")
-            .help(concat!(
-                "The default subject to use when the sender does not ",
-                "provide one."
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
-            .default("Contact form submission")
-            .build()
-            .new_field("form.name.default")
-            .label("Name default")
-            .help(concat!(
-                "The default name to use when the sender does not ",
-                "provide one."
-            ))
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [])
-            .default("Anonymous")
-            .build()
-            .new_field("form.rate-limit")
-            .label("Rate limit")
-            .help(concat!(
-                "Maximum number of contact form submissions that can be made ",
-                "in a timeframe by a given IP address."
-            ))
-            .default("5/1h")
-            .typ(Type::Rate)
-            .build()
-            .new_field("form.max-size")
-            .label("Max Size")
-            .help(concat!(
-                "Maximum size of the contact form submission in bytes."
-            ))
-            .typ(Type::Size)
-            .default("102400")
-            .build()
-            .new_field("form.enable")
-            .label("Enable form submissions")
-            .help(concat!("Whether to enable contact form submissions."))
-            .typ(Type::Boolean)
-            .default("false")
-            .build()
-            .new_field("form.validate-domain")
-            .label("Validate email domain")
-            .help(concat!(
-                "Whether to validate the domain of the sender's email address."
-            ))
-            .typ(Type::Boolean)
-            .default("true")
-            .build()
-            .new_form_section()
-            .title("Form submission settings")
-            .fields(["form.deliver-to", "form.enable"])
-            .build()
-            .new_form_section()
-            .title("Fields")
-            .fields([
-                "form.email.field",
-                "form.name.field",
-                "form.subject.field",
-                "form.honey-pot.field",
-            ])
-            .build()
-            .new_form_section()
-            .title("Security")
-            .fields(["form.rate-limit", "form.max-size", "form.validate-domain"])
-            .build()
-            .new_form_section()
-            .title("Defaults")
-            .fields([
-                "form.email.default",
-                "form.name.default",
-                "form.subject.default",
-            ])
             .build()
             .build()
             // AI models

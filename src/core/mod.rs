@@ -16,7 +16,7 @@ pub mod oauth;
 pub mod schema;
 pub mod url;
 
-pub const MINIMUM_API_VERSION: Semver = Semver::new(0, 11, 2);
+pub const MINIMUM_API_VERSION: Semver = Semver::new(0, 12, 0);
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AccessToken {

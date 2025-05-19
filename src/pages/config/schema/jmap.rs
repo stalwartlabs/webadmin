@@ -172,29 +172,6 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
-            // Rate limit
-            .new_schema("jmap-rate-limit")
-            .new_field("jmap.rate-limit.account")
-            .label("Authenticated")
-            .help(concat!(
-                "Specifies the request rate limit for authenticated users"
-            ))
-            .default("1000/1m")
-            .typ(Type::Rate)
-            .build()
-            .new_field("jmap.rate-limit.anonymous")
-            .label("Anonymous")
-            .help(concat!(
-                "Specifies the request rate limit for unauthenticated users"
-            ))
-            .default("100/1m")
-            .typ(Type::Rate)
-            .build()
-            .new_form_section()
-            .title("Rate Limit")
-            .fields(["jmap.rate-limit.account", "jmap.rate-limit.anonymous"])
-            .build()
-            .build()
             // Push & EventSource
             .new_schema("jmap-push")
             .new_field("jmap.push.max-total")

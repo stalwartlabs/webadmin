@@ -12,7 +12,7 @@ use humansize::{format_size, DECIMAL};
 use leptos::*;
 use leptos_router::{use_navigate, use_params_map};
 use pwhash::sha512_crypt;
-use rand::{distr::Alphanumeric, rng, Rng};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -171,7 +171,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                             ]);
                         }
                         PrincipalType::ApiKey => {
-                            principal.secrets = PrincipalValue::StringList(vec![rng()
+                            principal.secrets = PrincipalValue::StringList(vec![thread_rng()
                                 .sample_iter(Alphanumeric)
                                 .take(30)
                                 .map(char::from)

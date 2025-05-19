@@ -925,4 +925,151 @@ pub static PERMISSIONS: &[(&str, &str)] = &[
     ("oauth-client-override", "Override OAuth client settings"),
     ("ai-model-interact", "Interact with AI models"),
     ("troubleshoot", "Perform troubleshooting"),
+    (
+        "dav-sync-collection",
+        "WebDAV - Synchronize collection changes with client",
+    ),
+    (
+        "dav-expand-property",
+        "WebDAV - Expand properties that reference other resources",
+    ),
+    (
+        "dav-principal-acl",
+        "WebDAV - Set principal properties for access control",
+    ),
+    (
+        "dav-principal-list",
+        "WebDAV - List available principals in the system",
+    ),
+    (
+        "dav-principal-match",
+        "WebDAV - Match principals based on specified criteria",
+    ),
+    (
+        "dav-principal-search",
+        "WebDAV - Search for principals by property values",
+    ),
+    (
+        "dav-principal-search-prop-set",
+        "WebDAV - Define property sets for principal searches",
+    ),
+    (
+        "dav-file-prop-find",
+        "FileDAV - Retrieve properties of file resources",
+    ),
+    (
+        "dav-file-prop-patch",
+        "FileDAV - Modify properties of file resources",
+    ),
+    ("dav-file-get", "FileDAV - Download file resources"),
+    (
+        "dav-file-mk-col",
+        "FileDAV - Create new file collections or directories",
+    ),
+    ("dav-file-delete", "FileDAV - Remove file resources"),
+    ("dav-file-put", "FileDAV - Upload or modify file resources"),
+    (
+        "dav-file-copy",
+        "FileDAV - Copy file resources to new locations",
+    ),
+    (
+        "dav-file-move",
+        "FileDAV - Move file resources to new locations",
+    ),
+    (
+        "dav-file-lock",
+        "FileDAV - Lock file resources to prevent concurrent modifications",
+    ),
+    (
+        "dav-file-acl",
+        "FileDAV - Manage access control lists for file resources",
+    ),
+    (
+        "dav-card-prop-find",
+        "FileDAV - Retrieve properties of address book entries",
+    ),
+    (
+        "dav-card-prop-patch",
+        "CardDAV - Modify properties of address book entries",
+    ),
+    ("dav-card-get", "CardDAV - Download address book entries"),
+    (
+        "dav-card-mk-col",
+        "CardDAV - Create new address book collections",
+    ),
+    (
+        "dav-card-delete",
+        "CardDAV - Remove address book entries or collections",
+    ),
+    (
+        "dav-card-put",
+        "CardDAV - Upload or modify address book entries",
+    ),
+    (
+        "dav-card-copy",
+        "CardDAV - Copy address book entries to new locations",
+    ),
+    (
+        "dav-card-move",
+        "CardDAV - Move address book entries to new locations",
+    ),
+    (
+        "dav-card-lock",
+        "CardDAV - Lock address book entries to prevent concurrent modifications",
+    ),
+    (
+        "dav-card-acl",
+        "CardDAV - Manage access control lists for address book entries",
+    ),
+    (
+        "dav-card-query",
+        "CardDAV - Search for address book entries matching criteria",
+    ),
+    (
+        "dav-card-multi-get",
+        "CardDAV - Retrieve multiple address book entries in a single request",
+    ),
+    (
+        "dav-cal-prop-find",
+        "CalDAV - Retrieve properties of calendar entries",
+    ),
+    (
+        "dav-cal-prop-patch",
+        "CalDAV - Modify properties of calendar entries",
+    ),
+    ("dav-cal-get", "CalDAV - Download calendar entries"),
+    ("dav-cal-mk-col", "CalDAV - Create new calendar collections"),
+    (
+        "dav-cal-delete",
+        "CalDAV - Remove calendar entries or collections",
+    ),
+    ("dav-cal-put", "CalDAV - Upload or modify calendar entries"),
+    (
+        "dav-cal-copy",
+        "CalDAV - Copy calendar entries to new locations",
+    ),
+    (
+        "dav-cal-move",
+        "CalDAV - Move calendar entries to new locations",
+    ),
+    (
+        "dav-cal-lock",
+        "CalDAV - Lock calendar entries to prevent concurrent modifications",
+    ),
+    (
+        "dav-cal-acl",
+        "CalDAV - Manage access control lists for calendar entries",
+    ),
+    (
+        "dav-cal-query",
+        "CalDAV - Search for calendar entries matching criteria",
+    ),
+    (
+        "dav-cal-multi-get",
+        "CalDAV - Retrieve multiple calendar entries in a single request",
+    ),
+    (
+        "dav-cal-free-busy-query",
+        "CalDAV - Query free/busy time information for scheduling",
+    ),
 ];

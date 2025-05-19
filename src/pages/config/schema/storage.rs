@@ -149,13 +149,15 @@ impl Builder<Schemas, ()> {
             .typ(Type::Cron)
             .input_check([], [Validator::Required])
             .build()
-            .new_field("jmap.protocol.changes.max-history")
+            .new_field("changes.max-history")
             .label("Changes history")
             .help(concat!(
-                "How long to keep changes history for JMAP and IMAP clients"
+                "How many changes to keep in the history for each account. ",
+                "This is used to determine the changes that have occurred ",
+                "since the last time the client requested changes."
             ))
-            .default("30d")
-            .typ(Type::Duration)
+            .default("10000")
+            .typ(Type::Input)
             .build()
             .new_field("jmap.email.auto-expunge")
             .label("Trash auto-expunge")
@@ -200,7 +202,7 @@ impl Builder<Schemas, ()> {
             .title("Cleanup")
             .fields([
                 "jmap.account.purge.frequency",
-                "jmap.protocol.changes.max-history",
+                "changes.max-history",
                 "jmap.email.auto-expunge",
             ])
             .build()

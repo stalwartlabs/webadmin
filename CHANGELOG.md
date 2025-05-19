@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.26] - 2025-05-XX
+
+## Added
+- WebDAV, CalDAV amd CardDAV configuration.
+- NATS PubSub configuration.
+
+### Changed
+
+### Fixed
+
 ## [0.1.25] - 2024-03-40
 
 ## Added

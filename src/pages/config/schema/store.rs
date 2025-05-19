@@ -52,7 +52,8 @@ impl Builder<Schemas, ()> {
                     ("mysql", "mySQL"),
                     ("sqlite", "SQLite"),
                     ("s3", "S3-compatible"),
-                    ("redis", "Redis/Memcached"),
+                    ("redis", "Redis/Valkey"),
+                    ("nats", "NATS PubSub"),
                     ("elasticsearch", "ElasticSearch"),
                     ("azure", "Azure blob storage"),
                     ("fs", "Filesystem"),
@@ -130,12 +131,23 @@ impl Builder<Schemas, ()> {
                 typ: SelectType::Single,
             })
             .build()
+            // Redis protocol version
+            .new_field("protocol-version")
+            .label("Protocol version")
+            .help("Protocol Version")
+            .display_if_eq("redis-type", ["cluster"])
+            .default("resp2")
+            .typ(Type::Select {
+                source: Source::Static(&[("resp2", "RESP2"), ("resp3", "RESP3")]),
+                typ: SelectType::Single,
+            })
+            .build()
             // Username
             .new_field("user")
             .label("Username")
             .help("Username to connect to the database")
             .default("stalwart")
-            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch"])
+            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch", "nats"])
             .display_if_eq("redis-type", ["cluster"])
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
@@ -144,7 +156,7 @@ impl Builder<Schemas, ()> {
             .new_field("password")
             .label("Password")
             .help("Password to connect to the database")
-            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch"])
+            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch", "nats"])
             .display_if_eq("redis-type", ["cluster"])
             .typ(Type::Secret)
             .build()
@@ -213,7 +225,7 @@ impl Builder<Schemas, ()> {
             .new_field("tls.enable")
             .label("Enable TLS")
             .help("Use TLS to connect to the store")
-            .display_if_eq("type", ["postgresql", "mysql"])
+            .display_if_eq("type", ["postgresql", "mysql", "nats"])
             .default("false")
             .typ(Type::Boolean)
             .build()
@@ -465,6 +477,83 @@ impl Builder<Schemas, ()> {
             .default("true")
             .typ(Type::Boolean)
             .build()
+            // Nats specific
+            .new_field("address")
+            .label("Server Address")
+            .help("Address of the NATS server")
+            .display_if_eq("type", ["nats"])
+            .default("127.0.0.1:4444")
+            .typ(Type::Array)
+            .build()
+            .new_field("no-echo")
+            .label("No Echo")
+            .help("Disables delivering messages that were published from the same connection.")
+            .display_if_eq("type", ["nats"])
+            .default("true")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("max-reconnects")
+            .label("Max Reconnects")
+            .help("Maximum number of times to attempt to reconnect to the server")
+            .display_if_eq("type", ["nats"])
+            .build()
+            .new_field("timeout.connection")
+            .label("Connection Timeout")
+            .help("Timeout for establishing a connection to the server")
+            .display_if_eq("type", ["nats"])
+            .default("5s")
+            .typ(Type::Duration)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .build()
+            .new_field("timeout.request")
+            .label("Request Timeout")
+            .help("Timeout for requests to the server")
+            .display_if_eq("type", ["nats"])
+            .default("10s")
+            .typ(Type::Duration)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .build()
+            .new_field("ping-interval")
+            .label("Ping Interval")
+            .help("Interval between pings to the server")
+            .display_if_eq("type", ["nats"])
+            .default("60s")
+            .typ(Type::Duration)
+            .input_check([Transformer::Trim], [Validator::Required])
+            .build()
+            .new_field("capacity.client")
+            .label("Client Capacity")
+            .help(concat!(
+                "By default, Client dispatches op's to the Client onto the ",
+                "channel with capacity of 2048. This option enables overriding it"
+            ))
+            .display_if_eq("type", ["nats"])
+            .default("2048")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("capacity.subscription")
+            .label("Subscription Capacity")
+            .help(concat!(
+                "Sets the capacity for Subscribers. Exceeding it will ",
+                "trigger slow consumer error callback and drop messages."
+            ))
+            .display_if_eq("type", ["nats"])
+            .default("65536")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("capacity.read-buffer")
+            .label("Read Buffer Capacity")
+            .help(concat!(
+                "Sets the initial capacity of the read buffer. Which ",
+                "is a buffer used to gather partial protocol messages."
+            ))
+            .display_if_eq("type", ["nats"])
+            .default("65535")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
             // S3 specific
             .new_field("bucket")
             .typ(Type::Input)
@@ -612,11 +701,13 @@ impl Builder<Schemas, ()> {
                 "path",
                 "cluster-file",
                 "redis-type",
+                "address",
                 "host",
                 "port",
                 "database",
                 "url",
                 "urls",
+                "protocol-version",
                 "max-allowed-packet",
                 "region",
                 "endpoint",
@@ -626,12 +717,26 @@ impl Builder<Schemas, ()> {
                 "primary",
                 "replicas",
                 "stores",
+                "timeout.connection",
+                "timeout.request",
+                "max-reconnects",
+                "ping-interval",
             ])
             .build()
             .new_form_section()
             .title("Bucket")
             .display_if_eq("type", ["s3"])
             .fields(["bucket", "key-prefix"])
+            .build()
+            .new_form_section()
+            .title("PubSub")
+            .display_if_eq("type", ["nats"])
+            .fields([
+                "capacity.client",
+                "capacity.subscription",
+                "capacity.read-buffer",
+                "no-echo",
+            ])
             .build()
             .new_form_section()
             .title("Storage Account")
@@ -683,7 +788,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("TLS")
-            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch"])
+            .display_if_eq("type", ["postgresql", "mysql", "elasticsearch", "nats"])
             .fields(["tls.enable", "tls.allow-invalid-certs"])
             .build()
             .new_form_section()

@@ -7,6 +7,7 @@
 pub mod auth;
 pub mod authentication;
 pub mod directory;
+pub mod http;
 pub mod imap;
 pub mod jmap;
 pub mod listener;
@@ -18,6 +19,7 @@ pub mod storage;
 pub mod store;
 pub mod tls;
 pub mod tracing;
+pub mod webdav;
 
 use crate::core::schema::*;
 
