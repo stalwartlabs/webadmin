@@ -521,6 +521,12 @@ impl Builder<Schemas, ()> {
             .typ(Type::Duration)
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
+            .new_field("credentials")
+            .label("JWT Credentials")
+            .help("String containing the JWT credentials")
+            .display_if_eq("type", ["nats"])
+            .typ(Type::Text)
+            .build()
             .new_field("capacity.client")
             .label("Client Capacity")
             .help(concat!(
@@ -747,7 +753,14 @@ impl Builder<Schemas, ()> {
             .title("Authentication")
             .display_if_eq(
                 "type",
-                ["postgresql", "mysql", "elasticsearch", "s3", "azure"],
+                [
+                    "postgresql",
+                    "mysql",
+                    "elasticsearch",
+                    "s3",
+                    "azure",
+                    "nats",
+                ],
             )
             .display_if_eq("redis-type", ["cluster"])
             .fields([
@@ -758,6 +771,7 @@ impl Builder<Schemas, ()> {
                 "security-token",
                 "azure-access-key",
                 "sas-token",
+                "credentials",
             ])
             .build()
             .new_form_section()
