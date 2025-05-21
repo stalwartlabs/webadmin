@@ -345,10 +345,10 @@ impl Builder<Schemas, ()> {
             )
             .build()
             // Pubsub
-            .new_field("cluster.pubsub")
-            .label("PubSub Server")
+            .new_field("cluster.coordinator")
+            .label("Coordinator")
             .help(concat!(
-                "The id of the PubSub server to use for distributing events",
+                "The id of the coordinator backend to use for distributing events",
                 " in the cluster. Leave blank to disable."
             ))
             .typ(Type::Select {
@@ -399,7 +399,7 @@ impl Builder<Schemas, ()> {
             // Forms
             .new_form_section()
             .title("Cluster settings")
-            .fields(["cluster.node-id", "cluster.pubsub"])
+            .fields(["cluster.node-id", "cluster.coordinator"])
             .build()
             .new_form_section()
             .title("Node Roles")

@@ -113,7 +113,7 @@ impl Builder<Schemas, ()> {
             ])
             .input_check([], [Validator::Required])
             .build()
-            .new_field("storage.encryption.enable")
+            .new_field("email.encryption.enable")
             .label("Enable encryption at rest")
             .help(concat!(
                 "Allow users to configure encryption at rest for their data"
@@ -121,7 +121,7 @@ impl Builder<Schemas, ()> {
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("storage.encryption.append")
+            .new_field("email.encryption.append")
             .label("Encrypt on append")
             .help(concat!(
                 "Encrypt messages that are manually appended by the user using ",
@@ -139,7 +139,7 @@ impl Builder<Schemas, ()> {
             .default("en")
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
-            .new_field("jmap.account.purge.frequency")
+            .new_field("account.purge.frequency")
             .label("Frequency")
             .help(concat!(
                 "Specifies how often tombstoned messages are deleted ",
@@ -159,7 +159,7 @@ impl Builder<Schemas, ()> {
             .default("10000")
             .typ(Type::Input)
             .build()
-            .new_field("jmap.email.auto-expunge")
+            .new_field("email.auto-expunge")
             .label("Trash auto-expunge")
             .help(concat!(
                 "How long to keep messages in the Trash and Junk Mail folders ",
@@ -182,8 +182,8 @@ impl Builder<Schemas, ()> {
             .title("Data Store")
             .fields([
                 "storage.data",
-                "storage.encryption.enable",
-                "storage.encryption.append",
+                "email.encryption.enable",
+                "email.encryption.append",
             ])
             .build()
             .new_form_section()
@@ -201,9 +201,9 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Cleanup")
             .fields([
-                "jmap.account.purge.frequency",
+                "account.purge.frequency",
                 "changes.max-history",
-                "jmap.email.auto-expunge",
+                "email.auto-expunge",
             ])
             .build()
             .build()

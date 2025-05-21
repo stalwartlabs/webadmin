@@ -108,121 +108,121 @@ impl Builder<Schemas, ()> {
             .build()
             // Folders
             .new_schema("imap-folders")
-            .new_field("jmap.folders.inbox.name")
+            .new_field("email.folders.inbox.name")
             .label("Name")
             .help("Default name for the inbox folder")
             .default("Inbox")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
             .build()
-            .new_field("jmap.folders.inbox.create")
+            .new_field("email.folders.inbox.create")
             .label("Create automatically")
             .help("Whether to create the inbox folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.inbox.subscribe")
+            .new_field("email.folders.inbox.subscribe")
             .label("Subscribe automatically")
             .help("Whether to subscribe to the inbox folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.trash.name")
+            .new_field("email.folders.trash.name")
             .label("Name")
             .help("Default name for the trash folder")
             .default("Deleted Items")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
             .build()
-            .new_field("jmap.folders.trash.create")
+            .new_field("email.folders.trash.create")
             .label("Create automatically")
             .help("Whether to create the trash folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.trash.subscribe")
+            .new_field("email.folders.trash.subscribe")
             .label("Subscribe automatically")
             .help("Whether to subscribe to the trash folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.junk.name")
+            .new_field("email.folders.junk.name")
             .label("Name")
             .help("Default name for the junk folder")
             .default("Junk Mail")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
             .build()
-            .new_field("jmap.folders.junk.create")
+            .new_field("email.folders.junk.create")
             .label("Create automatically")
             .help("Whether to create the junk folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.junk.subscribe")
+            .new_field("email.folders.junk.subscribe")
             .label("Subscribe automatically")
             .help("Whether to subscribe to the junk folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.drafts.name")
+            .new_field("email.folders.drafts.name")
             .label("Name")
             .help("Default name for the drafts folder")
             .default("Drafts")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
             .build()
-            .new_field("jmap.folders.drafts.create")
+            .new_field("email.folders.drafts.create")
             .label("Create automatically")
             .help("Whether to create the drafts folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.drafts.subscribe")
+            .new_field("email.folders.drafts.subscribe")
             .label("Subscribe automatically")
             .help("Whether to subscribe to the drafts folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.sent.name")
+            .new_field("email.folders.sent.name")
             .label("Name")
             .help("Default name for the sent folder")
             .default("Sent Items")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
             .build()
-            .new_field("jmap.folders.sent.create")
+            .new_field("email.folders.sent.create")
             .label("Create automatically")
             .help("Whether to create the sent folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.sent.subscribe")
+            .new_field("email.folders.sent.subscribe")
             .label("Subscribe automatically")
             .help("Whether to subscribe to the sent folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.archive.name")
+            .new_field("email.folders.archive.name")
             .label("Name")
             .help("Default name for the archive folder")
             .default("Archive")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [])
             .build()
-            .new_field("jmap.folders.archive.create")
+            .new_field("email.folders.archive.create")
             .label("Create automatically")
             .help("Whether to create the archive folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.archive.subscribe")
+            .new_field("email.folders.archive.subscribe")
             .label("Subscribe automatically")
             .help("Whether to subscribe to the archive folder automatically")
             .default("true")
             .typ(Type::Boolean)
             .build()
-            .new_field("jmap.folders.shared.name")
+            .new_field("email.folders.shared.name")
             .label("Name")
             .help("Default name for the shared folder")
             .default("Shared Folders")
@@ -232,54 +232,54 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Inbox")
             .fields([
-                "jmap.folders.inbox.name",
-                "jmap.folders.inbox.create",
-                "jmap.folders.inbox.subscribe",
+                "email.folders.inbox.name",
+                "email.folders.inbox.create",
+                "email.folders.inbox.subscribe",
             ])
             .build()
             .new_form_section()
             .title("Trash")
             .fields([
-                "jmap.folders.trash.name",
-                "jmap.folders.trash.create",
-                "jmap.folders.trash.subscribe",
+                "email.folders.trash.name",
+                "email.folders.trash.create",
+                "email.folders.trash.subscribe",
             ])
             .build()
             .new_form_section()
             .title("Junk")
             .fields([
-                "jmap.folders.junk.name",
-                "jmap.folders.junk.create",
-                "jmap.folders.junk.subscribe",
+                "email.folders.junk.name",
+                "email.folders.junk.create",
+                "email.folders.junk.subscribe",
             ])
             .build()
             .new_form_section()
             .title("Drafts")
             .fields([
-                "jmap.folders.drafts.name",
-                "jmap.folders.drafts.create",
-                "jmap.folders.drafts.subscribe",
+                "email.folders.drafts.name",
+                "email.folders.drafts.create",
+                "email.folders.drafts.subscribe",
             ])
             .build()
             .new_form_section()
             .title("Sent")
             .fields([
-                "jmap.folders.sent.name",
-                "jmap.folders.sent.create",
-                "jmap.folders.sent.subscribe",
+                "email.folders.sent.name",
+                "email.folders.sent.create",
+                "email.folders.sent.subscribe",
             ])
             .build()
             .new_form_section()
             .title("Archive")
             .fields([
-                "jmap.folders.archive.name",
-                "jmap.folders.archive.create",
-                "jmap.folders.archive.subscribe",
+                "email.folders.archive.name",
+                "email.folders.archive.create",
+                "email.folders.archive.subscribe",
             ])
             .build()
             .new_form_section()
             .title("Shared Folders")
-            .fields(["jmap.folders.shared.name"])
+            .fields(["email.folders.shared.name"])
             .build()
             .build()
     }
