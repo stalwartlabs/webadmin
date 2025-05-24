@@ -31,6 +31,14 @@ impl Builder<Schemas, ()> {
             .help("Whether to automatically update the spam filter rules")
             .default("false")
             .typ(Type::Boolean)
+            .new_field("spam-filter.card-is-ham")
+            .label("Do not classify messages from contacts as spam")
+            .help(concat!(
+                "Never classify messages as spam if they are sent ",
+                "from addresses present in the user's address book.",
+            ))
+            .default("true")
+            .typ(Type::Boolean)
             .build()
             .new_field("spam-filter.resource")
             .label("Rules URL")
@@ -185,6 +193,7 @@ impl Builder<Schemas, ()> {
                 "spam-filter.score.discard",
                 "spam-filter.score.reject",
                 "spam-filter.enable",
+                "spam-filter.card-is-ham",
             ])
             .build()
             .new_form_section()
@@ -238,6 +247,15 @@ impl Builder<Schemas, ()> {
             .new_field("spam-filter.bayes.auto-learn.enable")
             .label("Automatically train the Bayes classifier")
             .help("Whether the bayes classifier should be trained automatically")
+            .default("true")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("spam-filter.bayes.auto-learn.card-is-ham")
+            .label("Train as ham messages from senders in the address book")
+            .help(concat!(
+                "If a message is classified as spam, ",
+                "but the sender is in the address book, learn it as ham."
+            ))
             .default("true")
             .typ(Type::Boolean)
             .build()
@@ -438,6 +456,7 @@ impl Builder<Schemas, ()> {
                 "spam-filter.bayes.account.score.spam",
                 "spam-filter.bayes.account.score.ham",
                 "spam-filter.bayes.account.enable",
+                "spam-filter.bayes.auto-learn.card-is-ham",
             ])
             .build()
             .new_form_section()
