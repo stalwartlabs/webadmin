@@ -129,6 +129,15 @@ impl Builder<Schemas, ()> {
                 "emails to a remote SMTP server"
             ))
             .default("ipv4_then_ipv6")
+            .typ(Type::Select {
+                typ: SelectType::Single,
+                source: Source::Static(&[
+                    ("ipv4_only", "IPv4 Only"),
+                    ("ipv6_only", "IPv6 Only"),
+                    ("ipv4_then_ipv6", "IPv4 then IPv6"),
+                    ("ipv6_then_ipv4", "IPv6 then IPv4"),
+                ]),
+            })
             .input_check(
                 [],
                 [
