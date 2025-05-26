@@ -151,6 +151,7 @@ impl Builder<Schemas, ()> {
                 "Determines a list of local IPv4 addresses to use when ",
                 "delivery emails to remote SMTP servers"
             ))
+            .typ(Type::Expression)
             .input_check([], [Validator::IsValidExpression(mx_vars)])
             .new_field("queue.outbound.source-ip.v6")
             .label("IPv6 addresses")
