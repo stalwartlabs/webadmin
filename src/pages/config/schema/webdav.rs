@@ -40,7 +40,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("dav.lock.max-timeout")
             .label("Max Lock Timeout")
-            .default("1m")
+            .default("1h")
             .help(concat!(
                 "Specifies the maximum duration for which a lock can be held on a resource"
             ))
