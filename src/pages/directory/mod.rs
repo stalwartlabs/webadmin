@@ -986,7 +986,7 @@ pub static PERMISSIONS: &[(&str, &str)] = &[
     ),
     (
         "dav-card-prop-find",
-        "FileDAV - Retrieve properties of address book entries",
+        "CardDAV - Retrieve properties of address book entries",
     ),
     (
         "dav-card-prop-patch",
