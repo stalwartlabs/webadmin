@@ -805,6 +805,13 @@ impl InputCheck {
                 Transformer::RemoveSpaces => value.replace(' ', ""),
                 Transformer::Lowercase => value.to_lowercase(),
                 Transformer::Uppercase => value.to_uppercase(),
+                Transformer::HashSecret => {
+                    if !is_hashed_secret(&value) {
+                        pwhash::sha512_crypt::hash(value).unwrap()
+                    } else {
+                        value
+                    }
+                }
             };
         }
 
@@ -921,6 +928,28 @@ impl InputCheck {
         }
 
         Ok(value)
+    }
+}
+
+fn is_hashed_secret(value: &str) -> bool {
+    if let Some(value) = value.strip_prefix('$') {
+        value.starts_with("argon2")
+            || value.starts_with("pbkdf2")
+            || value.starts_with("scrypt")
+            || value.starts_with("2")
+            || value.starts_with("6$")
+            || value.starts_with("5$")
+            || value.starts_with("sha1")
+            || value.starts_with("1")
+    } else if let Some(value) = value.strip_prefix('{') {
+        value.starts_with("ARGON2")
+            || value.starts_with("PBKDF2")
+            || value.starts_with("SSHA")
+            || value.starts_with("SHA")
+            || value.starts_with("MD5")
+            || value.starts_with("CRYPT")
+    } else {
+        false
     }
 }
 

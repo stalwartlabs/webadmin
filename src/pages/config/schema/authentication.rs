@@ -40,7 +40,7 @@ impl Builder<Schemas, ()> {
                 "in case the directory becomes unavailable"
             ))
             .typ(Type::Secret)
-            .input_check([Transformer::Trim], [])
+            .input_check([Transformer::Trim, Transformer::HashSecret], [])
             .build()
             // Master user
             .new_field("authentication.master.user")
@@ -59,7 +59,7 @@ impl Builder<Schemas, ()> {
                 "The master user secret to access any user account ",
             ))
             .typ(Type::Secret)
-            .input_check([Transformer::Trim], [])
+            .input_check([Transformer::Trim, Transformer::HashSecret], [])
             .build()
             .new_form_section()
             .title("Authentication")

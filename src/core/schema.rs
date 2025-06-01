@@ -188,6 +188,7 @@ pub enum Transformer {
     RemoveSpaces,
     Lowercase,
     Uppercase,
+    HashSecret,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
