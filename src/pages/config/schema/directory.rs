@@ -247,34 +247,44 @@ impl Builder<Schemas, ()> {
             .new_field("bind.secret")
             .label("Bind Secret")
             .typ(Type::Secret)
-            .new_field("bind.auth.enable")
-            .label("Enable Bind Auth")
-            .help("Use bind authentication for verifying credentials with the LDAP server")
-            .typ(Type::Boolean)
-            .default("false")
             .build()
-            .new_field("bind.auth.dn")
-            .label("Bind Auth DN")
+            .new_field("bind.auth.method")
+            .label("Method")
+            .help("Method used for verifying credentials with the LDAP server")
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("default", "Lookup using bind DN"),
+                    ("template", "Bind authentication with template"),
+                    ("lookup", "Bind authentication after lookup"),
+                ]),
+                typ: SelectType::Single,
+            })
+            .default("default")
+            .build()
+            .new_field("bind.auth.template")
+            .label("Bind DN template")
             .help(concat!(
                 "The distinguished name (DN) template used for binding to the ",
-                "LDAP server. The ? in the DN template is a placeholder that ",
+                "LDAP server. The {username} in the DN template is a placeholder that ",
                 "will be replaced with the username provided during the ",
-                "login process."
+                "login process. If the username is an email address, ",
+                "{local} and {domain} placeholders can be used to ",
+                "extract the local part and domain from the email address."
             ))
             .typ(Type::Input)
-            .display_if_eq("bind.auth.enable", ["true"])
-            .placeholder("cn=?,ou=svcaccts,dc=example,dc=org")
+            .display_if_eq("bind.auth.method", ["template"])
+            .placeholder("cn={username},ou=svcaccts,dc=example,dc=org")
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_field("bind.auth.search")
-            .label("Use Auth DN for search")
+            .label("Reuse bind auth connection for search")
             .help(concat!(
                 "Weather to perform LDAP searches with the bind auth DN connection. ",
                 "If disabled, LDAP searches will be done using a separate connection ",
                 "using the default Bind DN."
             ))
             .typ(Type::Boolean)
-            .display_if_eq("bind.auth.enable", ["true"])
+            .display_if_eq("bind.auth.method", ["template"])
             .default("true")
             .build()
             .new_field("filter.name")
@@ -457,7 +467,6 @@ impl Builder<Schemas, ()> {
                 "type",
                 "store",
                 "url",
-                "base-dn",
                 "host",
                 "port",
                 "endpoint.url",
@@ -466,15 +475,14 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .new_form_section()
-            .title("Binding")
+            .title("LDAP Binding")
             .display_if_eq("type", ["ldap"])
-            .fields([
-                "bind.dn",
-                "bind.secret",
-                "bind.auth.enable",
-                "bind.auth.dn",
-                "bind.auth.search",
-            ])
+            .fields(["bind.dn", "bind.secret"])
+            .build()
+            .new_form_section()
+            .title("LDAP Authentication Method")
+            .display_if_eq("type", ["ldap"])
+            .fields(["bind.auth.method", "bind.auth.template", "bind.auth.search"])
             .build()
             .new_form_section()
             .title("TLS")
@@ -505,7 +513,7 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("LDAP Filters")
             .display_if_eq("type", ["ldap"])
-            .fields(["filter.name", "filter.email"])
+            .fields(["base-dn", "filter.name", "filter.email"])
             .build()
             .new_form_section()
             .title("Object Attributes")
