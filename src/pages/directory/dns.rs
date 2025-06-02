@@ -34,46 +34,29 @@ struct DnsRecord {
     content: String,
 }
 
-fn format_zonefile(records: &[DnsRecord], domain: &str) -> String {
-    let formatted_records: Vec<[&str; 3]> = records
-        .iter()
-        .filter_map(|record| {
-            record.name.strip_suffix(domain).map(|name| {
-                if name.is_empty() {
-                    ["@", &record.typ, &record.content]
-                } else {
-                    [
-                        name.strip_suffix('.').unwrap_or(name),
-                        &record.typ,
-                        &record.content,
-                    ]
-                }
-            })
-        })
-        .collect();
-
-    let max_len = formatted_records.iter().fold([0, 0], |acc, x| {
-        [acc[0].max(x[0].len()), acc[1].max(x[1].len())]
+fn format_zonefile(records: &Vec<DnsRecord>, domain: &str) -> String {
+    let max_len = records.iter().fold([0, 0], |[name, typ], x| {
+        [name.max(x.name.len()), typ.max(x.typ.len())]
     });
 
-    formatted_records.iter().fold(String::new(), |acc, x| {
+    records.iter().fold(String::new(), |acc, x| {
         let key = format!(
             "{}{: <width1$} IN {: <width2$}",
             acc,
-            x[0],
-            x[1],
+            x.name,
+            x.typ,
             width1 = max_len[0],
             width2 = max_len[1]
         );
-        if x[1] == "TXT" {
-            x[2].as_bytes()
+        if x.name == "TXT" {
+            x.content.as_bytes()
                 .chunks(255)
                 .fold(key, |acc, x| {
                     format!("{} \"{}\"", acc, String::from_utf8_lossy(x))
                 })
                 .add("\n")
         } else {
-            format!("{} {}\n", key, x[2])
+            format!("{} {}\n", key, x.content)
         }
     })
 }
