@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.27] - 2025-06-04
+
+## Added
+- Updated LDAP configuration.
+
+### Changed
+
+### Fixed
+- Correct `dav.lock.max-timeout` default value (stalwartlabs/stalwart#1575)
+- Hash secrets when updated via forms (credits to @denschub for the report).
+
 ## [0.1.26] - 2025-05-26
 
 ## Added

@@ -2521,7 +2521,7 @@ dependencies = [
 
 [[package]]
 name = "webadmin"
-version = "0.1.26"
+version = "0.1.27"
 dependencies = [
  "ahash",
  "base64",
