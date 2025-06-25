@@ -15,8 +15,9 @@ use crate::{
     components::{
         form::input::{Duration, Rate},
         icon::{
-            IconCircleStack, IconCodeBracket, IconHandRaised, IconInbox, IconInboxArrowDown,
-            IconInboxStack, IconKey, IconServer, IconServerStack, IconShieldCheck, IconSignal,
+            IconCalendarDays, IconCircleStack, IconCodeBracket, IconHandRaised, IconInbox,
+            IconInboxArrowDown, IconInboxStack, IconKey, IconServer, IconServerStack,
+            IconShieldCheck, IconSignal,
         },
         layout::{LayoutBuilder, MenuItem},
     },
@@ -361,15 +362,7 @@ impl LayoutBuilder {
             .insert(true)
             .insert(true)
             .create("WebDAV")
-            .create("Settings")
             .route("/webdav/edit")
-            .insert(true)
-            .create("CalDAV")
-            .route("/caldav/edit")
-            .insert(true)
-            .create("CardDAV")
-            .route("/carddav/edit")
-            .insert(true)
             .insert(true)
             .create("Settings")
             .route("/http-settings/edit")
@@ -489,6 +482,22 @@ impl LayoutBuilder {
             .insert(true)
             .create("Rate Limits")
             .route("/imap-rate-limit/edit")
+            .insert(true)
+            .insert(true)
+            // Groupware
+            .create("Collaboration")
+            .icon(view! { <IconCalendarDays/> })
+            .create("Calendar")
+            .route("/calendar/edit")
+            .insert(true)
+            .create("Scheduling")
+            .route("/scheduling/edit")
+            .insert(true)
+            .create("Notifications")
+            .route("/alarms/edit")
+            .insert(true)
+            .create("Contacts")
+            .route("/contacts/edit")
             .insert(true)
             .insert(true)
             // Security

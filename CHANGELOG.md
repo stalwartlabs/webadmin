@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.28] - 2025-06-25
+
+## Added
+- Calendar Scheduling and Notification configuration.
+- Locales.
+
+### Changed
+
+### Fixed
+
 ## [0.1.27] - 2025-06-04
 
 ## Added

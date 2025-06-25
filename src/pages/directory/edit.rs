@@ -542,6 +542,27 @@ pub fn PrincipalEdit() -> impl IntoView {
 
                                         <FormItem
                                             stacked=true
+                                            label="Locale"
+                                            hide=Signal::derive(move || {
+                                                !matches!(selected_type.get(), PrincipalType::Individual)
+                                            })
+                                        >
+
+                                            <Select
+                                                element=FormElement::new("locale", data)
+                                                add_none=true
+                                                options=create_memo(move |_| {
+                                                    LOCALES
+                                                        .iter()
+                                                        .map(|(code, name)| (code.to_string(), name.to_string()))
+                                                        .collect::<Vec<_>>()
+                                                })
+                                            />
+
+                                        </FormItem>
+
+                                        <FormItem
+                                            stacked=true
                                             label="Logo URL"
                                             hide=Signal::derive(move || {
                                                 !matches!(
@@ -1061,6 +1082,7 @@ impl FormData {
             ("name", principal.name.as_str()),
             ("description", principal.description.as_str()),
             ("picture", principal.picture.as_str()),
+            ("locale", principal.locale.as_str()),
             ("tenant", principal.tenant.as_str()),
             ("email", principal.emails.as_str()),
         ] {
@@ -1174,6 +1196,7 @@ impl FormData {
                 ),
                 picture: PrincipalValue::String(self.value("picture").unwrap_or_default()),
                 description: PrincipalValue::String(self.value("description").unwrap_or_default()),
+                locale: PrincipalValue::String(self.value("locale").unwrap_or_default()),
                 ..Default::default()
             };
 
@@ -1271,3 +1294,15 @@ impl Builder<Schemas, ()> {
             .build()
     }
 }
+
+
+
+const LOCALES : &[(&str, &str)] = &[
+    ("en", "English"),
+    ("es", "Spanish"),
+    ("fr", "French"),
+    ("de", "German"),
+    ("it", "Italian"),
+    ("pt", "Portuguese"),
+    ("nl", "Dutch"),
+];

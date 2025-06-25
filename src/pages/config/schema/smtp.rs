@@ -452,6 +452,15 @@ impl Builder<Schemas, ()> {
             .typ(Type::Boolean)
             .input_check([], [Validator::Required])
             .build()
+            .new_field("resolver.edns")
+            .label("Enable EDNS")
+            .help(concat!(
+                "Whether to enable EDNS (Extension Mechanisms for DNS) support"
+            ))
+            .default("true")
+            .typ(Type::Boolean)
+            .input_check([], [Validator::Required])
+            .build()
             .new_field("resolver.concurrency")
             .label("Concurrent Requests")
             .help(concat!(
@@ -502,6 +511,7 @@ impl Builder<Schemas, ()> {
                 "resolver.attempts",
                 "resolver.preserve-intermediates",
                 "resolver.try-tcp-on-error",
+                "resolver.edns",
             ])
             .build()
             .build()

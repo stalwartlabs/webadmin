@@ -964,10 +964,7 @@ impl Builder<Schemas, ()> {
             .new_id_field()
             .label("Domain Name")
             .help("The domain name to be added to the URL redirectors list")
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::IsRegex],
-            )
+            .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_form_section()
             .field("_id")
@@ -985,10 +982,7 @@ impl Builder<Schemas, ()> {
             .new_id_field()
             .label("Domain Name")
             .help("The domain name to be added to the trusted domains list")
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::IsRegex],
-            )
+            .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_form_section()
             .field("_id")
@@ -1006,10 +1000,7 @@ impl Builder<Schemas, ()> {
             .new_id_field()
             .label("Domain Name")
             .help("The domain name to be added to the blocked domains list")
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::IsRegex],
-            )
+            .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_form_section()
             .field("_id")
@@ -1027,10 +1018,7 @@ impl Builder<Schemas, ()> {
             .new_id_field()
             .label("E-mail Address")
             .help("The e-mail address to be added to the SPAM trap list")
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::IsRegex],
-            )
+            .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_form_section()
             .field("_id")
