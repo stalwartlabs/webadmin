@@ -10,405 +10,81 @@ use super::*;
 
 impl Builder<Schemas, ()> {
     pub fn build_smtp_outbound(self) -> Self {
+        const REQUIRE_OPTIONAL: &[(&str, &str)] = &[
+            ("optional", "Optional"),
+            ("require", "Required"),
+            ("disable", "Disabled"),
+        ];
+
         let rcpt_vars = ExpressionValidator::new(SMTP_QUEUE_RCPT_VARS, &[]);
-        let sender_vars = ExpressionValidator::new(SMTP_QUEUE_SENDER_VARS, &[]);
-        let mx_vars = ExpressionValidator::new(SMTP_QUEUE_MX_VARS, &[]);
         let host_vars = ExpressionValidator::new(SMTP_QUEUE_HOST_VARS, &[]);
 
-        // Queue
-        self.new_schema("smtp-out-queue")
-            .new_field("queue.schedule.retry")
-            .label("Retry")
+        // Strategies
+        self.new_schema("smtp-out-strategy")
+            .new_field("queue.strategy.route")
+            .label("Routing")
             .help(concat!(
-                "List of durations defining the schedule for retrying the ",
-                "delivery of a message"
-            ))
-            .default("[2m, 5m, 10m, 15m, 30m, 1h, 2h]")
-            .typ(Type::Expression)
-            .input_check(
-                [],
-                [Validator::Required, Validator::IsValidExpression(host_vars)],
-            )
-            .new_field("queue.schedule.notify")
-            .label("Notify")
-            .help(concat!(
-                "List of durations specifying when to notify the sender of ",
-                "any delivery problems"
-            ))
-            .default("[1d, 3d]")
-            .input_check(
-                [],
-                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
-            )
-            .new_field("queue.schedule.expire")
-            .label("Expire")
-            .help(concat!(
-                "Maximum duration that a message can remain in the queue before",
-                " it expires and is returned to the sender"
-            ))
-            .default("5d")
-            .build()
-            .new_field("report.dsn.from-name")
-            .label("From Name")
-            .help(concat!(
-                "Name that will be used in the From header of Delivery Status ",
-                "Notifications (DSN) reports"
-            ))
-            .default("'Mail Delivery Subsystem'")
-            .typ(Type::Expression)
-            .input_check(
-                [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(sender_vars),
-                ],
-            )
-            .new_field("report.dsn.from-address")
-            .label("From Address")
-            .help(concat!(
-                "Email address that will be used in the From header of ",
-                "Delivery Status Notifications (DSN) reports"
-            ))
-            .default("'MAILER-DAEMON@' + config_get('report.domain')")
-            .new_field("report.dsn.sign")
-            .label("Signature")
-            .help(concat!(
-                "List of DKIM signatures to use when signing Delivery Status ",
-                "Notifications"
-            ))
-            .default(
-                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
-            )
-            .build()
-            .new_form_section()
-            .title("Queue Schedule")
-            .fields([
-                "queue.schedule.retry",
-                "queue.schedule.notify",
-                "queue.schedule.expire",
-            ])
-            .build()
-            .new_form_section()
-            .title("Delivery Status Notifications (DSN) Reports")
-            .fields([
-                "report.dsn.from-name",
-                "report.dsn.from-address",
-                "report.dsn.sign",
-            ])
-            .build()
-            .build()
-            // Routing
-            .new_schema("smtp-out-routing")
-            .new_field("queue.outbound.hostname")
-            .label("EHLO Hostname")
-            .help(concat!(
-                "Overrides the default EHLO hostname used when sending messages",
-                " to remote SMTP servers"
-            ))
-            .typ(Type::Expression)
-            .default("config_get('server.hostname')")
-            .input_check([], [Validator::IsValidExpression(sender_vars)])
-            .new_field("queue.outbound.next-hop")
-            .label("Next hop")
-            .help(concat!(
-                "Can either point to a remote host or 'false' which indicates",
-                " that the message delivery should be done through DNS resolution"
+                "An expression that returns the route name to use ",
+                "when delivering queued messages"
             ))
             .default(Expression::new(
                 [("is_local_domain('*', rcpt_domain)", "'local'")],
-                "false",
+                "'mx'",
             ))
-            .input_check(
-                [],
-                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
-            )
-            .new_field("queue.outbound.ip-strategy")
-            .label("IP Strategy")
-            .help(concat!(
-                "Determines which type of IP address to use when delivering ",
-                "emails to a remote SMTP server"
-            ))
-            .default("ipv4_then_ipv6")
-            .input_check(
-                [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(sender_vars.constants(IP_STRATEGY_CONSTANTS)),
-                ],
-            )
-            .new_field("queue.outbound.source-ip.v4")
-            .label("IPv4 addresses")
-            .help(concat!(
-                "Determines a list of local IPv4 addresses to use when ",
-                "delivery emails to remote SMTP servers"
-            ))
-            .input_check([], [Validator::IsValidExpression(mx_vars)])
-            .new_field("queue.outbound.source-ip.v6")
-            .label("IPv6 addresses")
-            .help(concat!(
-                "Determines a list of local IPv6 addresses to use when ",
-                "delivery emails to remote SMTP servers"
-            ))
-            .build()
-            .new_form_section()
-            .title("Routing")
-            .fields([
-                "queue.outbound.next-hop",
-                "queue.outbound.ip-strategy",
-                "queue.outbound.hostname",
-            ])
-            .build()
-            .new_form_section()
-            .title("Source IP Addresses")
-            .fields(["queue.outbound.source-ip.v4", "queue.outbound.source-ip.v6"])
-            .build()
-            .build()
-            // TLS
-            .new_schema("smtp-out-tls")
-            .new_field("queue.outbound.tls.dane")
-            .label("DANE")
-            .help(concat!("Whether DANE is required, optional, or disabled"))
-            .default("optional")
             .typ(Type::Expression)
-            .input_check(
-                [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(mx_vars.constants(REQUIRE_OPTIONAL_CONSTANTS)),
-                ],
-            )
-            .new_field("queue.outbound.tls.starttls")
-            .label("STARTTLS")
-            .help(concat!(
-                "Whether TLS support is required, optional, or disabled"
-            ))
-            .default("require")
-            .new_field("queue.outbound.tls.mta-sts")
-            .label("MTA-STS")
-            .help(concat!(
-                "Whether MTA-STS is required, optional, or disabled"
-            ))
-            .default("optional")
-            .input_check(
-                [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(rcpt_vars.constants(REQUIRE_OPTIONAL_CONSTANTS)),
-                ],
-            )
-            .new_field("queue.outbound.tls.allow-invalid-certs")
-            .label("Allow Invalid Certs")
-            .help(concat!(
-                "Whether to allow connections to servers with invalid TLS certificates"
-            ))
-            .default(Expression::new(
-                [("retry_num > 0 && last_error == 'tls'", "true")],
-                "false",
-            ))
-            .input_check(
-                [],
-                [Validator::Required, Validator::IsValidExpression(mx_vars)],
-            )
-            .build()
-            .new_field("report.tls.aggregate.from-name")
-            .label("From Name")
-            .help(concat!(
-                "Name that will be used in the From header of the TLS ",
-                "aggregate report email"
-            ))
-            .default("'Report Subsystem'")
-            .typ(Type::Expression)
-            .input_check(
-                [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(sender_vars),
-                ],
-            )
-            .new_field("report.tls.aggregate.from-address")
-            .label("From Address")
-            .help(concat!(
-                "Email address that will be used in the From header of ",
-                "the TLS aggregate report email"
-            ))
-            .default("'noreply-tls@' + config_get('report.domain')")
-            .new_field("report.tls.aggregate.subject")
-            .label("Subject")
-            .help(concat!(
-                "Subject name that will be used in the TLS aggregate report email"
-            ))
-            .default("'TLS Aggregate Report'")
-            .new_field("report.tls.aggregate.sign")
-            .label("Signature")
-            .help(concat!(
-                "List of DKIM signatures to use when signing the TLS ",
-                "aggregate report"
-            ))
-            .default(
-                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
-            )
-            .new_field("report.tls.aggregate.org-name")
-            .label("Organization")
-            .help(concat!(
-                "Name of the organization to be included in the report"
-            ))
-            .default("config_get('report.domain')")
-            .new_field("report.tls.aggregate.contact-info")
-            .label("Contact")
-            .help(concat!("Contact information to be included in the report"))
-            .default("")
-            .new_field("report.tls.aggregate.max-size")
-            .label("Max Report Size")
-            .help(concat!("Maximum size of the TLS aggregate report in bytes"))
-            .default("26214400")
-            .new_field("report.tls.aggregate.send")
-            .label("Frequency")
-            .help(concat!(
-                "Frequency at which the TLS aggregate reports will be sent. The options ",
-                "are hourly, daily, weekly, or never to disable reporting"
-            ))
-            .default("daily")
-            .input_check(
-                [],
-                [
-                    Validator::Required,
-                    Validator::IsValidExpression(sender_vars.constants(AGGREGATE_FREQ_CONSTANTS)),
-                ],
-            )
-            .build()
-            .new_form_section()
-            .title("TLS Security")
-            .fields([
-                "queue.outbound.tls.starttls",
-                "queue.outbound.tls.dane",
-                "queue.outbound.tls.mta-sts",
-                "queue.outbound.tls.allow-invalid-certs",
-            ])
-            .build()
-            .new_form_section()
-            .title("TLS Aggregate Reporting")
-            .fields([
-                "report.tls.aggregate.from-name",
-                "report.tls.aggregate.from-address",
-                "report.tls.aggregate.subject",
-                "report.tls.aggregate.sign",
-                "report.tls.aggregate.org-name",
-                "report.tls.aggregate.contact-info",
-                "report.tls.aggregate.max-size",
-                "report.tls.aggregate.send",
-            ])
-            .build()
-            .build()
-            // Limits & Timeouts
-            .new_schema("smtp-out-limits")
-            .new_field("queue.threads.remote")
-            .label("Remote")
-            .help(concat!(
-                "Maximum number of threads to use for outbound delivery"
-            ))
-            .default("25")
-            .typ(Type::Input)
-            .input_check([], [Validator::Required, Validator::MinValue(1.into())])
-            .new_field("queue.threads.local")
-            .label("Local")
-            .help(concat!(
-                "Maximum number of threads to use for local delivery"
-            ))
-            .default("10")
-            .build()
-            .new_field("queue.outbound.limits.mx")
-            .label("MX Hosts")
-            .help(concat!(
-                "Maximum number of MX hosts to try on each delivery attempt"
-            ))
-            .default("7")
-            .typ(Type::Expression)
-            .input_check(
-                [],
-                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
-            )
-            .new_field("queue.outbound.limits.multihomed")
-            .label("Multi-homed IPs")
-            .help(concat!(
-                "For multi-homed remote servers, it is the maximum number of ",
-                "IP addresses to try on each delivery attempt"
-            ))
-            .default("2")
-            .new_field("queue.outbound.timeouts.connect")
-            .label("Connect")
-            .help(concat!(
-                "Maximum time to wait for the connection to be established"
-            ))
-            .default("3m")
             .input_check(
                 [],
                 [Validator::Required, Validator::IsValidExpression(host_vars)],
             )
-            .new_field("queue.outbound.timeouts.greeting")
-            .label("Greeting")
+            .new_field("queue.strategy.schedule")
+            .label("Scheduling")
             .help(concat!(
-                "Maximum time to wait for the SMTP greeting message"
+                "An expression that returns the scheduling strategy to use ",
+                "when queueing messages"
             ))
-            .default("3m")
-            .new_field("queue.outbound.timeouts.tls")
-            .label("TLS Handshake")
+            .default(Expression::new(
+                [
+                    ("is_local_domain('*', rcpt_domain)", "'local'"),
+                    ("source == 'dsn'", "'dsn'"),
+                    ("source == 'report'", "'report'"),
+                ],
+                "'remote'",
+            ))
+            .input_check(
+                [],
+                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
+            )
+            .new_field("queue.strategy.connection")
+            .label("Connection")
             .help(concat!(
-                "Maximum time to wait for the TLS handshake to complete"
+                "An expression that returns the connection strategy to use ",
+                "when delivering messages to remote SMTP servers"
             ))
-            .default("2m")
-            .new_field("queue.outbound.timeouts.ehlo")
-            .label("EHLO command")
+            .default("'default'")
+            .build()
+            .new_field("queue.strategy.tls")
+            .label("TLS")
+            .typ(Type::Expression)
             .help(concat!(
-                "Maximum time to wait for the EHLO command response"
+                "An expression that returns the TLS strategy to use ",
+                "when delivering messages to remote SMTP servers"
             ))
-            .default("3m")
-            .new_field("queue.outbound.timeouts.mail-from")
-            .label("MAIL-FROM command")
-            .help(concat!(
-                "Maximum time to wait for the MAIL-FROM command response"
+            .default(Expression::new(
+                [("retry_num > 0 && last_error == 'tls'", "'invalid-tls'")],
+                "'default'",
             ))
-            .default("3m")
-            .new_field("queue.outbound.timeouts.rcpt-to")
-            .label("RCPT-TO command")
-            .help(concat!(
-                "Maximum time to wait for the RCPT-TO command response"
-            ))
-            .default("3m")
-            .new_field("queue.outbound.timeouts.data")
-            .label("DATA command")
-            .help(concat!(
-                "Maximum time to wait for the DATA command response"
-            ))
-            .default("10m")
-            .new_field("queue.outbound.timeouts.mta-sts")
-            .label("MTA-STS lookup")
-            .help(concat!(
-                "Maximum time to wait for the MTA-STS policy lookup to complete"
-            ))
-            .default("2m")
+            .input_check(
+                [],
+                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
+            )
             .build()
             .new_form_section()
-            .title("Delivery Threads")
-            .fields(["queue.threads.remote", "queue.threads.local"])
-            .build()
-            .new_form_section()
-            .title("Limits")
+            .title("Outbound Strategies")
             .fields([
-                "queue.outbound.limits.mx",
-                "queue.outbound.limits.multihomed",
-            ])
-            .build()
-            .new_form_section()
-            .title("Timeouts")
-            .fields([
-                "queue.outbound.timeouts.connect",
-                "queue.outbound.timeouts.greeting",
-                "queue.outbound.timeouts.tls",
-                "queue.outbound.timeouts.ehlo",
-                "queue.outbound.timeouts.mail-from",
-                "queue.outbound.timeouts.rcpt-to",
-                "queue.outbound.timeouts.data",
-                "queue.outbound.timeouts.mta-sts",
+                "queue.strategy.route",
+                "queue.strategy.schedule",
+                "queue.strategy.connection",
+                "queue.strategy.tls",
             ])
             .build()
             .build()
@@ -438,7 +114,7 @@ impl Builder<Schemas, ()> {
                 "List of custom DNS server URLs to use for resolution"
             ))
             .default("udp://127.0.0.1:53")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([], [Validator::Required])
             .display_if_eq("resolver.type", ["custom"])
             .build()
@@ -515,16 +191,76 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
-            // Remote hosts
-            .new_schema("smtp-out-remote")
-            .prefix("remote")
-            .suffix("address")
-            .names("host", "hosts")
+            // Routing strategies
+            .new_schema("smtp-out-routing")
+            .prefix("queue.route")
+            .suffix("type")
+            .names("route", "routes")
             .new_id_field()
-            .label("Host ID")
-            .help("Unique identifier for the remote host")
+            .label("ID")
+            .help("Unique identifier for the route")
+            .build()
+            .new_field("type")
+            .readonly()
+            .label("Type")
+            .help("Route type")
+            .default("mx")
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("local", "Local Delivery"),
+                    ("mx", "Remote Delivery (MX)"),
+                    ("relay", "Relay Host"),
+                ]),
+                typ: SelectType::Single,
+            })
+            .build()
+            .new_field("description")
+            .label("Description")
+            .help(concat!(
+                "A short description of the route, which can be used to ",
+                "identify it in the list of routes"
+            ))
+            .typ(Type::Input)
+            .placeholder("Route description")
+            .build()
+            .new_field("ip-lookup")
+            .display_if_eq("type", ["mx"])
+            .label("IP Resolution")
+            .help("IP resolution strategy for MX hosts")
+            .default("ipv4_then_ipv6")
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("ipv4_then_ipv6", "IPv4 then IPv6"),
+                    ("ipv6_then_ipv4", "IPv6 then IPv4"),
+                    ("ipv4_only", "IPv4 Only"),
+                    ("ipv6_only", "IPv6 Only"),
+                ]),
+                typ: SelectType::Single,
+            })
+            .build()
+            .new_field("limits.mx")
+            .display_if_eq("type", ["mx"])
+            .label("MX Hosts")
+            .help(concat!(
+                "Maximum number of MX hosts to try on each delivery attempt"
+            ))
+            .typ(Type::Input)
+            .input_check([], [Validator::Required, Validator::MinValue(1i64.into())])
+            .default("5")
+            .build()
+            .new_field("limits.multihomed")
+            .display_if_eq("type", ["mx"])
+            .label("Multi-homed IPs")
+            .help(concat!(
+                "For multi-homed remote servers, it is the maximum number of ",
+                "IP addresses to try on each delivery attempt"
+            ))
+            .typ(Type::Input)
+            .input_check([], [Validator::Required, Validator::MinValue(1i64.into())])
+            .default("2")
             .build()
             .new_field("address")
+            .display_if_eq("type", ["relay"])
             .label("Address")
             .help(concat!(
                 "The address of the remote SMTP server, which can be an IP ",
@@ -535,6 +271,7 @@ impl Builder<Schemas, ()> {
             .placeholder("127.0.0.1")
             .build()
             .new_field("port")
+            .display_if_eq("type", ["relay"])
             .label("Port")
             .help(concat!(
                 "The port number of the remote server, which is typically ",
@@ -545,6 +282,7 @@ impl Builder<Schemas, ()> {
             .placeholder("25")
             .build()
             .new_field("protocol")
+            .display_if_eq("type", ["relay"])
             .label("Protocol")
             .help(concat!(
                 "The protocol to use when delivering messages to the remote ",
@@ -557,6 +295,7 @@ impl Builder<Schemas, ()> {
             .default("smtp")
             .build()
             .new_field("tls.implicit")
+            .display_if_eq("type", ["relay"])
             .label("Implicit TLS")
             .help(concat!(
                 "Whether to use TLS encryption for all connections to the remote ",
@@ -566,6 +305,7 @@ impl Builder<Schemas, ()> {
             .default("false")
             .build()
             .new_field("tls.allow-invalid-certs")
+            .display_if_eq("type", ["relay"])
             .label("Allow Invalid Certs")
             .help(concat!(
                 "Whether to allow connections to servers with invalid TLS certificates"
@@ -574,6 +314,7 @@ impl Builder<Schemas, ()> {
             .default("false")
             .build()
             .new_field("auth.username")
+            .display_if_eq("type", ["relay"])
             .label("Username")
             .help(concat!(
                 "The username to use when authenticating with the remote server"
@@ -581,6 +322,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Input)
             .build()
             .new_field("auth.secret")
+            .display_if_eq("type", ["relay"])
             .label("Secret")
             .help(concat!(
                 "The secret to use when authenticating with the remote server"
@@ -588,20 +330,386 @@ impl Builder<Schemas, ()> {
             .typ(Type::Secret)
             .build()
             .new_form_section()
+            .title("Route Configuration")
+            .fields(["_id", "type", "description"])
+            .build()
+            .new_form_section()
+            .title("MX Resolution")
+            .display_if_eq("type", ["mx"])
+            .fields(["ip-lookup", "limits.mx", "limits.multihomed"])
+            .build()
+            .new_form_section()
             .title("Server Details")
-            .fields(["_id", "address", "port", "protocol"])
+            .display_if_eq("type", ["relay"])
+            .fields(["address", "port", "protocol"])
             .build()
             .new_form_section()
             .title("TLS")
+            .display_if_eq("type", ["relay"])
             .fields(["tls.implicit", "tls.allow-invalid-certs"])
             .build()
             .new_form_section()
             .title("Authentication")
+            .display_if_eq("type", ["relay"])
             .fields(["auth.username", "auth.secret"])
             .build()
-            .list_title("Relay Hosts")
-            .list_subtitle("Manage remote SMTP and LMTP servers for message delivery")
-            .list_fields(["_id", "protocol", "address", "port"])
+            .list_title("Routes")
+            .list_subtitle("Manage routes for message delivery")
+            .list_fields(["_id", "type", "description"])
+            .build()
+            // Virtual queues
+            .new_schema("smtp-out-queues")
+            .prefix("queue.virtual")
+            .suffix("threads-per-node")
+            .names("queue", "queues")
+            .new_id_field()
+            .label("Name")
+            .help("Unique identifier for the queue, max 8 characters")
+            .input_check(
+                [Transformer::Trim],
+                [
+                    Validator::Required,
+                    Validator::IsId,
+                    Validator::MaxLength(8),
+                ],
+            )
+            .build()
+            .new_field("threads-per-node")
+            .label("Delivery Threads")
+            .help(concat!(
+                "Maximum number of threads to use for  delivery ",
+                "on each node in the cluster"
+            ))
+            .typ(Type::Input)
+            .input_check([], [Validator::Required, Validator::MinValue(1i64.into())])
+            .default("25")
+            .build()
+            .new_field("description")
+            .label("Description")
+            .help(concat!(
+                "A short description of the queue, which can be used to ",
+                "identify it in the list of queues"
+            ))
+            .typ(Type::Input)
+            .placeholder("Queue description")
+            .build()
+            .new_form_section()
+            .title("Virtual Queue")
+            .fields(["_id", "description", "threads-per-node"])
+            .build()
+            .list_title("Virtual Queues")
+            .list_subtitle("Manage virtual queues for message delivery")
+            .list_fields(["_id", "threads-per-node", "description"])
+            .build()
+            // Scheduling
+            .new_schema("smtp-out-scheduling")
+            .prefix("queue.schedule")
+            .suffix("queue-name")
+            .names("schedule", "schedules")
+            .new_id_field()
+            .label("Name")
+            .help("Unique identifier for the schedule")
+            .build()
+            .new_field("queue-name")
+            .label("Virtual Queue")
+            .help(concat!(
+                "The name of the virtual queue to use for this schedule"
+            ))
+            .typ(Type::Select {
+                source: Source::Dynamic {
+                    schema: "smtp-out-queues",
+                    field: "description",
+                    filter: Default::default(),
+                },
+                typ: SelectType::Single,
+            })
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("description")
+            .label("Description")
+            .help(concat!(
+                "A short description of the schedule, which can be used to ",
+                "identify it in the list of schedules"
+            ))
+            .typ(Type::Input)
+            .placeholder("Schedule description")
+            .build()
+            .new_field("retry")
+            .label("Retry Intervals")
+            .help(concat!("List of retry intervals for message delivery"))
+            .default(&["2m", "5m", "10m", "15m", "30m", "1h", "2h"][..])
+            .typ(Type::Array(ArrayType::Duration))
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("notify")
+            .label("Notify Intervals")
+            .help(concat!(
+                "List of delayed delivery DSN notification intervals"
+            ))
+            .default(&["1d", "3d"][..])
+            .typ(Type::Array(ArrayType::Duration))
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("expire-type")
+            .label("Expiration Strategy")
+            .help(concat!(
+                "Whether to expire messages after a number of delivery ",
+                "attempts or after certain time (TTL)"
+            ))
+            .default("ttl")
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("ttl", "Time To Live"),
+                    ("attempts", "Delivery Attempts"),
+                ]),
+                typ: SelectType::Single,
+            })
+            .build()
+            .new_field("expire")
+            .display_if_eq("expire-type", ["ttl"])
+            .label("Time To Live")
+            .help(concat!(
+                "Time after which the message will be expired if it is not ",
+                "delivered"
+            ))
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .default("3d")
+            .build()
+            .new_field("max-attempts")
+            .display_if_eq("expire-type", ["attempts"])
+            .label("Max Attempts")
+            .help(concat!(
+                "Maximum number of delivery attempts before the message is ",
+                "considered failed"
+            ))
+            .typ(Type::Input)
+            .input_check([], [Validator::Required, Validator::MinValue(1i64.into())])
+            .default("5")
+            .build()
+            .new_form_section()
+            .title("Schedule Details")
+            .fields(["_id", "queue-name", "description"])
+            .build()
+            .new_form_section()
+            .title("Delivery Retry Intervals")
+            .fields(["retry"])
+            .build()
+            .new_form_section()
+            .title("Delayed Delivery Notifications")
+            .fields(["notify"])
+            .build()
+            .new_form_section()
+            .title("Message Expiration")
+            .fields(["expire-type", "expire", "max-attempts"])
+            .build()
+            .list_title("Schedules")
+            .list_subtitle("Manage schedules for message delivery")
+            .list_fields(["_id", "queue-name", "description"])
+            .build()
+            // TLS strategies
+            .new_schema("smtp-out-tls")
+            .prefix("queue.tls")
+            .suffix("allow-invalid-certs")
+            .names("TLS strategy", "TLS strategies")
+            .new_id_field()
+            .label("Name")
+            .help("Unique identifier for the TLS strategy")
+            .build()
+            .new_field("dane")
+            .label("DANE")
+            .help(concat!("Whether DANE is required, optional, or disabled"))
+            .default("optional")
+            .typ(Type::Select {
+                typ: SelectType::Single,
+                source: Source::Static(REQUIRE_OPTIONAL),
+            })
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("mta-sts")
+            .label("MTA-STS")
+            .help(concat!(
+                "Whether MTA-STS is required, optional, or disabled"
+            ))
+            .default("optional")
+            .typ(Type::Select {
+                typ: SelectType::Single,
+                source: Source::Static(REQUIRE_OPTIONAL),
+            })
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("starttls")
+            .label("STARTTLS")
+            .help(concat!(
+                "Whether TLS support is required, optional, or disabled"
+            ))
+            .default("optional")
+            .typ(Type::Select {
+                typ: SelectType::Single,
+                source: Source::Static(REQUIRE_OPTIONAL),
+            })
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("allow-invalid-certs")
+            .label("Allow Invalid Certs")
+            .help(concat!(
+                "Whether to allow connections to servers with invalid TLS certificates"
+            ))
+            .default("false")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("timeout.tls")
+            .label("TLS")
+            .help(concat!(
+                "Maximum time to wait for the TLS handshake to complete"
+            ))
+            .default("3m")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("timeout.mta-sts")
+            .label("MTA-STS")
+            .help(concat!(
+                "Maximum time to wait for the MTA-STS policy lookup to complete"
+            ))
+            .default("5m")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("description")
+            .label("Description")
+            .help(concat!(
+                "A short description of the TLS strategy, which can be used to ",
+                "identify it in the list of strategies"
+            ))
+            .typ(Type::Input)
+            .placeholder("TLS Strategy description")
+            .build()
+            .new_form_section()
+            .title("TLS Strategy")
+            .fields(["_id", "description"])
+            .build()
+            .new_form_section()
+            .title("Security Requirements")
+            .fields(["dane", "mta-sts", "starttls", "allow-invalid-certs"])
+            .build()
+            .new_form_section()
+            .title("Timeouts")
+            .fields(["timeout.tls", "timeout.mta-sts"])
+            .build()
+            .list_title("TLS Strategies")
+            .list_subtitle("Manage TLS strategies for message delivery")
+            .list_fields(["_id", "description"])
+            .build()
+            // Connection strategies
+            .new_schema("smtp-out-connection")
+            .prefix("queue.connection")
+            .suffix("timeout.connect")
+            .names("Connection strategy", "Connection strategies")
+            .new_id_field()
+            .label("Name")
+            .help("Unique identifier for the connection strategy")
+            .build()
+            .new_field("source-ips")
+            .label("Source IPs")
+            .help(concat!(
+                "List of local IPv4 and IPv6 addresses to use when ",
+                "delivering emails to remote SMTP servers"
+            ))
+            .typ(Type::Array(ArrayType::Text))
+            .input_check([], [Validator::IsIpOrMask])
+            .build()
+            .new_field("ehlo-hostname")
+            .label("EHLO Hostname")
+            .help(concat!(
+                "Overrides the EHLO hostname that will be used when ",
+                "connecting to remote SMTP servers"
+            ))
+            .typ(Type::Input)
+            .input_check([], [Validator::Required, Validator::IsHost])
+            .placeholder("mail.example.com")
+            .build()
+            .new_field("timeout.connect")
+            .label("Connect")
+            .help(concat!(
+                "Maximum time to wait for the connection to be established"
+            ))
+            .default("5m")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("timeout.greeting")
+            .label("Greeting")
+            .help(concat!(
+                "Maximum time to wait for the SMTP greeting message"
+            ))
+            .default("5m")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("timeout.ehlo")
+            .label("EHLO")
+            .help(concat!(
+                "Maximum time to wait for the EHLO command response"
+            ))
+            .default("5m")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("timeout.mail-from")
+            .label("MAIL-FROM")
+            .help(concat!(
+                "Maximum time to wait for the MAIL-FROM command response"
+            ))
+            .default("5m")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("timeout.rcpt-to")
+            .label("RCPT-TO")
+            .help(concat!(
+                "Maximum time to wait for the RCPT-TO command response"
+            ))
+            .default("5m")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("timeout.data")
+            .label("DATA")
+            .help(concat!(
+                "Maximum time to wait for the DATA command response"
+            ))
+            .default("10m")
+            .typ(Type::Duration)
+            .input_check([], [Validator::Required])
+            .build()
+            .new_field("description")
+            .label("Description")
+            .help("Short description of the connection strategy")
+            .typ(Type::Input)
+            .build()
+            .new_form_section()
+            .title("Connection Strategy")
+            .fields(["_id", "description", "ehlo-hostname"])
+            .build()
+            .new_form_section()
+            .title("Timeouts")
+            .fields([
+                "timeout.connect",
+                "timeout.greeting",
+                "timeout.ehlo",
+                "timeout.mail-from",
+                "timeout.rcpt-to",
+                "timeout.data",
+            ])
+            .build()
+            .new_form_section()
+            .title("Source IP Addresses")
+            .fields(["source-ips"])
+            .build()
+            .list_title("Connection Strategies")
+            .list_subtitle("Manage connection strategies for message delivery")
+            .list_fields(["_id", "description"])
             .build()
             // Outbound rate limiter
             .new_schema("smtp-out-throttle")
@@ -1619,7 +1727,7 @@ impl Builder<Schemas, ()> {
             .input_check([], [Validator::Required])
             .build()
             .new_field("headers")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .label("HTTP Headers")
             .help("The headers to be sent with hook requests")
             .build()
@@ -1701,7 +1809,7 @@ impl Builder<Schemas, ()> {
                 "Override the allowed MX hosts for the MTA-STS policy domain. ",
                 "If empty, the MX hosts are determined from the available TLS certificates"
             ))
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [])
             .build()
             .new_form_section()
@@ -1734,7 +1842,7 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "URLs to fetch CSV file containing the IP to ASN mappings.",
             ))
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [Validator::Required])
             .display_if_eq("asn.type", ["resource"])
             .build()
@@ -1743,7 +1851,7 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "URLs to fetch CSV file containing the IP to country code mappings.",
             ))
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [Validator::Required])
             .display_if_eq("asn.type", ["resource"])
             .build()
@@ -1774,7 +1882,7 @@ impl Builder<Schemas, ()> {
             .display_if_eq("asn.type", ["resource"])
             .build()
             .new_field("asn.headers")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .label("HTTP Headers")
             .help(concat!(
                 "Headers to send with the ASN/Geo resource fetch request.",

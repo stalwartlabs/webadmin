@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::core::{form::Expression, schema::*};
+use crate::{
+    core::{form::Expression, schema::*},
+    pages::config::schema::SMTP_QUEUE_SENDER_VARS,
+};
 
 use super::{smtp::*, CONNECTION_VARS, RCPT_DOMAIN_VARS, SMTP_RCPT_TO_VARS};
 
@@ -13,6 +16,7 @@ impl Builder<Schemas, ()> {
         let conn_vars = ExpressionValidator::new(CONNECTION_VARS, &[]);
         let rcpt_domain = ExpressionValidator::new(RCPT_DOMAIN_VARS, &[]);
         let rcpt_vars = ExpressionValidator::new(SMTP_RCPT_TO_VARS, &[]);
+        let sender_vars = ExpressionValidator::new(SMTP_QUEUE_SENDER_VARS, &[]);
 
         self.new_schema("signature")
             .prefix("signature")
@@ -64,7 +68,7 @@ impl Builder<Schemas, ()> {
             .label("Headers")
             .help(concat!("List of headers to be signed"))
             .default(&["From", "To", "Date", "Subject", "Message-ID"][..])
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_field("canonicalization")
@@ -201,43 +205,6 @@ impl Builder<Schemas, ()> {
                 )],
                 "false",
             ))
-            .new_field("report.dkim.from-name")
-            .label("From Name")
-            .help(concat!(
-                "Name that will be used in the From header of the DKIM ",
-                "report email"
-            ))
-            .default("'Report Subsystem'")
-            .new_field("report.dkim.from-address")
-            .label("From Address")
-            .help(concat!(
-                "Email address that will be used in the From header of ",
-                "the DKIM report email"
-            ))
-            .default("'noreply-dkim@' + config_get('report.domain')")
-            .new_field("report.dkim.subject")
-            .label("Subject")
-            .help(concat!(
-                "Subject name that will be used in the DKIM report email"
-            ))
-            .default("'DKIM Authentication Failure Report'")
-            .new_field("report.dkim.sign")
-            .label("Signature")
-            .help(concat!(
-                "List of DKIM signatures to use when signing the DKIM ",
-                "report"
-            ))
-            .default(
-                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
-            )
-            .new_field("report.dkim.send")
-            .label("Send rate")
-            .help(concat!(
-                "Rate at which DKIM reports will be sent to a given email ",
-                "address. When this rate is exceeded, no further DKIM failure reports",
-                " will be sent to that address"
-            ))
-            .default("[1, 1d]")
             .build()
             .new_form_section()
             .title("DKIM Verification")
@@ -246,16 +213,6 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("DKIM Signing")
             .fields(["auth.dkim.sign"])
-            .build()
-            .new_form_section()
-            .title("DKIM Reporting")
-            .fields([
-                "report.dkim.from-name",
-                "report.dkim.from-address",
-                "report.dkim.subject",
-                "report.dkim.sign",
-                "report.dkim.send",
-            ])
             .build()
             .build()
             // ARC Settings
@@ -320,6 +277,290 @@ impl Builder<Schemas, ()> {
                 [("local_port == 25", "relaxed")],
                 "disable",
             ))
+            .build()
+            .new_form_section()
+            .title("SPF Verification")
+            .fields(["auth.spf.verify.ehlo", "auth.spf.verify.mail-from"])
+            .build()
+            .build()
+            // DMARC Settings
+            .new_schema("dmarc")
+            .new_field("auth.dmarc.verify")
+            .label("Strategy")
+            .help(concat!(
+                "Whether DMARC verification is strict, relaxed or disabled"
+            ))
+            .default(Expression::new(
+                [("local_port == 25", "relaxed")],
+                "disable",
+            ))
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(rcpt_vars.constants(VERIFY_CONSTANTS)),
+                ],
+            )
+            .build()
+            .new_form_section()
+            .title("DMARC Verification")
+            .fields(["auth.dmarc.verify"])
+            .build()
+            .build()
+            // Inbound Report Analysis
+            .new_schema("report-analysis")
+            .new_field("report.analysis.addresses")
+            .label("Report Addresses")
+            .help(concat!(
+                "List of addresses (which may include wildcards) from which ",
+                "reports will be intercepted and analyzed"
+            ))
+            .typ(Type::Array(ArrayType::Text))
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("report.analysis.forward")
+            .label("Forward")
+            .help(concat!(
+                "Whether reports should be forwarded to their final recipient ",
+                "after analysis"
+            ))
+            .default("true")
+            .typ(Type::Boolean)
+            .build()
+            .new_field("report.analysis.store")
+            .label("Store duration")
+            .help(concat!(
+                "The duration for which reports should be stored before being ",
+                "deleted, of None to disable storage"
+            ))
+            .default("30d")
+            .typ(Type::Duration)
+            .build()
+            .new_form_section()
+            .title("Inbound Report Analysis")
+            .fields([
+                "report.analysis.addresses",
+                "report.analysis.store",
+                "report.analysis.forward",
+            ])
+            .build()
+            .build()
+            // Outbound Report Settings
+            .new_schema("report-outbound")
+            .new_field("report.domain")
+            .label("Default Domain")
+            .help(concat!(
+                "The default domain name used for DSNs and other reports. ",
+                "If left empty, the server hostname's domain will be used."
+            ))
+            .placeholder("example.com")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::IsDomain])
+            .build()
+            .new_field("report.submitter")
+            .label("Submitter")
+            .help(concat!(
+                "Report submitter address or leave empty to use the default hostname"
+            ))
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [Validator::IsValidExpression(ExpressionValidator::new(
+                    RCPT_DOMAIN_VARS,
+                    &[],
+                ))],
+            )
+            .default("config_get('server.hostname')")
+            .build()
+            .new_form_section()
+            .title("Outbound Report Settings")
+            .fields(["report.domain", "report.submitter"])
+            .build()
+            .build()
+            // DSN Reports
+            .new_schema("report-dsn")
+            .new_field("report.dsn.from-name")
+            .label("From Name")
+            .help(concat!(
+                "Name that will be used in the From header of Delivery Status ",
+                "Notifications (DSN) reports"
+            ))
+            .default("'Mail Delivery Subsystem'")
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(sender_vars),
+                ],
+            )
+            .new_field("report.dsn.from-address")
+            .label("From Address")
+            .help(concat!(
+                "Email address that will be used in the From header of ",
+                "Delivery Status Notifications (DSN) reports"
+            ))
+            .default("'MAILER-DAEMON@' + config_get('report.domain')")
+            .new_field("report.dsn.sign")
+            .label("Signature")
+            .help(concat!(
+                "List of DKIM signatures to use when signing Delivery Status ",
+                "Notifications"
+            ))
+            .default(
+                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
+            )
+            .build()
+            .new_form_section()
+            .title("Delivery Status Notifications (DSN)")
+            .fields([
+                "report.dsn.from-name",
+                "report.dsn.from-address",
+                "report.dsn.sign",
+            ])
+            .build()
+            .build()
+            // TLS Reporting
+            .new_schema("report-tls")
+            .new_field("report.tls.aggregate.from-name")
+            .label("From Name")
+            .help(concat!(
+                "Name that will be used in the From header of the TLS ",
+                "aggregate report email"
+            ))
+            .default("'Report Subsystem'")
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(sender_vars),
+                ],
+            )
+            .new_field("report.tls.aggregate.from-address")
+            .label("From Address")
+            .help(concat!(
+                "Email address that will be used in the From header of ",
+                "the TLS aggregate report email"
+            ))
+            .default("'noreply-tls@' + config_get('report.domain')")
+            .new_field("report.tls.aggregate.subject")
+            .label("Subject")
+            .help(concat!(
+                "Subject name that will be used in the TLS aggregate report email"
+            ))
+            .default("'TLS Aggregate Report'")
+            .new_field("report.tls.aggregate.sign")
+            .label("Signature")
+            .help(concat!(
+                "List of DKIM signatures to use when signing the TLS ",
+                "aggregate report"
+            ))
+            .default(
+                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
+            )
+            .new_field("report.tls.aggregate.org-name")
+            .label("Organization")
+            .help(concat!(
+                "Name of the organization to be included in the report"
+            ))
+            .default("config_get('report.domain')")
+            .new_field("report.tls.aggregate.contact-info")
+            .label("Contact")
+            .help(concat!("Contact information to be included in the report"))
+            .default("")
+            .new_field("report.tls.aggregate.max-size")
+            .label("Max Report Size")
+            .help(concat!("Maximum size of the TLS aggregate report in bytes"))
+            .default("26214400")
+            .new_field("report.tls.aggregate.send")
+            .label("Frequency")
+            .help(concat!(
+                "Frequency at which the TLS aggregate reports will be sent. The options ",
+                "are hourly, daily, weekly, or never to disable reporting"
+            ))
+            .default("daily")
+            .input_check(
+                [],
+                [
+                    Validator::Required,
+                    Validator::IsValidExpression(sender_vars.constants(AGGREGATE_FREQ_CONSTANTS)),
+                ],
+            )
+            .build()
+            .new_form_section()
+            .title("TLS Aggregate Reporting")
+            .fields([
+                "report.tls.aggregate.from-name",
+                "report.tls.aggregate.from-address",
+                "report.tls.aggregate.subject",
+                "report.tls.aggregate.sign",
+                "report.tls.aggregate.org-name",
+                "report.tls.aggregate.contact-info",
+                "report.tls.aggregate.max-size",
+                "report.tls.aggregate.send",
+            ])
+            .build()
+            .build()
+            // DKIM Reports
+            .new_schema("report-dkim")
+            .new_field("report.dkim.from-name")
+            .typ(Type::Expression)
+            .input_check(
+                [],
+                [Validator::Required, Validator::IsValidExpression(rcpt_vars)],
+            )
+            .label("From Name")
+            .help(concat!(
+                "Name that will be used in the From header of the DKIM ",
+                "report email"
+            ))
+            .default("'Report Subsystem'")
+            .new_field("report.dkim.from-address")
+            .label("From Address")
+            .help(concat!(
+                "Email address that will be used in the From header of ",
+                "the DKIM report email"
+            ))
+            .default("'noreply-dkim@' + config_get('report.domain')")
+            .new_field("report.dkim.subject")
+            .label("Subject")
+            .help(concat!(
+                "Subject name that will be used in the DKIM report email"
+            ))
+            .default("'DKIM Authentication Failure Report'")
+            .new_field("report.dkim.sign")
+            .label("Signature")
+            .help(concat!(
+                "List of DKIM signatures to use when signing the DKIM ",
+                "report"
+            ))
+            .default(
+                "['rsa-' + config_get('report.domain'), 'ed25519-' + config_get('report.domain')]",
+            )
+            .new_field("report.dkim.send")
+            .label("Send rate")
+            .help(concat!(
+                "Rate at which DKIM reports will be sent to a given email ",
+                "address. When this rate is exceeded, no further DKIM failure reports",
+                " will be sent to that address"
+            ))
+            .default("[1, 1d]")
+            .build()
+            .new_form_section()
+            .title("DKIM Reporting")
+            .fields([
+                "report.dkim.from-name",
+                "report.dkim.from-address",
+                "report.dkim.subject",
+                "report.dkim.sign",
+                "report.dkim.send",
+            ])
+            .build()
+            .build()
+            // SPF Reports
+            .new_schema("report-spf")
             .new_field("report.spf.from-name")
             .label("From Name")
             .help(concat!(
@@ -366,10 +607,6 @@ impl Builder<Schemas, ()> {
             .default("[1, 1d]")
             .build()
             .new_form_section()
-            .title("SPF Verification")
-            .fields(["auth.spf.verify.ehlo", "auth.spf.verify.mail-from"])
-            .build()
-            .new_form_section()
             .title("SPF Authentication Failure Reporting")
             .fields([
                 "report.spf.from-name",
@@ -380,17 +617,9 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
-            // DMARC Settings
-            .new_schema("dmarc")
-            .new_field("auth.dmarc.verify")
-            .label("Strategy")
-            .help(concat!(
-                "Whether DMARC verification is strict, relaxed or disabled"
-            ))
-            .default(Expression::new(
-                [("local_port == 25", "relaxed")],
-                "disable",
-            ))
+            // DMARC Reports
+            .new_schema("report-dmarc")
+            .new_field("report.dmarc.from-name")
             .typ(Type::Expression)
             .input_check(
                 [],
@@ -399,7 +628,6 @@ impl Builder<Schemas, ()> {
                     Validator::IsValidExpression(rcpt_vars.constants(VERIFY_CONSTANTS)),
                 ],
             )
-            .new_field("report.dmarc.from-name")
             .label("From Name")
             .help(concat!(
                 "Name that will be used in the From header of the DMARC ",
@@ -504,10 +732,6 @@ impl Builder<Schemas, ()> {
             )
             .build()
             .new_form_section()
-            .title("DMARC Verification")
-            .fields(["auth.dmarc.verify"])
-            .build()
-            .new_form_section()
             .title("DMARC Authentication Failure Reporting")
             .fields([
                 "report.dmarc.from-name",
@@ -529,72 +753,6 @@ impl Builder<Schemas, ()> {
                 "report.dmarc.aggregate.max-size",
                 "report.dmarc.aggregate.send",
             ])
-            .build()
-            .build()
-            // Reporting
-            .new_schema("report")
-            .new_field("report.domain")
-            .label("Default Domain")
-            .help(concat!(
-                "The default domain name used for DSNs and other reports. ",
-                "If left empty, the server hostname's domain will be used."
-            ))
-            .placeholder("example.com")
-            .input_check([Transformer::Trim], [Validator::IsDomain])
-            .build()
-            .new_field("report.analysis.addresses")
-            .label("Report Addresses")
-            .help(concat!(
-                "List of addresses (which may include wildcards) from which ",
-                "reports will be intercepted and analyzed"
-            ))
-            .typ(Type::Array)
-            .input_check([Transformer::Trim], [])
-            .build()
-            .new_field("report.analysis.forward")
-            .label("Forward")
-            .help(concat!(
-                "Whether reports should be forwarded to their final recipient ",
-                "after analysis"
-            ))
-            .default("true")
-            .typ(Type::Boolean)
-            .build()
-            .new_field("report.analysis.store")
-            .label("Store duration")
-            .help(concat!(
-                "The duration for which reports should be stored before being ",
-                "deleted, of None to disable storage"
-            ))
-            .default("30d")
-            .typ(Type::Duration)
-            .build()
-            .new_field("report.submitter")
-            .label("Submitter")
-            .help(concat!(
-                "Report submitter address or leave empty to use the default hostname"
-            ))
-            .typ(Type::Expression)
-            .input_check(
-                [],
-                [Validator::IsValidExpression(ExpressionValidator::new(
-                    RCPT_DOMAIN_VARS,
-                    &[],
-                ))],
-            )
-            .default("config_get('server.hostname')")
-            .build()
-            .new_form_section()
-            .title("Inbound Report Analysis")
-            .fields([
-                "report.analysis.addresses",
-                "report.analysis.store",
-                "report.analysis.forward",
-            ])
-            .build()
-            .new_form_section()
-            .title("Outbound Report Settings")
-            .fields(["report.domain", "report.submitter"])
             .build()
             .build()
     }

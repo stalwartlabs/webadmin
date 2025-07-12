@@ -5,7 +5,6 @@
  */
 
 use std::sync::Arc;
-
 use ahash::AHashMap;
 use leptos::*;
 use leptos_router::{use_navigate, use_params_map};
@@ -14,16 +13,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     components::{
         form::{
-            button::Button,
-            expression::InputExpression,
-            input::{
+            button::Button, expression::InputExpression, input::{
                 InputDuration, InputPassword, InputRate, InputSize, InputSwitch, InputText,
                 TextArea,
-            },
-            select::{CheckboxGroup, Select, SelectCron},
-            stacked_badge::StackedBadge,
-            stacked_input::StackedInput,
-            Form, FormButtonBar, FormElement, FormItem, FormSection,
+            }, select::{CheckboxGroup, Select, SelectCron}, stacked_badge::StackedBadge, stacked_duration::StackedDuration, stacked_input::StackedInput, Form, FormButtonBar, FormElement, FormItem, FormSection
         },
         icon::IconRefresh,
         messages::{
@@ -37,7 +30,7 @@ use crate::{
         form::{ExternalSources, FormData},
         http::{self, HttpRequest},
         oauth::use_authorization,
-        schema::SelectType,
+        schema::{ArrayType, SelectType},
     },
     pages::{
         config::{ReloadSettings, Schema, SchemaType, Schemas, Settings, Type, UpdateSettings},
@@ -392,7 +385,7 @@ pub fn SettingsEdit() -> impl IntoView {
                                                     }
                                                         .into_view()
                                                 }
-                                                Type::Array => {
+                                                Type::Array(ArrayType::Text) => {
                                                     view! {
                                                         <StackedInput
                                                             add_button_text="Add".to_string()
@@ -403,6 +396,15 @@ pub fn SettingsEdit() -> impl IntoView {
                                                                     .unwrap_or_default()
                                                                     .to_string()
                                                             })
+                                                        />
+                                                    }
+                                                        .into_view()
+                                                }
+                                                Type::Array(ArrayType::Duration) => {
+                                                    view! {
+                                                        <StackedDuration
+                                                            add_button_text="Add".to_string()
+                                                            element=FormElement::new(field.id, data)
                                                         />
                                                     }
                                                         .into_view()

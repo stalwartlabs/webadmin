@@ -41,7 +41,7 @@ impl Builder<Schemas, ()> {
             .build()
             // Domains
             .new_field("domains")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [Validator::Required])
             .label("Subject names")
             .help("Hostnames covered by this ACME manager")
@@ -62,7 +62,7 @@ impl Builder<Schemas, ()> {
                 "the contact email address, which is used for important ",
                 "communications regarding your ACME account and certificates"
             ))
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check(
                 [Transformer::Trim],
                 [Validator::Required, Validator::IsEmail],
@@ -294,7 +294,7 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_field("subjects")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [Validator::IsDomain])
             .label("Subject Alternative Names")
             .help("Subject Alternative Names (SAN) for the certificate")

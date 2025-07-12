@@ -68,7 +68,7 @@ impl Builder<Schemas, ()> {
             .new_field("http.headers")
             .label("Response headers")
             .help("Additional headers to include in HTTP responses")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [])
             .build()
             .new_form_section()
@@ -155,7 +155,7 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "List of local e-mail addresses to deliver the contact form to.",
             ))
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [Validator::IsEmail])
             .build()
             .new_field("form.email.field")

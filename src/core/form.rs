@@ -498,7 +498,7 @@ impl FormData {
                             }
                         }
                     }
-                    Type::Array
+                    Type::Array(_)
                     | Type::Select {
                         typ: SelectType::Many | SelectType::ManyWithSearch,
                         ..
@@ -682,7 +682,7 @@ impl FormData {
                             data.set(field.id, value);
                         }
                     }
-                    Type::Array
+                    Type::Array(_)
                     | Type::Select {
                         typ: SelectType::Many | SelectType::ManyWithSearch,
                         ..

@@ -29,7 +29,7 @@ use crate::{
     core::{
         http::{Error, HttpRequest},
         oauth::use_authorization,
-        schema::{Builder, Schemas, SelectType, Source, Transformer, Type, Validator},
+        schema::{ArrayType, Builder, Schemas, SelectType, Source, Transformer, Type, Validator},
         url::UrlBuilder,
     },
 };
@@ -335,7 +335,7 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [])
             .build()
             .new_field("env_to")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [Validator::Required])
             .build()
             .new_field("env_from_flags")

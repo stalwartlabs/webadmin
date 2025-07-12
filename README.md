@@ -5,7 +5,7 @@
 </p>
 
 <h3 align="center">
-  Web-based Administration Interface for Stalwart Mail Server 🛡️
+  Web-based Administration Interface for Stalwart 🛡️
 </h3>
 
 <br>
@@ -30,7 +30,7 @@
 
 ## Features
 
-**Stalwart Webadmin** is an web-based management tool for Stalwart Mail Server. It is written in Rust using the [Leptos](https://github.com/leptos-rs/leptos) web framework.
+**Stalwart Webadmin** is an web-based management tool for Stalwart Mail and Collaboration Server. It is written in Rust using the [Leptos](https://github.com/leptos-rs/leptos) web framework.
 
 Key features:
 

@@ -9,6 +9,7 @@ pub mod expression;
 pub mod input;
 pub mod select;
 pub mod stacked_badge;
+pub mod stacked_duration;
 pub mod stacked_input;
 pub mod tab;
 

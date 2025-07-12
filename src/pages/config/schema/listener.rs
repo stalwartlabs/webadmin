@@ -39,7 +39,7 @@ impl Builder<Schemas, ()> {
             .new_field("bind")
             .label("Bind addresses")
             .help("The addresses the listener will bind to")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check(
                 [Transformer::Trim],
                 [Validator::Required, Validator::IsSocketAddr],

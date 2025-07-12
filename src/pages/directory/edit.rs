@@ -34,7 +34,7 @@ use crate::{
         form::FormData,
         http::{self, HttpRequest},
         oauth::use_authorization,
-        schema::{Builder, Schemas, Transformer, Type, Validator},
+        schema::{ArrayType, Builder, Schemas, Transformer, Type, Validator},
         Permission,
     },
     pages::{
@@ -1266,21 +1266,21 @@ impl Builder<Schemas, ()> {
             )
             .build()
             .new_field("aliases")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check(
                 [Transformer::Trim, Transformer::Lowercase],
                 [Validator::IsEmail],
             )
             .build()
             .new_field("external-members")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check(
                 [Transformer::Trim, Transformer::Lowercase],
                 [Validator::IsEmail],
             )
             .build()
             .new_field("urls")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [Validator::IsUrl])
             .build()
             .new_field("description")

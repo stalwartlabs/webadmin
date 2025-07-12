@@ -161,7 +161,7 @@ impl Builder<Schemas, ()> {
             .build()
             // OT Headers
             .new_field("headers")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .label("HTTP Headers")
             .help("The headers to be sent with OpenTelemetry requests")
             .display_if_eq("transport", ["http"])
@@ -305,7 +305,7 @@ impl Builder<Schemas, ()> {
             .build()
             // OT Headers
             .new_field("metrics.open-telemetry.headers")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .label("HTTP Headers")
             .help("The headers to be sent with OpenTelemetry requests")
             .display_if_eq("metrics.open-telemetry.transport", ["http"])
@@ -579,7 +579,7 @@ impl Builder<Schemas, ()> {
             .build()
             // To
             .new_field("notify.email.to")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .label("To")
             .help("The email address of the recipient(s)")
             .placeholder("recipient@example.com")

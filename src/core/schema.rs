@@ -23,7 +23,7 @@ pub struct Builder<P, I> {
 #[derive(Clone, Default, Debug)]
 pub enum Type<S, F> {
     Input,
-    Array,
+    Array(ArrayType),
     Secret,
     Text,
     #[default]
@@ -37,6 +37,13 @@ pub enum Type<S, F> {
     Rate,
     Size,
     Cron,
+}
+
+#[derive(Clone, Copy, Default, Debug)]
+pub enum ArrayType {
+    #[default]
+    Text,
+    Duration,
 }
 
 #[derive(Clone, Copy, Default, Debug)]
@@ -337,7 +344,7 @@ impl Field {
     pub fn is_multivalue(&self) -> bool {
         matches!(
             self.typ_,
-            Type::Array
+            Type::Array(_)
                 | Type::Expression
                 | Type::Select {
                     typ: SelectType::Many | SelectType::ManyWithSearch,
@@ -981,7 +988,7 @@ impl From<Type<&'static str, &'static str>> for Type<Arc<Schema>, Arc<Field>> {
             Type::Duration => Type::Duration,
             Type::Expression => Type::Expression,
             Type::Input => Type::Input,
-            Type::Array => Type::Array,
+            Type::Array(t) => Type::Array(t),
             Type::Secret => Type::Secret,
             Type::Text => Type::Text,
             Type::Size => Type::Size,

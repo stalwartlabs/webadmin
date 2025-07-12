@@ -18,14 +18,14 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "List of capabilities to disable in the untrusted interpreter"
             ))
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [])
             .build()
             .new_field("sieve.untrusted.notification-uris")
             .label("Notification URIs")
             .help(concat!("List of allowed URIs for the notify extension"))
             .default("mailto")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [])
             .build()
             .new_field("sieve.untrusted.protected-headers")
@@ -41,7 +41,7 @@ impl Builder<Schemas, ()> {
                     "Auto-Submitted",
                 ][..],
             )
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [])
             .build()
             .new_field("sieve.untrusted.vacation.default-subject")

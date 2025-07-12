@@ -50,6 +50,12 @@ pub const V_URL: &str = "url";
 pub const V_URL_PATH: &str = "url_path";
 pub const V_HEADERS: &str = "headers";
 pub const V_METHOD: &str = "method";
+pub const V_QUEUE_NAME: &str = "queue_name";
+pub const V_QUEUE_AGE: &str = "queue_age";
+pub const V_RECEIVED_FROM_IP: &str = "received_from_ip";
+pub const V_RECEIVED_VIA_PORT: &str = "received_via_port";
+pub const V_SOURCE: &str = "source";
+pub const V_SIZE: &str = "size";
 
 pub const CONNECTION_VARS: &[&str] = &[
     V_LISTENER,
@@ -136,8 +142,15 @@ pub const SMTP_QUEUE_HOST_VARS: &[&str] = &[
     V_QUEUE_EXPIRES_IN,
     V_QUEUE_LAST_STATUS,
     V_QUEUE_LAST_ERROR,
+    V_QUEUE_NAME,
+    V_QUEUE_AGE,
+    V_RECEIVED_FROM_IP,
+    V_RECEIVED_VIA_PORT,
+    V_SOURCE,
+    V_SIZE,
 ];
 pub const SMTP_QUEUE_RCPT_VARS: &[&str] = &[
+    V_RECIPIENT,
     V_RECIPIENT_DOMAIN,
     V_RECIPIENTS,
     V_SENDER,
@@ -148,24 +161,17 @@ pub const SMTP_QUEUE_RCPT_VARS: &[&str] = &[
     V_QUEUE_EXPIRES_IN,
     V_QUEUE_LAST_STATUS,
     V_QUEUE_LAST_ERROR,
+    V_QUEUE_NAME,
+    V_QUEUE_AGE,
+    V_RECEIVED_FROM_IP,
+    V_RECEIVED_VIA_PORT,
+    V_SOURCE,
+    V_SIZE,
 ];
 pub const SMTP_QUEUE_SENDER_VARS: &[&str] = &[
     V_SENDER,
     V_SENDER_DOMAIN,
     V_PRIORITY,
-    V_QUEUE_RETRY_NUM,
-    V_QUEUE_NOTIFY_NUM,
-    V_QUEUE_EXPIRES_IN,
-    V_QUEUE_LAST_STATUS,
-    V_QUEUE_LAST_ERROR,
-];
-pub const SMTP_QUEUE_MX_VARS: &[&str] = &[
-    V_RECIPIENT_DOMAIN,
-    V_RECIPIENTS,
-    V_SENDER,
-    V_SENDER_DOMAIN,
-    V_PRIORITY,
-    V_MX,
     V_QUEUE_RETRY_NUM,
     V_QUEUE_NOTIFY_NUM,
     V_QUEUE_EXPIRES_IN,

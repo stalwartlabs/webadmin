@@ -69,7 +69,7 @@ impl Builder<Schemas, ()> {
                 "All other keys will be stored in the database. If left blank ",
                 "the default settings will be used (check the documentation for more info)"
             ))
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [Validator::Required])
             .default(
                 &[
@@ -299,7 +299,7 @@ impl Builder<Schemas, ()> {
                 "The paths that will trigger an immediate ban if accessed. ",
                 "Each path should be a glob expression"
             ))
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [])
             .default(
                 &[
@@ -367,7 +367,7 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "List of node ids that are responsible for purging stores"
             ))
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .input_check(
                 [Transformer::Trim],
                 [
@@ -467,7 +467,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Secret)
             .build()
             .new_field("headers")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .label("HTTP Headers")
             .help("The headers to be sent with webhook requests")
             .build()
@@ -604,7 +604,7 @@ impl Builder<Schemas, ()> {
             .enterprise_feature()
             .build()
             .new_field("headers")
-            .typ(Type::Array)
+            .typ(Type::Array(ArrayType::Text))
             .label("HTTP Headers")
             .help("The headers to be sent with requests")
             .enterprise_feature()
@@ -680,7 +680,7 @@ impl Builder<Schemas, Schema> {
         })
         .label("Proxy networks")
         .help("Enable proxy protocol for connections from these networks")
-        .typ(Type::Array)
+        .typ(Type::Array(ArrayType::Text))
         .input_check([Transformer::Trim], [Validator::IsIpOrMask])
         .display_if_eq("proxy.override", do_override.iter().copied())
         .build()
