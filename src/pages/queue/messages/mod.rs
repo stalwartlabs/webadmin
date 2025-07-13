@@ -14,7 +14,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 pub struct Message {
     pub id: u64,
     pub return_path: String,
-    pub domains: Vec<Domain>,
+    pub recipients: Vec<Recipient>,
     #[serde(deserialize_with = "deserialize_datetime")]
     pub created: DateTime<Utc>,
     pub size: usize,
@@ -25,24 +25,17 @@ pub struct Message {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Domain {
-    pub name: String,
+pub struct Recipient {
+    pub address: String,
     pub status: Status,
-    pub recipients: Vec<Recipient>,
-
+    pub queue: String,
     pub retry_num: u32,
     #[serde(deserialize_with = "deserialize_maybe_datetime")]
     pub next_retry: Option<DateTime<Utc>>,
     #[serde(deserialize_with = "deserialize_maybe_datetime")]
     pub next_notify: Option<DateTime<Utc>>,
-    #[serde(deserialize_with = "deserialize_datetime")]
-    pub expires: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Recipient {
-    pub address: String,
-    pub status: Status,
+    #[serde(deserialize_with = "deserialize_maybe_datetime")]
+    pub expires: Option<DateTime<Utc>>,
     pub orcpt: Option<String>,
 }
 
@@ -70,19 +63,19 @@ impl Message {
     pub fn next_retry(&self) -> Option<DateTime<Utc>> {
         let mut next_event = None;
 
-        for (pos, domain) in self
-            .domains
+        for (pos, recipient) in self
+            .recipients
             .iter()
             .filter(|d| matches!(d.status, Status::Scheduled | Status::TemporaryFailure(_)))
             .enumerate()
         {
             if pos == 0
-                || domain
+                || recipient
                     .next_retry
                     .as_ref()
                     .is_some_and(|next_retry| next_retry < &next_event.unwrap())
             {
-                next_event = domain.next_retry;
+                next_event = recipient.next_retry;
             }
         }
 
@@ -92,19 +85,19 @@ impl Message {
     pub fn next_dsn(&self) -> Option<DateTime<Utc>> {
         let mut next_event = None;
 
-        for (pos, domain) in self
-            .domains
+        for (pos, recipient) in self
+            .recipients
             .iter()
             .filter(|d| matches!(d.status, Status::Scheduled | Status::TemporaryFailure(_)))
             .enumerate()
         {
             if pos == 0
-                || domain
+                || recipient
                     .next_notify
                     .as_ref()
                     .is_some_and(|next_notify| next_notify < &next_event.unwrap())
             {
-                next_event = domain.next_notify;
+                next_event = recipient.next_notify;
             }
         }
 
@@ -114,14 +107,19 @@ impl Message {
     pub fn expires(&self) -> Option<DateTime<Utc>> {
         let mut next_event = None;
 
-        for (pos, domain) in self
-            .domains
+        for recipient in self
+            .recipients
             .iter()
             .filter(|d| matches!(d.status, Status::Scheduled | Status::TemporaryFailure(_)))
-            .enumerate()
         {
-            if pos == 0 || domain.expires > next_event.unwrap() {
-                next_event = domain.expires.into();
+            if let Some(expires) = recipient.expires {
+                if let Some(next_event) = &mut next_event {
+                    if expires < *next_event {
+                        *next_event = expires;
+                    }
+                } else {
+                    next_event = Some(expires);
+                }
             }
         }
 

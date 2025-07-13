@@ -206,29 +206,11 @@ pub fn QueueManage() -> impl IntoView {
                 Some(Ok(message)) => {
                     blob_hash.set(message.blob_hash.clone());
                     let return_path = message.return_path().to_string();
-                    let num_recipients = message
-                        .domains
-                        .iter()
-                        .map(|d| d.recipients.len())
-                        .sum::<usize>();
-                    let num_domains = message.domains.len();
+                    let num_recipients = message.recipients.len();
                     let next_retry = message.next_retry();
                     let next_dsn = message.next_dsn();
                     let expires = message.expires();
-                    let recipients = message
-                        .clone()
-                        .domains
-                        .into_iter()
-                        .flat_map(|d| {
-                            d.recipients
-                                .into_iter()
-                                .map(move |mut r| {
-                                    if r.status == Status::Scheduled {
-                                        r.status = d.status.clone();
-                                    }
-                                    (r, d.next_retry)
-                                })
-                        });
+                    let recipients = message.recipients;
                     Some(
                         view! {
                             <Card>
@@ -355,23 +337,7 @@ pub fn QueueManage() -> impl IntoView {
                                                         retry_action.dispatch(vec!["".to_string()]);
                                                     }
                                                     ItemSelection::Some(rcpts) => {
-                                                        let mut domains = Vec::<String>::new();
-                                                        for rcpt in rcpts {
-                                                            if let Some((_, domain)) = rcpt.split_once('@') {
-                                                                let domain = domain.to_string();
-                                                                if !domains.contains(&domain) {
-                                                                    domains.push(domain);
-                                                                }
-                                                            }
-                                                        }
-                                                        retry_action
-                                                            .dispatch(
-                                                                if domains.len() != num_domains {
-                                                                    domains
-                                                                } else {
-                                                                    vec!["".to_string()]
-                                                                },
-                                                            );
+                                                        retry_action.dispatch(rcpts.into_iter().collect());
                                                     }
                                                     ItemSelection::None => {}
                                                 }
@@ -443,6 +409,7 @@ pub fn QueueManage() -> impl IntoView {
                                     <ColumnList
                                         headers=vec![
                                             "Recipient".to_string(),
+                                            "Queue".to_string(),
                                             "Status".to_string(),
                                             "Server Response".to_string(),
                                             "Next/Last Retry".to_string(),
@@ -454,8 +421,8 @@ pub fn QueueManage() -> impl IntoView {
                                         <For
                                             each=move || { recipients.clone() }
 
-                                            key=|(recipient, _)| recipient.address.clone()
-                                            children=move |(recipient, next_retry)| {
+                                            key=|recipient| recipient.address.clone()
+                                            children=move |recipient| {
                                                 let item_id = recipient.address.clone();
                                                 let mut status_details = recipient
                                                     .status
@@ -515,6 +482,8 @@ pub fn QueueManage() -> impl IntoView {
                                                                 </div>
                                                             </div>
                                                         </ListItem>
+
+                                                        <ListTextItem>{recipient.queue}</ListTextItem>
 
                                                         <ListItem>{display_status}</ListItem>
 

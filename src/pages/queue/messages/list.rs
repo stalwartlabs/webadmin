@@ -386,7 +386,7 @@ pub fn QueueList() -> impl IntoView {
                                             "Envelope".to_string(),
                                             "Status".to_string(),
                                             "Next Retry".to_string(),
-                                            "Next DSN".to_string(),
+                                            "Queue".to_string(),
                                             "".to_string(),
                                         ]
 
@@ -453,32 +453,30 @@ fn QueueItem(message: Message) -> impl IntoView {
     let mut total_failed = 0;
     let mut total_recipients = 0;
     let mut first_recipient = "";
+    let mut queues = Vec::new();
 
-    for domain in &message.domains {
-        for rcpt in &domain.recipients {
-            match &rcpt.status {
-                Status::Completed(_) => total_success += 1,
-                Status::TemporaryFailure(_) => total_pending += 1,
-                Status::PermanentFailure(_) => total_failed += 1,
-                Status::Scheduled => match domain.status {
-                    Status::Scheduled | Status::TemporaryFailure(_) => total_pending += 1,
-                    Status::PermanentFailure(_) => total_failed += 1,
-                    _ => {}
-                },
-            }
+    for rcpt in &message.recipients {
+        match &rcpt.status {
+            Status::Completed(_) => total_success += 1,
+            Status::TemporaryFailure(_) | Status::Scheduled => total_pending += 1,
+            Status::PermanentFailure(_) => total_failed += 1,
+        }
 
-            if first_recipient.is_empty() {
-                first_recipient = rcpt.address.as_str();
-            } else {
-                total_recipients += 1;
-            }
+        if first_recipient.is_empty() {
+            first_recipient = rcpt.address.as_str();
+        } else {
+            total_recipients += 1;
+        }
+        if !queues.contains(&rcpt.queue) {
+            queues.push(rcpt.queue.clone());
         }
     }
+    queues.sort_unstable();
 
     let next_retry = message
         .next_retry()
         .map(|dt| HumanTime::from(dt).to_string());
-    let next_dsn = message.next_dsn().map(|dt| HumanTime::from(dt).to_string());
+    let queues = queues.join(", ");
     let return_path = message.return_path().to_string();
     let recipients = if total_recipients > 0 {
         format!("{first_recipient} and {total_recipients} more",)
@@ -529,7 +527,7 @@ fn QueueItem(message: Message) -> impl IntoView {
             </ListItem>
 
             <ListItem>
-                <span class="text-sm text-gray-500">{next_dsn}</span>
+                <span class="text-sm text-gray-500">{queues}</span>
             </ListItem>
 
             <ListItem subclass="px-6 py-1.5">

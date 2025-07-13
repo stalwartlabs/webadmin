@@ -446,9 +446,7 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "List of delayed delivery DSN notification intervals"
             ))
-            .default(&["1d", "3d"][..])
             .typ(Type::Array(ArrayType::Duration))
-            .input_check([], [Validator::Required])
             .build()
             .new_field("expire-type")
             .label("Expiration Strategy")
@@ -626,7 +624,7 @@ impl Builder<Schemas, ()> {
                 "connecting to remote SMTP servers"
             ))
             .typ(Type::Input)
-            .input_check([], [Validator::Required, Validator::IsHost])
+            .input_check([], [Validator::IsHost])
             .placeholder("mail.example.com")
             .build()
             .new_field("timeout.connect")
