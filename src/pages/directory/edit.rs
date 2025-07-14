@@ -91,7 +91,9 @@ pub fn PrincipalEdit() -> impl IntoView {
         .permissions()
         .has_access(Permission::TenantList);
     let principals: RwSignal<Arc<PrincipalMap>> = create_rw_signal(Arc::new(AHashMap::new()));
-
+    let data = expect_context::<Arc<Schemas>>()
+        .build_form("principals")
+        .into_signal();
     let fetch_principal = create_resource(
         move || params.get().get("id").cloned().unwrap_or_default(),
         move |name| {
@@ -171,13 +173,17 @@ pub fn PrincipalEdit() -> impl IntoView {
                             ]);
                         }
                         PrincipalType::ApiKey => {
-                            principal.secrets = PrincipalValue::StringList(vec![thread_rng()
+                            let api_key = thread_rng()
                                 .sample_iter(Alphanumeric)
                                 .take(30)
                                 .map(char::from)
-                                .collect::<String>()]);
+                                .collect::<String>();
+                            data.update(|data| {
+                                data.set("api_secret", &api_key);
+                            });
+                            principal.secrets = PrincipalValue::StringList(vec![api_key.clone()]);
                             principal.enabled_permissions =
-                                PrincipalValue::StringList(vec!["authenticate".to_string()]);
+                                PrincipalValue::StringList(vec!["authenticate".to_string(), "authenticate-oauth".to_string()]);
                         }
                         _ => {}
                     }
@@ -231,9 +237,7 @@ pub fn PrincipalEdit() -> impl IntoView {
     );
     let (pending, set_pending) = create_signal(false);
     let current_principal = create_rw_signal(Principal::default());
-    let data = expect_context::<Arc<Schemas>>()
-        .build_form("principals")
-        .into_signal();
+
 
     let save_changes = create_action(move |changes: &Principal| {
         let current = current_principal.get();
@@ -642,7 +646,7 @@ pub fn PrincipalEdit() -> impl IntoView {
 
                                         <FormItem
                                             stacked=true
-                                            label="Key"
+                                            label="Bearer Token"
 
                                             hide=Signal::derive(move || {
                                                 !matches!(selected_type.get(), PrincipalType::ApiKey)
@@ -656,14 +660,15 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                     let secret = data
                                                         .value::<String>("api_secret")
                                                         .unwrap_or_default();
-                                                    (!name.is_empty() && !secret.is_empty())
-                                                        .then(|| {
-                                                            format!(
-                                                                "api_{}",
-                                                                general_purpose::STANDARD
-                                                                    .encode(format!("{}:{}", name, secret).as_bytes()),
-                                                            )
-                                                        })
+                                                    if !name.is_empty() && !secret.is_empty() {
+                                                        format!(
+                                                            "api_{}",
+                                                            general_purpose::STANDARD
+                                                                .encode(format!("{}:{}", name, secret).as_bytes()),
+                                                        )
+                                                    } else {
+                                                        "N/A".to_string()
+                                                    }
                                                 }}
 
                                             </span>
@@ -1155,9 +1160,7 @@ impl FormData {
                 app_passwords.push(app);
             } else if secret.is_otp_auth() {
                 self.set("otpauth_url", secret);
-            } else if default_type == PrincipalType::ApiKey {
-                self.set("api_secret", secret);
-            }
+            } 
         }
         if !app_passwords.is_empty() {
             self.array_set("app_passwords", app_passwords);
@@ -1173,7 +1176,7 @@ impl FormData {
             if let Some(password) = self.value::<String>("password") {
                 secrets.push(sha512_crypt::hash(password).unwrap());
             } else if let Some(password) = self.value::<String>("api_secret") {
-                secrets.push(password);
+                secrets.push(sha512_crypt::hash(password).unwrap());
             }
 
             if let Some(otpauth_url) = self.value::<String>("otpauth_url") {
