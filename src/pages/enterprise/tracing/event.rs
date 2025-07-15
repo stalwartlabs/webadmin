@@ -84,6 +84,7 @@ pub enum Key {
     Path,
     Policy,
     QueueId,
+    QueueName,
     RangeFrom,
     RangeTo,
     Reason,

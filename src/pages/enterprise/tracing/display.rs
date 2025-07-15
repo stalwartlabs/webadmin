@@ -284,6 +284,7 @@ fn format_kv(key: Key, value: Value) -> View {
         Key::Path => "Path",
         Key::Policy => "Policy",
         Key::QueueId => "Queue ID",
+        Key::QueueName => "Queue Name",
         Key::RangeFrom => "Range from",
         Key::RangeTo => "Range to",
         Key::Reason => "Reason",
