@@ -116,6 +116,7 @@ impl Builder<Schemas, ()> {
                 source: Source::Static(&[
                     ("rfc2136-tsig", "RFC2136"),
                     ("cloudflare", "Cloudflare"),
+                    ("digitalocean", "DigitalOcean"),
                 ]),
                 typ: SelectType::Single,
             })
@@ -131,14 +132,14 @@ impl Builder<Schemas, ()> {
             .label("Secret")
             .help("The TSIG secret or token used to authenticate with the DNS provider")
             .input_check([], [Validator::Required])
-            .display_if_eq("challenge", ["dns-01"])
+            .display_if_eq("challenge", ["dns-01", "digitalocean"])
             .build()
             // Request timeout (DNS-01)
             .new_field("timeout")
             .typ(Type::Duration)
             .label("Timeout")
             .help("Request timeout for the DNS provider")
-            .display_if_eq("provider", ["cloudflare"])
+            .display_if_eq("provider", ["cloudflare", "digitalocean"])
             .input_check([], [Validator::Required])
             .default("30s")
             .build()

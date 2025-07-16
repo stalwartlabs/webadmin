@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.30] - 2025-07-15
+
+## Added
+- ACME DigitalOcean provider.
+
+### Changed
+
+### Fixed
+- Queue serialization error.
+
 ## [0.1.29] - 2025-07-15
 
 ## Added

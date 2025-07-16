@@ -20,6 +20,7 @@ pub struct Message {
     pub size: usize,
     #[serde(default)]
     pub priority: i16,
+    #[serde(default)]
     pub env_id: Option<String>,
     pub blob_hash: String,
 }
@@ -30,12 +31,13 @@ pub struct Recipient {
     pub status: Status,
     pub queue: String,
     pub retry_num: u32,
-    #[serde(deserialize_with = "deserialize_maybe_datetime")]
+    #[serde(deserialize_with = "deserialize_maybe_datetime", default)]
     pub next_retry: Option<DateTime<Utc>>,
-    #[serde(deserialize_with = "deserialize_maybe_datetime")]
+    #[serde(deserialize_with = "deserialize_maybe_datetime", default)]
     pub next_notify: Option<DateTime<Utc>>,
-    #[serde(deserialize_with = "deserialize_maybe_datetime")]
+    #[serde(deserialize_with = "deserialize_maybe_datetime", default)]
     pub expires: Option<DateTime<Utc>>,
+    #[serde(default)]
     pub orcpt: Option<String>,
 }
 
