@@ -386,7 +386,7 @@ impl Builder<Schemas, ()> {
             .placeholder("my-server-id")
             .typ(Type::Input)
             .input_check([Transformer::Trim], [Validator::IsId])
-            .new_field("ids.data-center")
+            .new_field("ids.datacenter")
             .label("Data Center Id")
             .help("Data center ID (optional)")
             .placeholder("my-datacenter-id")
