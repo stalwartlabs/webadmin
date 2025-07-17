@@ -1308,4 +1308,5 @@ const LOCALES : &[(&str, &str)] = &[
     ("it", "Italian"),
     ("pt", "Portuguese"),
     ("nl", "Dutch"),
-];
+    ("da", "Danish"),
+ ];
