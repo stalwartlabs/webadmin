@@ -8,6 +8,7 @@ use std::{sync::Arc, time::Duration};
 
 use gloo_storage::{LocalStorage, SessionStorage, Storage};
 use leptos::*;
+use leptos_i18n::{t};
 use leptos_meta::*;
 use leptos_router::{use_navigate, use_query_map};
 use serde::{Deserialize, Serialize};
@@ -19,13 +20,11 @@ use crate::{
             FormElement,
         },
         messages::alert::{use_alerts, Alert, Alerts},
-    },
-    core::{
+    }, core::{
         oauth::{oauth_authenticate, AuthenticationResult},
         schema::{Builder, Schemas, Transformer, Type, Validator},
         AccessToken, Permissions,
-    },
-    STATE_LOGIN_NAME_KEY, STATE_STORAGE_KEY,
+    }, i18n::use_i18n, STATE_LOGIN_NAME_KEY, STATE_STORAGE_KEY
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -36,6 +35,7 @@ struct SavedSession {
 
 #[component]
 pub fn Login() -> impl IntoView {
+    let i18n = use_i18n();
     let stored_data: Option<SavedSession> = LocalStorage::get(STATE_LOGIN_NAME_KEY).ok();
     let remember_me = create_rw_signal(stored_data.is_some());
     let show_totp = create_rw_signal(false);
@@ -129,23 +129,23 @@ pub fn Login() -> impl IntoView {
     });
 
     view! {
-        <Body class="dark:bg-slate-900 bg-gray-100 flex h-full items-center py-16"/>
+        <Body class="dark:bg-slate-900 bg-gray-100 flex h-full items-center py-16" />
         <main class="w-full max-w-md mx-auto p-6">
             <div class="mt-7 bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
                 <div class="p-4 sm:p-7">
                     <div class="text-center p-6">
-                        <img src="/logo.svg"/>
+                        <img src="/logo.svg" />
 
                     </div>
 
                     <div class="mt-5">
-                        <Alerts/>
+                        <Alerts />
                         <form on:submit=|ev| ev.prevent_default()>
                             <div class="grid gap-y-4">
                                 <Show when=move || has_remote.get()>
                                     <div>
                                         <label class="block text-sm mb-2 dark:text-white">
-                                            Host
+                                            {t!(i18n, host)}
                                         </label>
                                         <InputText
                                             placeholder="https://mail.example.org"
@@ -156,7 +156,7 @@ pub fn Login() -> impl IntoView {
                                 <Show when=move || !show_totp.get()>
                                     <div>
                                         <label class="block text-sm mb-2 dark:text-white">
-                                            Login
+                                            {t!(i18n, login)}
                                         </label>
                                         <InputText
                                             placeholder="user@example.org"
@@ -166,19 +166,19 @@ pub fn Login() -> impl IntoView {
                                     <div>
                                         <div class="flex justify-between items-center">
                                             <label class="block text-sm mb-2 dark:text-white">
-                                                Password
+                                                {t!(i18n, password)}
                                             </label>
 
                                         </div>
-                                        <InputPassword element=FormElement::new("password", data)/>
+                                        <InputPassword element=FormElement::new("password", data) />
                                     </div>
                                 </Show>
                                 <Show when=move || show_totp.get()>
                                     <div>
                                         <label class="block text-sm mb-2 dark:text-white">
-                                            TOTP Token
+                                            {t!(i18n, totp_token)}
                                         </label>
-                                        <InputText element=FormElement::new("totp-code", data)/>
+                                        <InputText element=FormElement::new("totp-code", data) />
                                     </div>
                                 </Show>
                                 <div class="flex items-center">
@@ -200,7 +200,7 @@ pub fn Login() -> impl IntoView {
                                     </div>
                                     <div class="ms-3">
                                         <label for="remember-me" class="text-sm dark:text-white">
-                                            Remember me
+                                            {t!(i18n, remember_me)}
                                         </label>
                                     </div>
                                 </div>
@@ -245,7 +245,7 @@ pub fn Login() -> impl IntoView {
                                     }
                                 >
 
-                                    Sign in
+                                    {t!(i18n, sign_in)}
                                 </button>
                             </div>
                         </form>

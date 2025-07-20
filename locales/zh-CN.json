@@ -1,0 +1,15 @@
+{
+  "stalwart": "Stalwart",
+  "brand": "Brand",
+  "oops_something_went_wrong": "糟糕，出了点问题。",
+  "sorry_we_could_not_find_your_page": "抱歉，我们找不到您的页面。",
+  "back_to_manage": "返回管理页面",
+  "c_stalwart_labs_ltd": "(c) Stalwart Labs Ltd.",
+  "you_are_not_authorized_to_access_this_service": "您无权访问此服务。",
+  "host": "主机",
+  "remember_me": "保持登录",
+  "sign_in": "登入",
+  "totp_token": "TOTP令牌",
+  "password": "密码",
+  "login": "登录"
+}

@@ -1,0 +1,15 @@
+{
+  "stalwart": "Stalwart",
+  "brand": "Brand",
+  "oops_something_went_wrong": "Oops, something went wrong.",
+  "sorry_we_could_not_find_your_page": "Sorry, we could not find your page.",
+  "back_to_manage": "Back to manage",
+  "c_stalwart_labs_ltd": "(c) Stalwart Labs Ltd.",
+  "you_are_not_authorized_to_access_this_service": "You are not authorized to access this service.",
+  "host": "Host",
+  "login": "Login",
+  "password": "Password",
+  "totp_token": "TOTP Token",
+  "remember_me": "Remember me",
+  "sign_in": "Sign in"
+}
