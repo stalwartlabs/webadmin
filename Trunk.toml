@@ -2,3 +2,7 @@
 stage = "pre_build"
 command = "sh"
 command_arguments = ["-c", "npx tailwindcss -i input.css -o style/output.css"]
+
+[hooks.windows]
+command = "cmd"
+command_arguments = ["/C", "npx tailwindcss -i input.css -o style/output.css"]
