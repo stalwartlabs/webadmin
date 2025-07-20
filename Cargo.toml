@@ -1,7 +1,7 @@
 [package]
 name = "webadmin"
 description = "Stalwart Web-based Admin"
-authors = [ "Stalwart Labs Ltd. <hello@stalw.art>"]
+authors = ["Stalwart Labs Ltd. <hello@stalw.art>"]
 repository = "https://github.com/stalwartlabs/webadmin"
 homepage = "https://stalw.art"
 keywords = ["web", "admin", "email", "mail", "server"]
@@ -38,8 +38,14 @@ totp-rs = { version = "5.5.1", features = ["otpauth", "qr", "gen_secret"] }
 web-time = "1.1.0"
 rand = "0.8"
 leptos-chartistry = "0.1.7"
+leptos_i18n = { version = "0.4", features = ["csr"] }
 
 [features]
 demo = []
 #default = ["demo"]
 default = []
+
+[package.metadata.leptos-i18n]
+default = "en"
+locales = ["en", "zh-CN"]
+
