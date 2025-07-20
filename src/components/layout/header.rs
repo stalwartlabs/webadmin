@@ -9,8 +9,9 @@ use leptos::*;
 use leptos_router::use_navigate;
 
 use crate::{
-    components::icon::{
-        IconAdjustmentsHorizontal, IconHeart, IconPower, IconServer, IconUserCircle,
+    components::{
+        icon::{IconAdjustmentsHorizontal, IconHeart, IconPower, IconServer, IconUserCircle},
+        language::LanguageSelector,
     },
     core::{oauth::use_authorization, url::UrlBuilder, AccessToken, Permission, Permissions},
     pages::config::edit::DEFAULT_SETTINGS_URL,
@@ -29,7 +30,7 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
             <nav class="flex basis-full items-center w-full mx-auto px-4 sm:px-6 md:px-8">
 
                 <div class="me-5 lg:me-0 lg:hidden">
-                    <img src="/logo.svg" title=VERSION_NAME/>
+                    <img src="/logo.svg" title=VERSION_NAME />
                 </div>
 
                 <div class="w-full flex items-center justify-end sm:justify-between sm:gap-x-3 sm:order-3">
@@ -110,6 +111,9 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                     <div class="flex flex-row items-center justify-end gap-2 ms-auto">
 
                         <div class="flex flex-row items-center justify-end gap-1">
+                            <div>
+                                <LanguageSelector />
+                            </div>
                             <div class="hs-dropdown relative inline-flex">
 
                                 <button
@@ -173,7 +177,7 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                                             }
                                         >
 
-                                            <IconServer/>
+                                            <IconServer />
                                             Manage
                                         </a>
 
@@ -187,7 +191,7 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                                             }
                                         >
 
-                                            <IconAdjustmentsHorizontal/>
+                                            <IconAdjustmentsHorizontal />
                                             Configure
                                         </a>
 
@@ -196,7 +200,7 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                                             href="https://github.com/sponsors/stalwartlabs"
                                             target="_blank"
                                         >
-                                            <IconHeart/>
+                                            <IconHeart />
                                             Sponsor
                                         </a>
                                     </div>
@@ -287,7 +291,7 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                                             }
                                         >
 
-                                            <IconUserCircle/>
+                                            <IconUserCircle />
                                             Account
                                         </a>
                                         <a
@@ -299,7 +303,7 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                                             }
                                         >
 
-                                            <IconPower/>
+                                            <IconPower />
                                             Logout
                                         </a>
                                     </div>
