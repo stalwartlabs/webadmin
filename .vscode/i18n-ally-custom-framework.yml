@@ -1,0 +1,16 @@
+languageIds:
+  - rust
+
+usageMatchRegex:
+  - "[^\\w\\d]t!\\(\\s*[\\w.:]*,\\s*([\\w.]*)"
+  - "[^\\w\\d]td!\\(\\s*[\\w.:]*,\\s*([\\w.]*)"
+  - "[^\\w\\d]td_string!\\(\\s*[\\w.:]*,\\s*([\\w.]*)"
+  - "[^\\w\\d]td_display!\\(\\s*[\\w.:]*,\\s*([\\w.]*)"
+
+refactorTemplates:
+  - {t!(i18n, $1)}
+  - td!(i18n.get_locale(), $1)
+  - td_string!(i18n.get_locale(), $1)
+  - td_display!(i18n.get_locale(), $1)
+
+monopoly: true
