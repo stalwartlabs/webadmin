@@ -827,7 +827,7 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Cluster Ids")
             .display_if_eq("type", ["foundationdb"])
-            .fields(["ids.machine", "ids.data-center"])
+            .fields(["ids.machine", "ids.datacenter"])
             .build()
             .new_form_section()
             .title("Transaction Settings")
