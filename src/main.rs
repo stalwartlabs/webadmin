@@ -45,9 +45,7 @@ use crate::{
     components::{
         layout::{Layout, LayoutBuilder},
         messages::{alert::init_alerts, modal::init_modals},
-    },
-    core::oauth::oauth_refresh_token,
-    pages::{
+    }, core::oauth::oauth_refresh_token, i18n::I18nContextProvider, pages::{
         account::{crypto::ManageCrypto, password::ChangePassword},
         authorize::Authorize,
         config::{edit::SettingsEdit, list::SettingsList, search::SettingsSearch},
@@ -59,12 +57,13 @@ use crate::{
             reports::{display::ReportDisplay, list::ReportList},
         },
         reports::{display::IncomingReportDisplay, list::IncomingReportList},
-    },
+    }
 };
 
 pub mod components;
 pub mod core;
 pub mod pages;
+leptos_i18n::load_locales!();
 
 pub const STATE_STORAGE_KEY: &str = "webadmin_state";
 pub const STATE_LOGIN_NAME_KEY: &str = "webadmin_login_name";
@@ -72,11 +71,12 @@ pub const STATE_LOGIN_NAME_KEY: &str = "webadmin_login_name";
 fn main() {
     _ = console_log::init_with_level(log::Level::Debug);
     console_error_panic_hook::set_once();
-    leptos::mount_to_body(|| view! { <App/> })
+    leptos::mount_to_body(|| view! { <App /> })
 }
 
 #[component]
 pub fn App() -> impl IntoView {
+    leptos_meta::provide_meta_context();
     let auth_token = create_rw_signal(
         SessionStorage::get::<AccessToken>(STATE_STORAGE_KEY)
             .map(|mut t| {
@@ -152,404 +152,416 @@ pub fn App() -> impl IntoView {
     });
 
     view! {
-        <Router>
-            <Routes>
-                <ProtectedRoute
-                    path="/manage"
-                    view=move || {
-                        let menu_items = LayoutBuilder::manage(
-                            &permissions.get().unwrap_or_default(),
-                        );
-                        view! { <Layout menu_items=menu_items permissions=permissions/> }
-                    }
-
-                    redirect_path="/login"
-                    condition=move || permissions.get().is_some()
-                >
+        <I18nContextProvider>
+            <Router>
+                <Routes>
                     <ProtectedRoute
-                        path="/dashboard/:object?"
-                        view=Dashboard
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| {
-                                    p.has_access_all(
-                                        &[Permission::MetricsList, Permission::MetricsLive],
-                                    )
-                                })
+                        path="/manage"
+                        view=move || {
+                            let menu_items = LayoutBuilder::manage(
+                                &permissions.get().unwrap_or_default(),
+                            );
+                            view! { <Layout menu_items=menu_items permissions=permissions /> }
                         }
-                    />
 
+                        redirect_path="/login"
+                        condition=move || permissions.get().is_some()
+                    >
+                        <ProtectedRoute
+                            path="/dashboard/:object?"
+                            view=Dashboard
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| {
+                                        p.has_access_all(
+                                            &[Permission::MetricsList, Permission::MetricsLive],
+                                        )
+                                    })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/directory/:object"
+                            view=PrincipalList
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| {
+                                        p.has_access_any(
+                                            &[
+                                                Permission::IndividualList,
+                                                Permission::GroupList,
+                                                Permission::RoleList,
+                                                Permission::TenantList,
+                                                Permission::DomainList,
+                                                Permission::MailingListList,
+                                                Permission::OauthClientList,
+                                                Permission::ApiKeyList,
+                                            ],
+                                        )
+                                    })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/directory/:object/:id?/edit"
+                            view=PrincipalEdit
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| {
+                                        p.has_access_any(
+                                            &[
+                                                Permission::IndividualList,
+                                                Permission::GroupList,
+                                                Permission::RoleList,
+                                                Permission::TenantList,
+                                                Permission::DomainList,
+                                                Permission::MailingListList,
+                                                Permission::OauthClientList,
+                                                Permission::ApiKeyList,
+                                            ],
+                                        )
+                                    })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/dns/:id/view"
+                            view=DnsDisplay
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| {
+                                        p.has_access_all(
+                                            &[Permission::DkimSignatureGet, Permission::DomainGet],
+                                        )
+                                    })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/queue/messages"
+                            view=QueueList
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::MessageQueueList) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/queue/message/:id"
+                            view=QueueManage
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::MessageQueueGet) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/queue/reports"
+                            view=ReportList
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| {
+                                        p.has_access(Permission::OutgoingReportList)
+                                    })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/queue/report/:id"
+                            view=ReportDisplay
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| {
+                                        p.has_access(Permission::OutgoingReportGet)
+                                    })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/reports/:object"
+                            view=IncomingReportList
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| {
+                                        p.has_access(Permission::IncomingReportList)
+                                    })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/reports/:object/:id"
+                            view=IncomingReportDisplay
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| {
+                                        p.has_access(Permission::IncomingReportGet)
+                                    })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/logs"
+                            view=Logs
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::LogsView) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/spam/train"
+                            view=SpamTrain
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::SpamFilterTrain) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/spam/test"
+                            view=SpamTest
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::SpamFilterTrain) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/maintenance"
+                            view=Maintenance
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| {
+                                        p.has_access_any(
+                                            &[
+                                                Permission::SettingsReload,
+                                                Permission::Restart,
+                                                Permission::SpamFilterUpdate,
+                                                Permission::WebadminUpdate,
+                                            ],
+                                        )
+                                    })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/undelete/:id"
+                            view=UndeleteList
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::Undelete) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/tracing/span/:id"
+                            view=SpanDisplay
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::TracingGet) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/tracing/live"
+                            view=LiveTracing
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::TracingLive) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/tracing/:object"
+                            view=SpanList
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::TracingList) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/troubleshoot/delivery"
+                            view=TroubleshootDelivery
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::Troubleshoot) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/troubleshoot/dmarc"
+                            view=TroubleshootDmarc
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::Troubleshoot) })
+                            }
+                        />
+
+                    </ProtectedRoute>
                     <ProtectedRoute
-                        path="/directory/:object"
-                        view=PrincipalList
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| {
-                                    p.has_access_any(
-                                        &[
-                                            Permission::IndividualList,
-                                            Permission::GroupList,
-                                            Permission::RoleList,
-                                            Permission::TenantList,
-                                            Permission::DomainList,
-                                            Permission::MailingListList,
-                                            Permission::OauthClientList,
-                                            Permission::ApiKeyList,
-                                        ],
-                                    )
-                                })
+                        path="/settings"
+                        view=move || {
+                            let menu_items = LayoutBuilder::settings(
+                                auth_token.get().default_url(),
+                            );
+                            view! { <Layout menu_items=menu_items permissions=permissions /> }
                         }
-                    />
 
+                        redirect_path="/login"
+                        condition=move || permissions.get().is_some()
+                    >
+                        <ProtectedRoute
+                            path="/:object"
+                            view=SettingsList
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::SettingsList) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/:object/:id?/edit"
+                            view=SettingsEdit
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::SettingsUpdate) })
+                            }
+                        />
+
+                        <ProtectedRoute
+                            path="/search"
+                            view=SettingsSearch
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::SettingsList) })
+                            }
+                        />
+
+                    </ProtectedRoute>
                     <ProtectedRoute
-                        path="/directory/:object/:id?/edit"
-                        view=PrincipalEdit
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| {
-                                    p.has_access_any(
-                                        &[
-                                            Permission::IndividualList,
-                                            Permission::GroupList,
-                                            Permission::RoleList,
-                                            Permission::TenantList,
-                                            Permission::DomainList,
-                                            Permission::MailingListList,
-                                            Permission::OauthClientList,
-                                            Permission::ApiKeyList,
-                                        ],
-                                    )
-                                })
+                        path="/account"
+                        view=move || {
+                            let menu_items = LayoutBuilder::account(
+                                &permissions.get().unwrap_or_default(),
+                            );
+                            view! { <Layout menu_items=menu_items permissions=permissions /> }
                         }
-                    />
 
-                    <ProtectedRoute
-                        path="/dns/:id/view"
-                        view=DnsDisplay
                         redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| {
-                                    p.has_access_all(
-                                        &[Permission::DkimSignatureGet, Permission::DomainGet],
-                                    )
-                                })
-                        }
-                    />
+                        condition=move || permissions.get().is_some()
+                    >
+                        <ProtectedRoute
+                            path="/crypto"
+                            view=ManageCrypto
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::ManageEncryption) })
+                            }
+                        />
 
-                    <ProtectedRoute
-                        path="/queue/messages"
-                        view=QueueList
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::MessageQueueList) })
-                        }
-                    />
+                        <ProtectedRoute
+                            path="/password"
+                            view=ChangePassword
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
+                            }
+                        />
 
-                    <ProtectedRoute
-                        path="/queue/message/:id"
-                        view=QueueManage
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::MessageQueueGet) })
-                        }
-                    />
+                        <ProtectedRoute
+                            path="/mfa"
+                            view=ManageMfa
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
+                            }
+                        />
 
-                    <ProtectedRoute
-                        path="/queue/reports"
-                        view=ReportList
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::OutgoingReportList) })
-                        }
-                    />
+                        <ProtectedRoute
+                            path="/app-passwords"
+                            view=AppPasswords
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
+                            }
+                        />
 
-                    <ProtectedRoute
-                        path="/queue/report/:id"
-                        view=ReportDisplay
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::OutgoingReportGet) })
-                        }
-                    />
+                        <ProtectedRoute
+                            path="/app-passwords/edit"
+                            view=AppPasswordCreate
+                            redirect_path="/login"
+                            condition=move || {
+                                permissions
+                                    .get()
+                                    .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
+                            }
+                        />
 
-                    <ProtectedRoute
-                        path="/reports/:object"
-                        view=IncomingReportList
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::IncomingReportList) })
-                        }
-                    />
+                    </ProtectedRoute>
 
-                    <ProtectedRoute
-                        path="/reports/:object/:id"
-                        view=IncomingReportDisplay
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::IncomingReportGet) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/logs"
-                        view=Logs
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::LogsView) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/spam/train"
-                        view=SpamTrain
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::SpamFilterTrain) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/spam/test"
-                        view=SpamTest
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::SpamFilterTrain) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/maintenance"
-                        view=Maintenance
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| {
-                                    p.has_access_any(
-                                        &[
-                                            Permission::SettingsReload,
-                                            Permission::Restart,
-                                            Permission::SpamFilterUpdate,
-                                            Permission::WebadminUpdate,
-                                        ],
-                                    )
-                                })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/undelete/:id"
-                        view=UndeleteList
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::Undelete) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/tracing/span/:id"
-                        view=SpanDisplay
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::TracingGet) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/tracing/live"
-                        view=LiveTracing
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::TracingLive) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/tracing/:object"
-                        view=SpanList
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::TracingList) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/troubleshoot/delivery"
-                        view=TroubleshootDelivery
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::Troubleshoot) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/troubleshoot/dmarc"
-                        view=TroubleshootDmarc
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::Troubleshoot) })
-                        }
-                    />
-
-                </ProtectedRoute>
-                <ProtectedRoute
-                    path="/settings"
-                    view=move || {
-                        let menu_items = LayoutBuilder::settings(auth_token.get().default_url());
-                        view! { <Layout menu_items=menu_items permissions=permissions/> }
-                    }
-
-                    redirect_path="/login"
-                    condition=move || permissions.get().is_some()
-                >
-                    <ProtectedRoute
-                        path="/:object"
-                        view=SettingsList
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::SettingsList) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/:object/:id?/edit"
-                        view=SettingsEdit
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::SettingsUpdate) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/search"
-                        view=SettingsSearch
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::SettingsList) })
-                        }
-                    />
-
-                </ProtectedRoute>
-                <ProtectedRoute
-                    path="/account"
-                    view=move || {
-                        let menu_items = LayoutBuilder::account(
-                            &permissions.get().unwrap_or_default(),
-                        );
-                        view! { <Layout menu_items=menu_items permissions=permissions/> }
-                    }
-
-                    redirect_path="/login"
-                    condition=move || permissions.get().is_some()
-                >
-                    <ProtectedRoute
-                        path="/crypto"
-                        view=ManageCrypto
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::ManageEncryption) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/password"
-                        view=ChangePassword
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/mfa"
-                        view=ManageMfa
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/app-passwords"
-                        view=AppPasswords
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
-                        }
-                    />
-
-                    <ProtectedRoute
-                        path="/app-passwords/edit"
-                        view=AppPasswordCreate
-                        redirect_path="/login"
-                        condition=move || {
-                            permissions
-                                .get()
-                                .is_some_and(|p| { p.has_access(Permission::ManagePasswords) })
-                        }
-                    />
-
-                </ProtectedRoute>
-
-                <Route path="/" view=Login/>
-                <Route path="/login" view=Login/>
-                <Route path="/authorize/:type?" view=Authorize/>
-                <Route path="/*any" view=NotFound/>
-            </Routes>
-        </Router>
-        <div id="portal_root"></div>
+                    <Route path="/" view=Login />
+                    <Route path="/login" view=Login />
+                    <Route path="/authorize/:type?" view=Authorize />
+                    <Route path="/*any" view=NotFound />
+                </Routes>
+            </Router>
+            <div id="portal_root"></div>
+        </I18nContextProvider>
     }
 }
 
@@ -557,7 +569,7 @@ impl LayoutBuilder {
     pub fn manage(permissions: &Permissions) -> Vec<MenuItem> {
         LayoutBuilder::new("/manage")
             .create("Dashboard")
-            .icon(view! { <IconChartBarSquare/> })
+            .icon(view! { <IconChartBarSquare /> })
             .create("Overview")
             .route("/dashboard/overview")
             .insert(true)
@@ -575,7 +587,7 @@ impl LayoutBuilder {
             .insert(true)
             .insert(permissions.has_access_all(&[Permission::MetricsList, Permission::MetricsLive]))
             .create("Directory")
-            .icon(view! { <IconUserGroup/> })
+            .icon(view! { <IconUserGroup /> })
             .create("Accounts")
             .route("/directory/accounts")
             .insert(permissions.has_access(Permission::IndividualList))
@@ -611,7 +623,7 @@ impl LayoutBuilder {
                 Permission::ApiKeyList,
             ]))
             .create("Queues")
-            .icon(view! { <IconQueueList/> })
+            .icon(view! { <IconQueueList /> })
             .create("Messages")
             .route("/queue/messages")
             .insert(permissions.has_access(Permission::MessageQueueList))
@@ -625,7 +637,7 @@ impl LayoutBuilder {
                 ]),
             )
             .create("Reports")
-            .icon(view! { <IconDocumentChartBar/> })
+            .icon(view! { <IconDocumentChartBar /> })
             .create("DMARC Aggregate")
             .route("/reports/dmarc")
             .insert(true)
@@ -637,7 +649,7 @@ impl LayoutBuilder {
             .insert(true)
             .insert(permissions.has_access(Permission::IncomingReportList))
             .create("History")
-            .icon(view! { <IconClock/> })
+            .icon(view! { <IconClock /> })
             .create("Received Messages")
             .route("/tracing/received")
             .insert(true)
@@ -646,7 +658,7 @@ impl LayoutBuilder {
             .insert(true)
             .insert(permissions.has_access(Permission::TracingList))
             .create("Telemetry")
-            .icon(view! { <IconSignal/> })
+            .icon(view! { <IconSignal /> })
             .create("Logs")
             .route("/logs")
             .insert(permissions.has_access(Permission::LogsView))
@@ -655,7 +667,7 @@ impl LayoutBuilder {
             .insert(permissions.has_access(Permission::TracingLive))
             .insert(permissions.has_access_any(&[Permission::LogsView, Permission::TracingLive]))
             .create("Spam filter")
-            .icon(view! { <IconShieldCheck/> })
+            .icon(view! { <IconShieldCheck /> })
             .create("Train")
             .route("/spam/train")
             .insert(true)
@@ -664,7 +676,7 @@ impl LayoutBuilder {
             .insert(true)
             .insert(permissions.has_access(Permission::SpamFilterTrain))
             .create("Troubleshoot")
-            .icon(view! { <IconBeaker/> })
+            .icon(view! { <IconBeaker /> })
             .create("E-mail Delivery")
             .route("/troubleshoot/delivery")
             .insert(true)
@@ -673,11 +685,11 @@ impl LayoutBuilder {
             .insert(true)
             .insert(permissions.has_access(Permission::Troubleshoot))
             .create("Settings")
-            .icon(view! { <IconAdjustmentsHorizontal/> })
+            .icon(view! { <IconAdjustmentsHorizontal /> })
             .raw_route(DEFAULT_SETTINGS_URL)
             .insert(permissions.has_access(Permission::SettingsList))
             .create("Maintenance")
-            .icon(view! { <IconWrench/> })
+            .icon(view! { <IconWrench /> })
             .route("/maintenance")
             .insert(permissions.has_access_any(&[
                 Permission::SettingsReload,
@@ -691,19 +703,19 @@ impl LayoutBuilder {
     pub fn account(permissions: &Permissions) -> Vec<MenuItem> {
         LayoutBuilder::new("/account")
             .create("Encryption-at-rest")
-            .icon(view! { <IconLockClosed/> })
+            .icon(view! { <IconLockClosed /> })
             .route("/crypto")
             .insert(permissions.has_access(Permission::ManageEncryption))
             .create("Change Password")
-            .icon(view! { <IconKey/> })
+            .icon(view! { <IconKey /> })
             .route("/password")
             .insert(permissions.has_access(Permission::ManagePasswords))
             .create("Two-factor Auth")
-            .icon(view! { <IconShieldCheck/> })
+            .icon(view! { <IconShieldCheck /> })
             .route("/mfa")
             .insert(permissions.has_access(Permission::ManagePasswords))
             .create("App Passwords")
-            .icon(view! { <IconSquare2x2/> })
+            .icon(view! { <IconSquare2x2 /> })
             .route("/app-passwords")
             .insert(permissions.has_access(Permission::ManagePasswords))
             .menu_items
