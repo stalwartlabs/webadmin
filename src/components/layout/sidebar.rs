@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2020 Stalwart Labs Ltd <hello@stalw.art>
+ * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
  *
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
@@ -50,14 +50,14 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                             i
                                                 .route
                                                 .as_ref()
-                                                .is_some_and( |f| current_route.get().starts_with(f))
+                                                .is_some_and(|f| current_route.get().starts_with(f))
                                                 || i
                                                     .children
                                                     .iter()
                                                     .any(|i| {
                                                         i.route
                                                             .as_ref()
-                                                            .is_some_and( |f| current_route.get().starts_with(f))
+                                                            .is_some_and(|f| current_route.get().starts_with(f))
                                                     })
                                         })
                             });
@@ -138,7 +138,7 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                                                     || i
                                                                         .route
                                                                         .as_ref()
-                                                                        .is_some_and( |f| current_route.get().starts_with(f))
+                                                                        .is_some_and(|f| current_route.get().starts_with(f))
                                                             })
                                                     });
                                                     view! {

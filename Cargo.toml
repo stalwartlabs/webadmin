@@ -41,5 +41,5 @@ leptos-chartistry = "0.1.7"
 
 [features]
 demo = []
-#default = ["demo"]
-default = []
+enterprise = []
+default = ["enterprise"]

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2020 Stalwart Labs Ltd <hello@stalw.art>
+ * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
  *
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
@@ -47,7 +47,7 @@ pub fn NotFound() -> impl IntoView {
 
             <footer class="mt-auto text-center py-5">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <p class="text-sm text-gray-500">(c) Stalwart Labs Ltd.</p>
+                    <p class="text-sm text-gray-500">(c) Stalwart Labs LLC.</p>
                 </div>
             </footer>
         </div>
