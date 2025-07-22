@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.31] - 2025-07-22
+
+## Added
+- Danish and Catalan languages in dropdowns.
+
+### Changed
+
+### Fixed
+- FoundationDB `ids.datacenter` setting (fixes #89)
+
 ## [0.1.30] - 2025-07-16
 
 ## Added
