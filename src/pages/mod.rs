@@ -11,12 +11,18 @@ pub mod account;
 pub mod authorize;
 pub mod config;
 pub mod directory;
-pub mod enterprise;
 pub mod login;
 pub mod manage;
 pub mod notfound;
 pub mod queue;
 pub mod reports;
+
+// SPDX-SnippetBegin
+// SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+// SPDX-License-Identifier: LicenseRef-SEL
+#[cfg(feature = "enterprise")]
+pub mod enterprise;
+// SPDX-SnippetEnd
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct List<T> {

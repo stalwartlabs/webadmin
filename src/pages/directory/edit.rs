@@ -182,8 +182,10 @@ pub fn PrincipalEdit() -> impl IntoView {
                                 data.set("api_secret", &api_key);
                             });
                             principal.secrets = PrincipalValue::StringList(vec![api_key.clone()]);
-                            principal.enabled_permissions =
-                                PrincipalValue::StringList(vec!["authenticate".to_string(), "authenticate-oauth".to_string()]);
+                            principal.enabled_permissions = PrincipalValue::StringList(vec![
+                                "authenticate".to_string(),
+                                "authenticate-oauth".to_string(),
+                            ]);
                         }
                         _ => {}
                     }
@@ -237,7 +239,6 @@ pub fn PrincipalEdit() -> impl IntoView {
     );
     let (pending, set_pending) = create_signal(false);
     let current_principal = create_rw_signal(Principal::default());
-
 
     let save_changes = create_action(move |changes: &Principal| {
         let current = current_principal.get();
@@ -1160,7 +1161,7 @@ impl FormData {
                 app_passwords.push(app);
             } else if secret.is_otp_auth() {
                 self.set("otpauth_url", secret);
-            } 
+            }
         }
         if !app_passwords.is_empty() {
             self.array_set("app_passwords", app_passwords);
@@ -1298,9 +1299,7 @@ impl Builder<Schemas, ()> {
     }
 }
 
-
-
-const LOCALES : &[(&str, &str)] = &[
+const LOCALES: &[(&str, &str)] = &[
     ("en", "English"),
     ("es", "Spanish"),
     ("fr", "French"),
@@ -1309,5 +1308,5 @@ const LOCALES : &[(&str, &str)] = &[
     ("pt", "Portuguese"),
     ("nl", "Dutch"),
     ("da", "Danish"),
-    ("ca", "Catalan")
- ];
+    ("ca", "Catalan"),
+];

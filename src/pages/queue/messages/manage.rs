@@ -36,12 +36,18 @@ use crate::{
         oauth::use_authorization,
     },
     pages::{
-        enterprise::tracing::event::{Event, Key},
         maybe_plural,
         queue::messages::{Message, Status},
         FormatDateTime, List,
     },
 };
+
+// SPDX-SnippetBegin
+// SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+// SPDX-License-Identifier: LicenseRef-SEL
+#[cfg(feature = "enterprise")]
+use crate::pages::enterprise::tracing::event::{Event, Key};
+// SPDX-SnippetEnd
 
 #[component]
 pub fn QueueManage() -> impl IntoView {
@@ -68,6 +74,7 @@ pub fn QueueManage() -> impl IntoView {
     // SPDX-SnippetBegin
     // SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
     // SPDX-License-Identifier: LicenseRef-SEL
+    #[cfg(feature = "enterprise")]
     let fetch_attempts = create_resource(
         move || params.get().get("id").cloned().unwrap_or_default(),
         move |id| {
@@ -522,8 +529,10 @@ pub fn QueueManage() -> impl IntoView {
         // SPDX-SnippetBegin
         // SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
         // SPDX-License-Identifier: LicenseRef-SEL
+
         <Transition>
-            {move || match fetch_attempts.get() {
+            {#[cfg(feature = "enterprise")]
+            move || match fetch_attempts.get() {
                 Some(Err(http::Error::Unauthorized)) => {
                     use_navigate()("/login", Default::default());
                     Some(view! { <div></div> }.into_view())

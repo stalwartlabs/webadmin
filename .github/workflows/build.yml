@@ -44,11 +44,22 @@ jobs:
         run: |
           cd dist
           zip -r ../webadmin.zip *
+          cd ..
+
+      - name: Build the Rust WASM app and all of its assets (OSS)
+        run: |
+          rm -Rf dist
+          trunk build --release --no-default-features
+  
+      - name: Compress bundle (OSS)
+        run: |
+          cd dist
+          zip -r ../webadmin-oss.zip *
 
       - name: Publish Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-            files: 'webadmin.zip'
+            files: webadmin*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

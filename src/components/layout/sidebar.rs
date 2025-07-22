@@ -279,6 +279,12 @@ pub fn SideBar(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>) -> impl 
                                             )
                                         }
 
+                                        target=if route.starts_with("http") {
+                                            Some("_blank")
+                                        } else {
+                                            None
+                                        }
+
                                         href=route
                                     >
                                         {item.icon}

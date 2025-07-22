@@ -316,7 +316,16 @@ impl LayoutBuilder {
             // Enterprise
             .create("Enterprise")
             .route("/enterprise/edit")
-            .insert(true)
+            .insert({
+                #[cfg(feature = "enterprise")]
+                {
+                    true
+                }
+                #[cfg(not(feature = "enterprise"))]
+                {
+                    false
+                }
+            })
             .insert(true)
             // Storage
             .create("Storage")

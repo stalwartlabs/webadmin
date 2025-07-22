@@ -28,16 +28,22 @@ use pages::{
     },
     config::edit::DEFAULT_SETTINGS_URL,
     directory::{dns::DnsDisplay, edit::PrincipalEdit, list::PrincipalList},
-    enterprise::{
-        dashboard::Dashboard,
-        tracing::{display::SpanDisplay, list::SpanList, live::LiveTracing},
-        undelete::UndeleteList,
-    },
     manage::{
         spam::{SpamTest, SpamTrain},
         troubleshoot::{TroubleshootDelivery, TroubleshootDmarc},
     },
 };
+
+// SPDX-SnippetBegin
+// SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+// SPDX-License-Identifier: LicenseRef-SEL
+#[cfg(feature = "enterprise")]
+use crate::pages::enterprise::{
+    dashboard::Dashboard,
+    tracing::{display::SpanDisplay, list::SpanList, live::LiveTracing},
+    undelete::UndeleteList,
+};
+// SPDX-SnippetEnd
 
 pub static VERSION_NAME: &str = concat!("Stalwart Management UI v", env!("CARGO_PKG_VERSION"),);
 
@@ -542,7 +548,6 @@ pub fn App() -> impl IntoView {
                     />
 
                 </ProtectedRoute>
-
                 <Route path="/" view=Login/>
                 <Route path="/login" view=Login/>
                 <Route path="/authorize/:type?" view=Authorize/>
@@ -555,137 +560,248 @@ pub fn App() -> impl IntoView {
 
 impl LayoutBuilder {
     pub fn manage(permissions: &Permissions) -> Vec<MenuItem> {
-        LayoutBuilder::new("/manage")
-            .create("Dashboard")
-            .icon(view! { <IconChartBarSquare/> })
-            .create("Overview")
-            .route("/dashboard/overview")
-            .insert(true)
-            .create("Network")
-            .route("/dashboard/network")
-            .insert(true)
-            .create("Security")
-            .route("/dashboard/security")
-            .insert(true)
-            .create("Delivery")
-            .route("/dashboard/delivery")
-            .insert(true)
-            .create("Performance")
-            .route("/dashboard/performance")
-            .insert(true)
-            .insert(permissions.has_access_all(&[Permission::MetricsList, Permission::MetricsLive]))
-            .create("Directory")
-            .icon(view! { <IconUserGroup/> })
-            .create("Accounts")
-            .route("/directory/accounts")
-            .insert(permissions.has_access(Permission::IndividualList))
-            .create("Groups")
-            .route("/directory/groups")
-            .insert(permissions.has_access(Permission::GroupList))
-            .create("Lists")
-            .route("/directory/lists")
-            .insert(permissions.has_access(Permission::MailingListList))
-            .create("Domains")
-            .route("/directory/domains")
-            .insert(permissions.has_access(Permission::DomainList))
-            .create("Roles")
-            .route("/directory/roles")
-            .insert(permissions.has_access(Permission::RoleList))
-            .create("Tenants")
-            .route("/directory/tenants")
-            .insert(permissions.has_access(Permission::TenantList))
-            .create("API Keys")
-            .route("/directory/api-keys")
-            .insert(permissions.has_access(Permission::ApiKeyList))
-            .create("OAuth Clients")
-            .route("/directory/oauth-clients")
-            .insert(permissions.has_access(Permission::OauthClientList))
-            .insert(permissions.has_access_any(&[
-                Permission::IndividualList,
-                Permission::GroupList,
-                Permission::RoleList,
-                Permission::TenantList,
-                Permission::DomainList,
-                Permission::MailingListList,
-                Permission::OauthClientList,
-                Permission::ApiKeyList,
-            ]))
-            .create("Queues")
-            .icon(view! { <IconQueueList/> })
-            .create("Messages")
-            .route("/queue/messages")
-            .insert(permissions.has_access(Permission::MessageQueueList))
-            .create("Reports")
-            .route("/queue/reports")
-            .insert(permissions.has_access(Permission::OutgoingReportList))
-            .insert(
-                permissions.has_access_any(&[
+        #[cfg(feature = "enterprise")]
+        {
+            LayoutBuilder::new("/manage")
+                .create("Dashboard")
+                .icon(view! { <IconChartBarSquare/> })
+                .create("Overview")
+                .route("/dashboard/overview")
+                .insert(true)
+                .create("Network")
+                .route("/dashboard/network")
+                .insert(true)
+                .create("Security")
+                .route("/dashboard/security")
+                .insert(true)
+                .create("Delivery")
+                .route("/dashboard/delivery")
+                .insert(true)
+                .create("Performance")
+                .route("/dashboard/performance")
+                .insert(true)
+                .insert(
+                    permissions.has_access_all(&[Permission::MetricsList, Permission::MetricsLive]),
+                )
+                .create("Directory")
+                .icon(view! { <IconUserGroup/> })
+                .create("Accounts")
+                .route("/directory/accounts")
+                .insert(permissions.has_access(Permission::IndividualList))
+                .create("Groups")
+                .route("/directory/groups")
+                .insert(permissions.has_access(Permission::GroupList))
+                .create("Lists")
+                .route("/directory/lists")
+                .insert(permissions.has_access(Permission::MailingListList))
+                .create("Domains")
+                .route("/directory/domains")
+                .insert(permissions.has_access(Permission::DomainList))
+                .create("Roles")
+                .route("/directory/roles")
+                .insert(permissions.has_access(Permission::RoleList))
+                .create("Tenants")
+                .route("/directory/tenants")
+                .insert(permissions.has_access(Permission::TenantList))
+                .create("API Keys")
+                .route("/directory/api-keys")
+                .insert(permissions.has_access(Permission::ApiKeyList))
+                .create("OAuth Clients")
+                .route("/directory/oauth-clients")
+                .insert(permissions.has_access(Permission::OauthClientList))
+                .insert(permissions.has_access_any(&[
+                    Permission::IndividualList,
+                    Permission::GroupList,
+                    Permission::RoleList,
+                    Permission::TenantList,
+                    Permission::DomainList,
+                    Permission::MailingListList,
+                    Permission::OauthClientList,
+                    Permission::ApiKeyList,
+                ]))
+                .create("Queues")
+                .icon(view! { <IconQueueList/> })
+                .create("Messages")
+                .route("/queue/messages")
+                .insert(permissions.has_access(Permission::MessageQueueList))
+                .create("Reports")
+                .route("/queue/reports")
+                .insert(permissions.has_access(Permission::OutgoingReportList))
+                .insert(permissions.has_access_any(&[
                     Permission::MessageQueueList,
                     Permission::OutgoingReportList,
-                ]),
-            )
-            .create("Reports")
-            .icon(view! { <IconDocumentChartBar/> })
-            .create("DMARC Aggregate")
-            .route("/reports/dmarc")
-            .insert(true)
-            .create("TLS Aggregate")
-            .route("/reports/tls")
-            .insert(true)
-            .create("Failures")
-            .route("/reports/arf")
-            .insert(true)
-            .insert(permissions.has_access(Permission::IncomingReportList))
-            .create("History")
-            .icon(view! { <IconClock/> })
-            .create("Received Messages")
-            .route("/tracing/received")
-            .insert(true)
-            .create("Delivery Attempts")
-            .route("/tracing/delivery")
-            .insert(true)
-            .insert(permissions.has_access(Permission::TracingList))
-            .create("Telemetry")
-            .icon(view! { <IconSignal/> })
-            .create("Logs")
-            .route("/logs")
-            .insert(permissions.has_access(Permission::LogsView))
-            .create("Live tracing")
-            .route("/tracing/live")
-            .insert(permissions.has_access(Permission::TracingLive))
-            .insert(permissions.has_access_any(&[Permission::LogsView, Permission::TracingLive]))
-            .create("Spam filter")
-            .icon(view! { <IconShieldCheck/> })
-            .create("Train")
-            .route("/spam/train")
-            .insert(true)
-            .create("Test")
-            .route("/spam/test")
-            .insert(true)
-            .insert(permissions.has_access(Permission::SpamFilterTrain))
-            .create("Troubleshoot")
-            .icon(view! { <IconBeaker/> })
-            .create("E-mail Delivery")
-            .route("/troubleshoot/delivery")
-            .insert(true)
-            .create("DMARC")
-            .route("/troubleshoot/dmarc")
-            .insert(true)
-            .insert(permissions.has_access(Permission::Troubleshoot))
-            .create("Settings")
-            .icon(view! { <IconAdjustmentsHorizontal/> })
-            .raw_route(DEFAULT_SETTINGS_URL)
-            .insert(permissions.has_access(Permission::SettingsList))
-            .create("Maintenance")
-            .icon(view! { <IconWrench/> })
-            .route("/maintenance")
-            .insert(permissions.has_access_any(&[
-                Permission::SettingsReload,
-                Permission::Restart,
-                Permission::SpamFilterUpdate,
-                Permission::WebadminUpdate,
-            ]))
-            .menu_items
+                ]))
+                .create("Reports")
+                .icon(view! { <IconDocumentChartBar/> })
+                .create("DMARC Aggregate")
+                .route("/reports/dmarc")
+                .insert(true)
+                .create("TLS Aggregate")
+                .route("/reports/tls")
+                .insert(true)
+                .create("Failures")
+                .route("/reports/arf")
+                .insert(true)
+                .insert(permissions.has_access(Permission::IncomingReportList))
+                .create("History")
+                .icon(view! { <IconClock/> })
+                .create("Received Messages")
+                .route("/tracing/received")
+                .insert(true)
+                .create("Delivery Attempts")
+                .route("/tracing/delivery")
+                .insert(true)
+                .insert(permissions.has_access(Permission::TracingList))
+                .create("Telemetry")
+                .icon(view! { <IconSignal/> })
+                .create("Logs")
+                .route("/logs")
+                .insert(permissions.has_access(Permission::LogsView))
+                .create("Live tracing")
+                .route("/tracing/live")
+                .insert(permissions.has_access(Permission::TracingLive))
+                .insert(
+                    permissions.has_access_any(&[Permission::LogsView, Permission::TracingLive]),
+                )
+                .create("Spam filter")
+                .icon(view! { <IconShieldCheck/> })
+                .create("Train")
+                .route("/spam/train")
+                .insert(true)
+                .create("Test")
+                .route("/spam/test")
+                .insert(true)
+                .insert(permissions.has_access(Permission::SpamFilterTrain))
+                .create("Troubleshoot")
+                .icon(view! { <IconBeaker/> })
+                .create("E-mail Delivery")
+                .route("/troubleshoot/delivery")
+                .insert(true)
+                .create("DMARC")
+                .route("/troubleshoot/dmarc")
+                .insert(true)
+                .insert(permissions.has_access(Permission::Troubleshoot))
+                .create("Settings")
+                .icon(view! { <IconAdjustmentsHorizontal/> })
+                .raw_route(DEFAULT_SETTINGS_URL)
+                .insert(permissions.has_access(Permission::SettingsList))
+                .create("Maintenance")
+                .icon(view! { <IconWrench/> })
+                .route("/maintenance")
+                .insert(permissions.has_access_any(&[
+                    Permission::SettingsReload,
+                    Permission::Restart,
+                    Permission::SpamFilterUpdate,
+                    Permission::WebadminUpdate,
+                ]))
+                .menu_items
+        }
+
+        #[cfg(not(feature = "enterprise"))]
+        {
+            LayoutBuilder::new("/manage")
+                .create("Directory")
+                .icon(view! { <IconUserGroup/> })
+                .create("Accounts")
+                .route("/directory/accounts")
+                .insert(permissions.has_access(Permission::IndividualList))
+                .create("Groups")
+                .route("/directory/groups")
+                .insert(permissions.has_access(Permission::GroupList))
+                .create("Lists")
+                .route("/directory/lists")
+                .insert(permissions.has_access(Permission::MailingListList))
+                .create("Domains")
+                .route("/directory/domains")
+                .insert(permissions.has_access(Permission::DomainList))
+                .create("Roles")
+                .route("/directory/roles")
+                .insert(permissions.has_access(Permission::RoleList))
+                .create("API Keys")
+                .route("/directory/api-keys")
+                .insert(permissions.has_access(Permission::ApiKeyList))
+                .create("OAuth Clients")
+                .route("/directory/oauth-clients")
+                .insert(permissions.has_access(Permission::OauthClientList))
+                .insert(permissions.has_access_any(&[
+                    Permission::IndividualList,
+                    Permission::GroupList,
+                    Permission::RoleList,
+                    Permission::TenantList,
+                    Permission::DomainList,
+                    Permission::MailingListList,
+                    Permission::OauthClientList,
+                    Permission::ApiKeyList,
+                ]))
+                .create("Queues")
+                .icon(view! { <IconQueueList/> })
+                .create("Messages")
+                .route("/queue/messages")
+                .insert(permissions.has_access(Permission::MessageQueueList))
+                .create("Reports")
+                .route("/queue/reports")
+                .insert(permissions.has_access(Permission::OutgoingReportList))
+                .insert(permissions.has_access_any(&[
+                    Permission::MessageQueueList,
+                    Permission::OutgoingReportList,
+                ]))
+                .create("Reports")
+                .icon(view! { <IconDocumentChartBar/> })
+                .create("DMARC Aggregate")
+                .route("/reports/dmarc")
+                .insert(true)
+                .create("TLS Aggregate")
+                .route("/reports/tls")
+                .insert(true)
+                .create("Failures")
+                .route("/reports/arf")
+                .insert(true)
+                .insert(permissions.has_access(Permission::IncomingReportList))
+                .create("Telemetry")
+                .icon(view! { <IconSignal/> })
+                .create("Logs")
+                .route("/logs")
+                .insert(permissions.has_access(Permission::LogsView))
+                .insert(
+                    permissions.has_access_any(&[Permission::LogsView, Permission::TracingLive]),
+                )
+                .create("Spam filter")
+                .icon(view! { <IconShieldCheck/> })
+                .create("Train")
+                .route("/spam/train")
+                .insert(true)
+                .create("Test")
+                .route("/spam/test")
+                .insert(true)
+                .insert(permissions.has_access(Permission::SpamFilterTrain))
+                .create("Troubleshoot")
+                .icon(view! { <IconBeaker/> })
+                .create("E-mail Delivery")
+                .route("/troubleshoot/delivery")
+                .insert(true)
+                .create("DMARC")
+                .route("/troubleshoot/dmarc")
+                .insert(true)
+                .insert(permissions.has_access(Permission::Troubleshoot))
+                .create("Settings")
+                .icon(view! { <IconAdjustmentsHorizontal/> })
+                .raw_route(DEFAULT_SETTINGS_URL)
+                .insert(permissions.has_access(Permission::SettingsList))
+                .create("Maintenance")
+                .icon(view! { <IconWrench/> })
+                .route("/maintenance")
+                .insert(permissions.has_access_any(&[
+                    Permission::SettingsReload,
+                    Permission::Restart,
+                    Permission::SpamFilterUpdate,
+                    Permission::WebadminUpdate,
+                ]))
+                .create("Sponsor")
+                .icon(view! { <components::icon::IconHeart></components::icon::IconHeart> })
+                .raw_route("https://github.com/sponsors/stalwartlabs")
+                .insert(true)
+                .menu_items
+        }
     }
 
     pub fn account(permissions: &Permissions) -> Vec<MenuItem> {
@@ -741,4 +857,41 @@ pub fn build_schemas() -> Arc<Schemas> {
         .build_troubleshoot()
         .build()
         .into()
+}
+
+#[cfg(not(feature = "enterprise"))]
+#[component]
+pub fn UndeleteList() -> impl IntoView {
+    view! { <div>"This feature is unavailable."</div> }
+}
+
+#[cfg(not(feature = "enterprise"))]
+#[component]
+pub fn Dashboard() -> impl IntoView {
+    view! { <div>"This feature is unavailable."</div> }
+}
+
+#[cfg(not(feature = "enterprise"))]
+#[component]
+pub fn SpanDisplay() -> impl IntoView {
+    view! { <div>"This feature is unavailable."</div> }
+}
+
+#[cfg(not(feature = "enterprise"))]
+#[component]
+pub fn LiveTracing() -> impl IntoView {
+    view! { <div>"This feature is unavailable."</div> }
+}
+
+#[cfg(not(feature = "enterprise"))]
+#[component]
+pub fn SpanList() -> impl IntoView {
+    view! { <div>"This feature is unavailable."</div> }
+}
+
+#[cfg(not(feature = "enterprise"))]
+impl core::schema::Builder<Schemas, ()> {
+    pub fn build_live_tracing(self) -> Self {
+        self
+    }
 }
