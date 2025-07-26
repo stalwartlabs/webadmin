@@ -208,31 +208,38 @@ impl Principal {
         let mut changed_password = false;
         let current_secrets = current.secrets.unwrap_string_list();
         for new_secret in changes.secrets.as_string_list() {
-            if !new_secret.is_app_password() && !current_secrets.contains(new_secret) {
+            if !new_secret.is_app_password() {
+                if !current_secrets.contains(new_secret) {
+                    updates.push(PrincipalUpdate {
+                        action: PrincipalAction::AddItem,
+                        field: PrincipalField::Secrets,
+                        value: PrincipalValue::String(new_secret.clone()),
+                    });
+
+                    if new_secret.is_password() {
+                        changed_password = true;
+                    }
+                }
+            } else if !current_secrets
+                .iter()
+                .any(|prev_secret| prev_secret.starts_with(new_secret))
+            {
                 updates.push(PrincipalUpdate {
                     action: PrincipalAction::AddItem,
                     field: PrincipalField::Secrets,
                     value: PrincipalValue::String(new_secret.clone()),
                 });
-
-                if new_secret.is_password() {
-                    changed_password = true;
-                }
             }
         }
 
         for prev_secret in current_secrets {
             if !prev_secret.is_password() {
-                let mut found = false;
-
-                for new_secret in changes.secrets.as_string_list() {
-                    if prev_secret.starts_with(new_secret) {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if !found {
+                if !changes
+                    .secrets
+                    .as_string_list()
+                    .iter()
+                    .any(|new_secret| prev_secret.starts_with(new_secret))
+                {
                     updates.push(PrincipalUpdate {
                         action: PrincipalAction::RemoveItem,
                         field: PrincipalField::Secrets,

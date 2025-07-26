@@ -8,6 +8,7 @@ use std::{sync::Arc, vec};
 
 use ahash::{AHashMap, AHashSet};
 use base64::{engine::general_purpose, Engine};
+use chrono::Utc;
 use humansize::{format_size, DECIMAL};
 use leptos::*;
 use leptos_router::{use_navigate, use_params_map};
@@ -239,6 +240,7 @@ pub fn PrincipalEdit() -> impl IntoView {
     );
     let (pending, set_pending) = create_signal(false);
     let current_principal = create_rw_signal(Principal::default());
+    let add_app_passwords: RwSignal<AHashMap<String, String>> = create_rw_signal(AHashMap::new());
 
     let save_changes = create_action(move |changes: &Principal| {
         let current = current_principal.get();
@@ -641,6 +643,27 @@ pub fn PrincipalEdit() -> impl IntoView {
                                                 color=Color::Gray
                                                 element=FormElement::new("app_passwords", data)
                                                 add_button_text="Add password".to_string()
+                                                validate_item=Callback::new(move |
+                                                    (value, cb): (String, ValidateCb)|
+                                                {
+                                                    let password = value.trim();
+                                                    if !password.is_empty() {
+                                                        let app_pass_name = format!(
+                                                            "app_pass${}",
+                                                            Utc::now().to_rfc3339(),
+                                                        );
+                                                        add_app_passwords
+                                                            .update(|map| {
+                                                                map.insert(
+                                                                    app_pass_name.clone(),
+                                                                    sha512_crypt::hash(password).unwrap(),
+                                                                );
+                                                            });
+                                                        cb.call(Ok(app_pass_name));
+                                                    } else {
+                                                        cb.call(Err("Please enter a valid password".to_string()))
+                                                    }
+                                                })
                                             />
 
                                         </FormItem>
@@ -1067,7 +1090,7 @@ pub fn PrincipalEdit() -> impl IntoView {
                     color=Color::Blue
                     on_click=Callback::new(move |_| {
                         data.update(|data| {
-                            if let Some(changes) = data.to_principal() {
+                            if let Some(changes) = data.to_principal(add_app_passwords) {
                                 save_changes.dispatch(changes);
                             }
                         });
@@ -1168,11 +1191,21 @@ impl FormData {
         }
     }
 
-    fn to_principal(&mut self) -> Option<Principal> {
+    fn to_principal(
+        &mut self,
+        app_passwords: RwSignal<AHashMap<String, String>>,
+    ) -> Option<Principal> {
         if self.validate_form() {
             let mut secrets = vec![];
             for app_name in self.array_value("app_passwords") {
-                secrets.push(build_app_password(app_name, ""));
+                secrets.push(build_app_password(
+                    app_name,
+                    app_passwords
+                        .get_untracked()
+                        .get(app_name)
+                        .map(|s| s.as_str())
+                        .unwrap_or_default(),
+                ));
             }
             if let Some(password) = self.value::<String>("password") {
                 secrets.push(sha512_crypt::hash(password).unwrap());

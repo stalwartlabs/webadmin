@@ -366,6 +366,18 @@ fn PasswordItem(password: AppPassword) -> impl IntoView {
     }
 }
 
+pub fn generate_app_password() -> String {
+    let mut app_password = String::with_capacity(19);
+    for _ in 0..20 {
+        app_password.push(rand::thread_rng().gen_range(b'a'..=b'z') as char);
+        // Add a space every 4 characters
+        if app_password.len() % 5 == 0 {
+            app_password.push(' ');
+        }
+    }
+    app_password
+}
+
 #[component]
 pub fn AppPasswordCreate() -> impl IntoView {
     let auth = use_authorization();
@@ -376,15 +388,7 @@ pub fn AppPasswordCreate() -> impl IntoView {
     let mut data = expect_context::<Arc<Schemas>>().build_form("app-password");
 
     // Generate a random Application Password
-    let mut app_password = String::with_capacity(19);
-    for _ in 0..20 {
-        app_password.push(rand::thread_rng().gen_range(b'a'..=b'z') as char);
-        // Add a space every 4 characters
-        if app_password.len() % 5 == 0 {
-            app_password.push(' ');
-        }
-    }
-    data.set("password", app_password);
+    data.set("password", generate_app_password());
 
     let data = data.into_signal();
 
