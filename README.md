@@ -61,7 +61,7 @@ All documentation is available at [stalw.art/docs/get-started](https://stalw.art
 If you are having problems running Stalwart Mail Server, you found a bug or just have a question,
 do not hesitate to reach us on [Github Discussions](https://github.com/stalwartlabs/mail-server/discussions),
 [Reddit](https://www.reddit.com/r/stalwartlabs), [Discord](https://discord.gg/aVQr3jF8jd) or [Matrix](https://matrix.to/#/#stalwart:matrix.org).
-Additionally you may purchase a subscription to obtain priority support from Stalwart Labs Ltd.
+Additionally you may purchase a subscription to obtain priority support from Stalwart Labs LLC
 
 ## License
 
@@ -74,4 +74,4 @@ Each file in this project contains a license notice at the top, indicating the a
   
 ## Copyright
 
-Copyright (C) 2024, Stalwart Labs Ltd.
+Copyright (C) 2024, Stalwart Labs LLC

@@ -118,6 +118,7 @@ impl Builder<Schemas, ()> {
                     ("cloudflare", "Cloudflare"),
                     ("digitalocean", "DigitalOcean"),
                     ("desec", "DeSEC"),
+                    ("ovh", "OVH"),
                 ]),
                 typ: SelectType::Single,
             })
@@ -140,7 +141,7 @@ impl Builder<Schemas, ()> {
             .typ(Type::Duration)
             .label("Timeout")
             .help("Request timeout for the DNS provider")
-            .display_if_eq("provider", ["cloudflare", "digitalocean", "desec"])
+            .display_if_eq("provider", ["cloudflare", "digitalocean", "desec", "ovh"])
             .input_check([], [Validator::Required])
             .default("30s")
             .build()
@@ -194,11 +195,43 @@ impl Builder<Schemas, ()> {
                 [Transformer::Trim],
                 [Validator::Required, Validator::IsIpOrMask],
             )
+            .build()
             // Key
             .new_field("key")
             .label("Key")
             .help("The TSIG key used to authenticate with the DNS provider")
             .input_check([Transformer::Trim], [Validator::Required])
+            .display_if_eq("provider", ["rfc2136-tsig", "ovh"])
+            .build()
+            // OVH endpoint
+            .new_field("ovh-endpoint")
+            .typ(Type::Select {
+                source: Source::Static(&[
+                    ("ovh-eu", "OVH EU"),
+                    ("ovh-ca", "OVH CA"),
+                    ("kimsufi-eu", "Kimsufi EU"),
+                    ("kimsufi-ca", "Kimsufi CA"),
+                    ("soyoustart-eu", "Soyoustart EU"),
+                    ("soyoustart-ca", "Soyoustart CA"),
+                ]),
+                typ: SelectType::Single,
+            })
+            .label("OVH Endpoint")
+            .help("Which OVH endpoint to use")
+            .input_check([], [Validator::Required])
+            .default("ovh-eu")
+            .display_if_eq("provider", ["ovh"])
+            .build()
+            // Consumer key
+            .new_field("consumer-key")
+            .label("Consumer key")
+            .help(concat!(
+                "The consumer key used to authenticate with the DNS ",
+                "provider"
+            ))
+            .display_if_eq("provider", ["ovh"])
+            .typ(Type::Secret)
+            .input_check([], [Validator::Required])
             .build()
             // Account key
             .new_field("account-key")
@@ -244,12 +277,14 @@ impl Builder<Schemas, ()> {
             .display_if_eq("challenge", ["dns-01"])
             .fields([
                 "provider",
+                "ovh-endpoint",
                 "host",
                 "port",
                 "protocol",
                 "tsig-algorithm",
                 "key",
                 "secret",
+                "consumer-key",
                 "polling-interval",
                 "propagation-timeout",
                 "ttl",

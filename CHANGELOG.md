@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.1.32] - 2025-07-28
+- Allow administrators to add app passwords.
+- DeSEC DNS support.
+- OVH DNS support.
+
+## Added
+
+### Changed
+
+### Fixed
+
 ## [0.1.31] - 2025-07-22
 
 ## Added

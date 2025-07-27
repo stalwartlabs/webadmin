@@ -1,13 +1,13 @@
 [package]
 name = "webadmin"
 description = "Stalwart Web-based Admin"
-authors = [ "Stalwart Labs Ltd. <hello@stalw.art>"]
+authors = [ "Stalwart Labs LLC <hello@stalw.art>"]
 repository = "https://github.com/stalwartlabs/webadmin"
 homepage = "https://stalw.art"
 keywords = ["web", "admin", "email", "mail", "server"]
 categories = ["email"]
 license = "AGPL-3.0-only OR LicenseRef-SEL"
-version = "0.1.31"
+version = "0.1.32"
 edition = "2021"
 resolver = "2"
 
