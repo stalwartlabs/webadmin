@@ -54,17 +54,21 @@ pub fn Authorize() -> impl IntoView {
                             .await
                         {
                             AuthenticationResult::Success(response) => {
+                                let redirect_uri = redirect_uri.as_deref().unwrap_or_default();
+                                let sep = if redirect_uri.contains('?') { '&' } else { '?' };
                                 let url = if let Some(state) = state {
                                     format!(
-                                        "{}?code={}&state={}",
-                                        redirect_uri.as_deref().unwrap_or_default(),
+                                        "{}{}code={}&state={}",
+                                        redirect_uri,
+                                        sep,
                                         response.code,
                                         state
                                     )
                                 } else {
                                     format!(
-                                        "{}?code={}",
-                                        redirect_uri.as_deref().unwrap_or_default(),
+                                        "{}{}code={}",
+                                        redirect_uri,
+                                        sep,
                                         response.code
                                     )
                                 };
