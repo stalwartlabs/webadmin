@@ -17,7 +17,7 @@ cargo install --locked trunk
 #
 # In theory you can do now `trunk build --release` or `make it`.
 # But `trunk` calls `npx tailwindcss -i input.css -o style/output.css`,
-# so you have be ready for it:
+# so you have to be ready for it:
 
 npm install tailwindcss
 
@@ -28,13 +28,14 @@ sudo apt install npm
 
 endef
 
-# To get that infomration on standard out, type `make show`
+# To get that information on standard out, type `make show`
 show:
 	$(info $(FURTHER_INFORMATION))
 
+# The actual build, type `make it`
 it:
 	trunk build --release
-	cd dist && zip -r webadmin.zip *
+	cd dist && zip -r ../webadmin.zip *
 
 install:
 	install -m 0755 -d $(DESTDIR)/usr/share/stalwart-webadmin
