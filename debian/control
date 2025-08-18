@@ -1,0 +1,15 @@
+Source: stalwart-webadmin
+Section: web
+Priority: optional
+Maintainer: Geert Stappers <stappers@debian.org>
+Rules-Requires-Root: no
+#Build-Depends: trunk  and tailwindss
+Standards-Version: 4.6.0
+Homepage: https://stalw.art/
+
+Package: stalwart-webadmin
+Architecture: all
+Depends: ${misc:Depends}
+Description: stalwart server webadmin UI
+ Administrator Web User Interface for stalwart server
+ Self-host your own RustDesk server, it is free and open source.

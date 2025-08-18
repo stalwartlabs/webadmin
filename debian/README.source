@@ -1,0 +1,12 @@
+#
+# 18 Augustus 2025
+#
+
+make show
+
+make it
+
+debuild -uc -us
+
+# builds a debian package
+# in a very hacky way

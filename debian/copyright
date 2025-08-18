@@ -1,0 +1,9 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: stalwart-webadmin
+Files: *
+Copyright: Stalwartlabs LLC <hello@stalw.art>
+License: AGPL-3.0
+
+Files: debian/*
+Copyright: Geert Stappers <stappers@debian.org>
+License: GPL-2.0

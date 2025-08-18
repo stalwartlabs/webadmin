@@ -1,0 +1,5 @@
+stalwart-webadmin (0.1.32-1) UNRELEASED; urgency=low
+
+  * Initial release. Closes: #1111205
+
+ -- Geert Stappers <stappers@debian.org>  Mon, 18 Aug 2025 12:22:49 +0200
