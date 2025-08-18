@@ -14,6 +14,17 @@ define FURTHER_INFORMATION
 
 cargo install --locked trunk
 
+#
+# In theory you can do now `trunk build --release` or `make it`.
+# But `trunk` calls `npx tailwindcss -i input.css -o style/output.css`,
+# so you have be ready for it:
+
+npm install tailwindcss
+
+#
+# For what it is worth, I installed `npm` by:
+
+sudo apt install npm
 
 endef
 
