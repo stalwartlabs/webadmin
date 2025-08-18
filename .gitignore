@@ -3,6 +3,7 @@
 /_ignore
 **/*.rs.bk
 node_modules/
+style/output.css
 test-results/
 end2end/playwright-report/
 playwright/.cache/
