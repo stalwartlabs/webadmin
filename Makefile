@@ -35,6 +35,7 @@ show:
 # The actual build, type `make it`
 it:
 	trunk build --release
+	rm -f webadmin.zip # fresh start, avoids updates of the .zip
 	cd dist && zip -r ../webadmin.zip *
 
 install:
