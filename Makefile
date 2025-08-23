@@ -18,7 +18,10 @@ cargo install --locked trunk
 #   couldn't find application wasm-bindgen (version: m.n.p),
 #   unable to download in offline mode
 
-cargo install wasm-bindgen-cli
+cargo install wasm-bindgen-cli \
+  --version $$( grep --after=1 'name = "wasm-bindgen"' Cargo.lock \
+	| awk -F= '$$1 ~ /version/ { print $$2}' | tr -d '"' )
+
 
 #
 # In theory you can do now `trunk build --release` or `make it`.
