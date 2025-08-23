@@ -1,3 +1,8 @@
+[build]
+# idea/wish: to get reproducable blobs
+filehash = false
+offline = true
+
 [[hooks]]
 stage = "pre_build"
 command = "sh"
