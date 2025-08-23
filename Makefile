@@ -22,6 +22,11 @@ cargo install wasm-bindgen-cli \
   --version $$( grep --after=1 'name = "wasm-bindgen"' Cargo.lock \
 	| awk -F= '$$1 ~ /version/ { print $$2}' | tr -d '"' )
 
+# To avoid
+#   couldn't find application wasm-opt (version: <any>),
+#   unable to download in offline mode
+
+sudo apt install binaryen
 
 #
 # In theory you can do now `trunk build --release` or `make it`.
