@@ -14,6 +14,12 @@ define FURTHER_INFORMATION
 
 cargo install --locked trunk
 
+# To avoid
+#   couldn't find application wasm-bindgen (version: m.n.p),
+#   unable to download in offline mode
+
+cargo install wasm-bindgen-cli
+
 #
 # In theory you can do now `trunk build --release` or `make it`.
 # But `trunk` calls `npx tailwindcss -i input.css -o style/output.css`,
