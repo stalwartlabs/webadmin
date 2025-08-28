@@ -59,8 +59,8 @@ install:
 
 
 update:
-  npx update-browserslist-db@latest
-  # Why you should do it
-  #  regularly: https://github.com/browserslist/update-db#readme
+	npx update-browserslist-db@latest
+	@# Why you should do it
+	@#  regularly: https://github.com/browserslist/update-db#readme
 
 # l l
