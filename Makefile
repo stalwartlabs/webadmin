@@ -57,4 +57,10 @@ install:
 	install -m 0755 -d $(DESTDIR)/usr/share/stalwart-webadmin
 	install -m 0644 webadmin.zip $(DESTDIR)/usr/share/stalwart-webadmin
 
+
+update:
+  npx update-browserslist-db@latest
+  # Why you should do it
+  #  regularly: https://github.com/browserslist/update-db#readme
+
 # l l
