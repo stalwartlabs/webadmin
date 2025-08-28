@@ -51,6 +51,7 @@ it:
 	trunk build --release
 	rm -f webadmin.zip # fresh start, avoids updates of the .zip
 	cd dist && zip -r ../webadmin.zip *
+	# TODO make the build reproducable
 
 install:
 	install -m 0755 -d $(DESTDIR)/usr/share/stalwart-webadmin
