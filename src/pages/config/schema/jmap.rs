@@ -7,6 +7,7 @@
 use crate::core::schema::*;
 
 impl Builder<Schemas, ()> {
+    #![allow(clippy::useless_concat)]
     pub fn build_jmap(self) -> Self {
         self.new_schema("jmap-limits")
             .new_field("jmap.protocol.get.max-objects")
@@ -110,10 +111,24 @@ impl Builder<Schemas, ()> {
             .help(concat!("Determines the maximum size for an email message"))
             .default("75000000")
             .new_field("jmap.email.parse.max-items")
-            .label("Parse max")
+            .label("Emails")
             .help(concat!(
-                "Limits the maximum number of items that can be parsed from ",
-                "an email message"
+                "Limits the maximum number of e-mail message that can be parsed in ",
+                "a single request"
+            ))
+            .default("10")
+            .new_field("jmap.calendar.parse.max-items")
+            .label("Calendars")
+            .help(concat!(
+                "Limits the maximum number of iCalendar items that can be parsed in ",
+                "a single request"
+            ))
+            .default("10")
+            .new_field("jmap.contact.parse.max-items")
+            .label("Contacts")
+            .help(concat!(
+                "Limits the maximum number of vCard items that can be parsed in ",
+                "a single request"
             ))
             .default("10")
             .build()
@@ -165,48 +180,36 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Email Limits")
+            .fields(["jmap.email.max-attachment-size", "jmap.email.max-size"])
+            .build()
+            .new_form_section()
+            .title("Parsing Limits")
             .fields([
-                "jmap.email.max-attachment-size",
-                "jmap.email.max-size",
                 "jmap.email.parse.max-items",
+                "jmap.calendar.parse.max-items",
+                "jmap.contact.parse.max-items",
             ])
             .build()
             .build()
             // Push & EventSource
             .new_schema("jmap-push")
-            .new_field("jmap.push.max-total")
-            .label("Max Subscriptions")
-            .help(concat!(
-                "Total number of push subscriptions that a given user can activate"
-            ))
-            .default("100")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::MinValue(1.into())],
-            )
-            .build()
             .new_field("jmap.push.throttle")
             .label("Throttle")
-            .help(concat!(
-                "Time to wait before sending a new request to the push service"
-            ))
+            .help("Time to wait before sending a new request to the push service")
             .default("1ms")
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
             .new_field("jmap.push.attempts.interval")
             .label("Attempt Interval")
-            .help(concat!("Time to wait between push attempts"))
+            .help("Time to wait between push attempts")
             .default("1m")
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
             .new_field("jmap.push.attempts.max")
             .label("Max Attempts")
-            .help(concat!(
-                "Maximum number of push attempts before a notification is discarded"
-            ))
+            .help("Maximum number of push attempts before a notification is discarded")
             .default("3")
             .typ(Type::Input)
             .input_check(
@@ -216,34 +219,28 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("jmap.push.retry.interval")
             .label("Retry Interval")
-            .help(concat!("Time to wait between retry attempts"))
+            .help("Time to wait between retry attempts")
             .default("1s")
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
             .new_field("jmap.push.timeout.request")
             .label("Request")
-            .help(concat!(
-                "Time before a connection with a push service URL times out"
-            ))
+            .help("Time before a connection with a push service URL times out")
             .default("10s")
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
             .new_field("jmap.push.timeout.verify")
             .label("Verify")
-            .help(concat!(
-                "Time to wait for the push service to verify a subscription"
-            ))
+            .help("Time to wait for the push service to verify a subscription")
             .default("1s")
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
             .new_field("jmap.event-source.throttle")
             .label("Throttle")
-            .help(concat!(
-                "Specifies the minimum time between two event source notifications"
-            ))
+            .help("Specifies the minimum time between two event source notifications")
             .default("1s")
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
@@ -251,7 +248,6 @@ impl Builder<Schemas, ()> {
             .new_form_section()
             .title("Push Subscriptions")
             .fields([
-                "jmap.push.max-total",
                 "jmap.push.throttle",
                 "jmap.push.attempts.interval",
                 "jmap.push.attempts.max",
@@ -271,27 +267,21 @@ impl Builder<Schemas, ()> {
             .new_schema("jmap-web-sockets")
             .new_field("jmap.web-sockets.throttle")
             .label("Throttle")
-            .help(concat!(
-                "Amount of time to wait before sending a batch of notifications to a WS client"
-            ))
+            .help("Amount of time to wait before sending a batch of notifications to a WS client")
             .default("1s")
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
             .new_field("jmap.web-sockets.timeout")
             .label("Timeout")
-            .help(concat!(
-                "Time before an inactive WebSocket connection times out"
-            ))
+            .help("Time before an inactive WebSocket connection times out")
             .default("10m")
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
             .new_field("jmap.web-sockets.heartbeat")
             .label("Heartbeat")
-            .help(concat!(
-                "Time to wait before sending a new heartbeat to the WebSocket client"
-            ))
+            .help("Time to wait before sending a new heartbeat to the WebSocket client")
             .default("1m")
             .typ(Type::Duration)
             .input_check([], [Validator::Required])

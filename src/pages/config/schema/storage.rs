@@ -7,6 +7,7 @@
 use super::*;
 
 impl Builder<Schemas, ()> {
+    #![allow(clippy::useless_concat)]
     pub fn build_storage(self) -> Self {
         self.new_schema("storage")
             .new_field("storage.data")
@@ -204,6 +205,106 @@ impl Builder<Schemas, ()> {
                 "account.purge.frequency",
                 "changes.max-history",
                 "email.auto-expunge",
+            ])
+            .build()
+            .build()
+            // E-mail Storage Quotas
+            .new_schema("email-storage-quota")
+            .new_field("object-quota.push-subscription")
+            .label("Push Subscriptions")
+            .help("The default maximum number of push subscriptions a user can create")
+            .default("15")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("object-quota.email")
+            .label("Emails")
+            .help("The default maximum number of emails a user can create")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("object-quota.mailbox")
+            .label("Mailboxes")
+            .help("The default maximum number of mailboxes a user can create")
+            .default("250")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("object-quota.identity")
+            .label("Email Identities")
+            .help("The default maximum number of identities a user can create")
+            .default("20")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("object-quota.email-submission")
+            .label("Email Submissions")
+            .help("The default maximum number of email submissions a user can create")
+            .default("500")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("object-quota.sieve-script")
+            .label("Sieve Scripts")
+            .help("The default maximum number of sieve scripts a user can create")
+            .default("100")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_form_section()
+            .title("Default Object Quotas")
+            .fields([
+                "object-quota.mailbox",
+                "object-quota.email",
+                "object-quota.sieve-script",
+                "object-quota.push-subscription",
+                "object-quota.identity",
+                "object-quota.email-submission",
+            ])
+            .build()
+            .build()
+            // E-mail Storage Quotas
+            .new_schema("groupware-storage-quota")
+            .new_field("object-quota.calendar")
+            .label("Calendars")
+            .help("The default maximum number of calendars a user can create")
+            .default("250")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("object-quota.calendar-event")
+            .label("Calendar Events")
+            .help("The default maximum number of calendar events a user can create")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("object-quota.address-book")
+            .label("Address Books")
+            .help("The default maximum number of address books a user can create")
+            .default("250")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("object-quota.contact-card")
+            .label("Contact Cards")
+            .help("The default maximum number of contact cards a user can create")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_field("object-quota.file-node")
+            .label("File Nodes")
+            .help("The default maximum number of file nodes a user can create")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            .new_form_section()
+            .title("Default Object Quotas")
+            .fields([
+                "object-quota.calendar",
+                "object-quota.calendar-event",
+                "object-quota.address-book",
+                "object-quota.contact-card",
+                "object-quota.file-node",
             ])
             .build()
             .build()

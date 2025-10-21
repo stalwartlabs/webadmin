@@ -9,6 +9,7 @@ use crate::core::schema::*;
 use super::tracing::EVENT_NAMES;
 
 impl Builder<Schemas, ()> {
+    #![allow(clippy::useless_concat)]
     pub fn build_server(self) -> Self {
         self.new_schema("network")
             // Default hostname
@@ -368,13 +369,7 @@ impl Builder<Schemas, ()> {
                 "List of node ids that are responsible for purging stores"
             ))
             .typ(Type::Array(ArrayType::Text))
-            .input_check(
-                [Transformer::Trim],
-                [
-                    Validator::MinValue(1.into()),
-                    Validator::MaxValue(65534.into()),
-                ],
-            )
+            .input_check([Transformer::Trim], [])
             .new_field("cluster.roles.purge.accounts")
             .label("Purge Accounts")
             .help(concat!(
@@ -395,6 +390,31 @@ impl Builder<Schemas, ()> {
             .help(concat!(
                 "List of node ids that are responsible for pushing metrics"
             ))
+            .new_field("cluster.roles.push-notifications")
+            .label("Push Notifications")
+            .help(concat!(
+                "List of node ids that are responsible for sending push notifications"
+            ))
+            .new_field("cluster.roles.fts-indexing")
+            .label("FTS Indexing")
+            .help(concat!(
+                "List of node ids that are responsible for full-text search indexing"
+            ))
+            .new_field("cluster.roles.bayes-training")
+            .label("Bayes Training")
+            .help(concat!(
+                "List of node ids that are responsible for training the Bayes spam model"
+            ))
+            .new_field("cluster.roles.imip-processing")
+            .label("iMIP Processing")
+            .help(concat!(
+                "List of node ids that are responsible for processing iMIP calendar messages"
+            ))
+            .new_field("cluster.roles.calendar-alerts")
+            .label("Calendar Alerts")
+            .help(concat!(
+                "List of node ids that are responsible for sending calendar alerts"
+            ))
             .build()
             // Forms
             .new_form_section()
@@ -409,6 +429,11 @@ impl Builder<Schemas, ()> {
                 "cluster.roles.acme.renew",
                 "cluster.roles.metrics.calculate",
                 "cluster.roles.metrics.push",
+                "cluster.roles.push-notifications",
+                "cluster.roles.fts-indexing",
+                "cluster.roles.bayes-training",
+                "cluster.roles.imip-processing",
+                "cluster.roles.calendar-alerts",
             ])
             .build()
             .build()

@@ -17,6 +17,7 @@ const SCOPES: &[(&str, &str)] = &[
 ];
 
 impl Builder<Schemas, ()> {
+    #![allow(clippy::useless_concat)]
     pub fn build_spam_lists(self) -> Self {
         // Anti-SPAM settings
         self.new_schema("spam-settings")

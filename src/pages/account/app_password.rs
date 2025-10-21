@@ -371,7 +371,7 @@ pub fn generate_app_password() -> String {
     for _ in 0..20 {
         app_password.push(rand::thread_rng().gen_range(b'a'..=b'z') as char);
         // Add a space every 4 characters
-        if app_password.len() % 5 == 0 {
+        if app_password.len().is_multiple_of(5) {
             app_password.push(' ');
         }
     }

@@ -28,6 +28,7 @@ const SQLITE_EMAILS: &str = "SELECT address FROM emails WHERE name = ? ORDER BY 
 const SQLITE_SECRETS: &str = "SELECT secret FROM secrets WHERE name = ?";
 
 impl Builder<Schemas, ()> {
+    #![allow(clippy::useless_concat)]
     pub fn build_store(self) -> Self {
         self.new_schema("store")
             .names("store", "stores")

@@ -129,17 +129,13 @@ impl Builder<Schemas, ()> {
             .new_schema("http-rate-limit")
             .new_field("http.rate-limit.account")
             .label("Authenticated")
-            .help(concat!(
-                "Specifies the request rate limit for authenticated users"
-            ))
+            .help("Specifies the request rate limit for authenticated users")
             .default("1000/1m")
             .typ(Type::Rate)
             .build()
             .new_field("http.rate-limit.anonymous")
             .label("Anonymous")
-            .help(concat!(
-                "Specifies the request rate limit for unauthenticated users"
-            ))
+            .help("Specifies the request rate limit for unauthenticated users")
             .default("100/1m")
             .typ(Type::Rate)
             .build()
@@ -152,9 +148,7 @@ impl Builder<Schemas, ()> {
             .new_schema("http-form")
             .new_field("form.deliver-to")
             .label("Recipients")
-            .help(concat!(
-                "List of local e-mail addresses to deliver the contact form to.",
-            ))
+            .help("List of local e-mail addresses to deliver the contact form to.")
             .typ(Type::Array(ArrayType::Text))
             .input_check([Transformer::Trim], [Validator::IsEmail])
             .build()
@@ -235,23 +229,19 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("form.max-size")
             .label("Max Size")
-            .help(concat!(
-                "Maximum size of the contact form submission in bytes."
-            ))
+            .help("Maximum size of the contact form submission in bytes.")
             .typ(Type::Size)
             .default("102400")
             .build()
             .new_field("form.enable")
             .label("Enable form submissions")
-            .help(concat!("Whether to enable contact form submissions."))
+            .help("Whether to enable contact form submissions.")
             .typ(Type::Boolean)
             .default("false")
             .build()
             .new_field("form.validate-domain")
             .label("Validate email domain")
-            .help(concat!(
-                "Whether to validate the domain of the sender's email address."
-            ))
+            .help("Whether to validate the domain of the sender's email address.")
             .typ(Type::Boolean)
             .default("true")
             .build()

@@ -9,6 +9,7 @@ use crate::core::schema::*;
 use super::SMTP_RCPT_TO_VARS;
 
 impl Builder<Schemas, ()> {
+    #![allow(clippy::useless_concat)]
     pub fn build_sieve(self) -> Self {
         let rcpt_vars = ExpressionValidator::new(SMTP_RCPT_TO_VARS, &[]);
 
@@ -184,10 +185,6 @@ impl Builder<Schemas, ()> {
             .default("512")
             .typ(Type::Input)
             .input_check([], [Validator::Required, Validator::MinValue(1.into())])
-            .new_field("sieve.untrusted.limits.max-scripts")
-            .label("Maximum Scripts")
-            .help(concat!("Maximum number of scripts a user can have"))
-            .default("256")
             .new_field("sieve.untrusted.limits.script-size")
             .label("Script Size")
             .help(concat!("Maximum size of a script"))
@@ -282,7 +279,6 @@ impl Builder<Schemas, ()> {
             .title("Untrusted Limits")
             .fields([
                 "sieve.untrusted.limits.name-length",
-                "sieve.untrusted.limits.max-scripts",
                 "sieve.untrusted.limits.script-size",
                 "sieve.untrusted.limits.string-length",
                 "sieve.untrusted.limits.variable-name-length",
