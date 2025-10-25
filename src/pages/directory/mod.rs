@@ -875,10 +875,92 @@ pub static PERMISSIONS: &[(&str, &str)] = &[
     ("individual-get", "Retrieve specific account information"),
     ("individual-list", "View list of user accounts"),
     ("individual-update", "Modify user account information"),
+    (
+        "jmap-address-book-changes",
+        "Track address book changes via JMAP",
+    ),
+    ("jmap-address-book-get", "Retrieve address books via JMAP"),
+    (
+        "jmap-address-book-set",
+        "Create or update address books via JMAP",
+    ),
     ("jmap-blob-copy", "Copy blobs via JMAP"),
     ("jmap-blob-get", "Retrieve blobs via JMAP"),
     ("jmap-blob-lookup", "Look up blobs via JMAP"),
     ("jmap-blob-upload", "Upload blobs via JMAP"),
+    ("jmap-calendar-changes", "Track calendar changes via JMAP"),
+    (
+        "jmap-calendar-event-changes",
+        "Track calendar event changes via JMAP",
+    ),
+    (
+        "jmap-calendar-event-copy",
+        "Copy calendar events to new locations via JMAP",
+    ),
+    (
+        "jmap-calendar-event-get",
+        "Retrieve calendar events via JMAP",
+    ),
+    (
+        "jmap-calendar-event-notification-changes",
+        "Track calendar event notification changes via JMAP",
+    ),
+    (
+        "jmap-calendar-event-notification-get",
+        "Retrieve calendar event notifications via JMAP",
+    ),
+    (
+        "jmap-calendar-event-notification-query",
+        "Search for calendar event notifications matching criteria via JMAP",
+    ),
+    (
+        "jmap-calendar-event-notification-query-changes",
+        "Track calendar event notification query changes via JMAP",
+    ),
+    (
+        "jmap-calendar-event-notification-set",
+        "Create or update calendar event notifications via JMAP",
+    ),
+    (
+        "jmap-calendar-event-parse",
+        "Parse calendar events via JMAP",
+    ),
+    (
+        "jmap-calendar-event-query",
+        "Search for calendar events matching criteria via JMAP",
+    ),
+    (
+        "jmap-calendar-event-query-changes",
+        "Track calendar event query changes via JMAP",
+    ),
+    (
+        "jmap-calendar-event-set",
+        "Create or update calendar events via JMAP",
+    ),
+    ("jmap-calendar-get", "Retrieve calendars via JMAP"),
+    ("jmap-calendar-set", "Create or update calendars via JMAP"),
+    (
+        "jmap-contact-card-changes",
+        "Track contact card changes via JMAP",
+    ),
+    (
+        "jmap-contact-card-copy",
+        "Copy contact cards to new locations via JMAP",
+    ),
+    ("jmap-contact-card-get", "Retrieve contact cards via JMAP"),
+    ("jmap-contact-card-parse", "Parse contact cards via JMAP"),
+    (
+        "jmap-contact-card-query",
+        "Search for contact cards matching criteria via JMAP",
+    ),
+    (
+        "jmap-contact-card-query-changes",
+        "Track contact card query changes via JMAP",
+    ),
+    (
+        "jmap-contact-card-set",
+        "Create or update contact cards via JMAP",
+    ),
     ("jmap-echo", "Perform JMAP echo requests"),
     ("jmap-email-changes", "Track email changes via JMAP"),
     ("jmap-email-copy", "Copy emails via JMAP"),
@@ -911,6 +993,17 @@ pub static PERMISSIONS: &[(&str, &str)] = &[
         "jmap-email-submission-set",
         "Modify email submission settings via JMAP",
     ),
+    ("jmap-file-node-changes", "Track file node changes via JMAP"),
+    ("jmap-file-node-get", "Retrieve file nodes via JMAP"),
+    (
+        "jmap-file-node-query",
+        "Search for file nodes matching criteria via JMAP",
+    ),
+    (
+        "jmap-file-node-query-changes",
+        "Track file node query changes via JMAP",
+    ),
+    ("jmap-file-node-set", "Create or update file nodes via JMAP"),
     ("jmap-identity-changes", "Track identity changes via JMAP"),
     ("jmap-identity-get", "Retrieve user identities via JMAP"),
     ("jmap-identity-set", "Modify user identities via JMAP"),
@@ -923,8 +1016,25 @@ pub static PERMISSIONS: &[(&str, &str)] = &[
     ),
     ("jmap-mailbox-set", "Modify mailboxes via JMAP"),
     (
+        "jmap-participant-identity-changes",
+        "Track participant identity changes via JMAP",
+    ),
+    (
+        "jmap-participant-identity-get",
+        "Retrieve participant identity information via JMAP",
+    ),
+    (
+        "jmap-participant-identity-set",
+        "Create or update participant identities via JMAP",
+    ),
+    ("jmap-principal-changes", "Track principal changes via JMAP"),
+    (
         "jmap-principal-get",
         "Retrieve principal information via JMAP",
+    ),
+    (
+        "jmap-principal-get-availability",
+        "Retrieve availability information via JMAP",
     ),
     ("jmap-principal-query", "Perform principal queries via JMAP"),
     (
@@ -947,6 +1057,26 @@ pub static PERMISSIONS: &[(&str, &str)] = &[
         "Track quota query changes via JMAP",
     ),
     ("jmap-search-snippet", "Retrieve search snippets via JMAP"),
+    (
+        "jmap-share-notification-changes",
+        "Track share notification changes via JMAP",
+    ),
+    (
+        "jmap-share-notification-get",
+        "Retrieve share notifications via JMAP",
+    ),
+    (
+        "jmap-share-notification-query",
+        "Search for share notifications matching criteria via JMAP",
+    ),
+    (
+        "jmap-share-notification-query-changes",
+        "Track share notification query changes via JMAP",
+    ),
+    (
+        "jmap-share-notification-set",
+        "Create or update share notifications via JMAP",
+    ),
     ("jmap-sieve-script-get", "Retrieve Sieve scripts via JMAP"),
     (
         "jmap-sieve-script-query",

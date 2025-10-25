@@ -12,6 +12,7 @@ use crate::{
 use super::{smtp::*, CONNECTION_VARS, RCPT_DOMAIN_VARS, SMTP_RCPT_TO_VARS};
 
 impl Builder<Schemas, ()> {
+    #![allow(clippy::useless_concat)]
     pub fn build_mail_auth(self) -> Self {
         let conn_vars = ExpressionValidator::new(CONNECTION_VARS, &[]);
         let rcpt_domain = ExpressionValidator::new(RCPT_DOMAIN_VARS, &[]);

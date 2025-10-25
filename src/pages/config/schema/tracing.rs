@@ -7,6 +7,7 @@
 use crate::core::schema::*;
 
 impl Builder<Schemas, ()> {
+    #![allow(clippy::useless_concat)]
     pub fn build_telemetry(self) -> Self {
         self.new_schema("tracing")
             .names("tracer", "tracers")
@@ -1072,6 +1073,7 @@ pub static EVENT_NAMES: &[&str] = &[
     "smtp.future-release-disabled",
     "smtp.future-release-invalid",
     "smtp.help",
+    "smtp.id-not-found",
     "smtp.invalid-command",
     "smtp.invalid-ehlo",
     "smtp.invalid-parameter",
@@ -1106,7 +1108,6 @@ pub static EVENT_NAMES: &[&str] = &[
     "smtp.rcpt-to-missing",
     "smtp.rcpt-to-rewritten",
     "smtp.relay-not-allowed",
-    "smtp.remote-id-not-found",
     "smtp.request-too-large",
     "smtp.require-tls-disabled",
     "smtp.rset",
@@ -1183,6 +1184,7 @@ pub static EVENT_NAMES: &[&str] = &[
     "task-queue.blob-not-found",
     "task-queue.metadata-not-found",
     "task-queue.task-acquired",
+    "task-queue.task-ignored",
     "task-queue.task-locked",
     "telemetry.alert",
     "telemetry.journal-error",

@@ -9,6 +9,7 @@ use crate::core::{form::Expression, schema::*};
 use super::*;
 
 impl Builder<Schemas, ()> {
+    #![allow(clippy::useless_concat)]
     pub fn build_smtp_outbound(self) -> Self {
         const REQUIRE_OPTIONAL: &[(&str, &str)] = &[
             ("optional", "Optional"),

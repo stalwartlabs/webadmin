@@ -8,54 +8,7 @@ use crate::core::schema::*;
 
 impl Builder<Schemas, ()> {
     pub fn build_imap(self) -> Self {
-        // Authentication
-        self.new_schema("imap-auth")
-            .new_field("imap.auth.max-failures")
-            .label("Max Failures")
-            .help(concat!(
-                "Number of authentication attempts a user can make before being ",
-                "disconnected by the server"
-            ))
-            .default("3")
-            .typ(Type::Input)
-            .input_check(
-                [Transformer::Trim],
-                [Validator::Required, Validator::MinValue(1.into())],
-            )
-            .build()
-            .new_field("imap.auth.allow-plain-text")
-            .label("Allow plain text authentication")
-            .help("Whether to allow plain text authentication on unencrypted connections")
-            .default("false")
-            .typ(Type::Boolean)
-            .build()
-            .new_form_section()
-            .title("Authentication settings")
-            .fields(["imap.auth.max-failures", "imap.auth.allow-plain-text"])
-            .build()
-            .build()
-            // Rate limiting
-            .new_schema("imap-rate-limit")
-            .new_field("imap.rate-limit.requests")
-            .label("Requests")
-            .help("The maximum number of requests per minute")
-            .default("2000/1m")
-            .typ(Type::Rate)
-            .build()
-            .new_field("imap.rate-limit.concurrent")
-            .label("Concurrent")
-            .help("The maximum number of concurrent connections")
-            .default("6")
-            .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
-            .build()
-            .new_form_section()
-            .title("Rate Limiting")
-            .fields(["imap.rate-limit.requests", "imap.rate-limit.concurrent"])
-            .build()
-            .build()
-            // Protocol limits
-            .new_schema("imap-limits")
+        self.new_schema("imap-settings")
             .new_field("imap.request.max-size")
             .label("Request Size")
             .help("Maximum size of an IMAP request that the server will accept")
@@ -93,8 +46,46 @@ impl Builder<Schemas, ()> {
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
+            // Rate limiting
+            .new_field("imap.rate-limit.requests")
+            .label("Requests")
+            .help("The maximum number of requests per minute")
+            .default("2000/1m")
+            .typ(Type::Rate)
+            .build()
+            .new_field("imap.rate-limit.concurrent")
+            .label("Concurrent")
+            .help("The maximum number of concurrent connections")
+            .default("6")
+            .typ(Type::Input)
+            .input_check([Transformer::Trim], [Validator::MinValue(1.into())])
+            .build()
+            // Authentication
+            .new_field("imap.auth.max-failures")
+            .label("Max Failures")
+            .help(concat!(
+                "Number of authentication attempts a user can make before being ",
+                "disconnected by the server"
+            ))
+            .default("3")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::MinValue(1.into())],
+            )
+            .build()
+            .new_field("imap.auth.allow-plain-text")
+            .label("Allow plain text authentication")
+            .help("Whether to allow plain text authentication on unencrypted connections")
+            .default("false")
+            .typ(Type::Boolean)
+            .build()
             .new_form_section()
-            .title("Limits")
+            .title("Authentication settings")
+            .fields(["imap.auth.max-failures", "imap.auth.allow-plain-text"])
+            .build()
+            .new_form_section()
+            .title("Request Limits")
             .fields(["imap.request.max-size"])
             .build()
             .new_form_section()
@@ -105,9 +96,13 @@ impl Builder<Schemas, ()> {
                 "imap.timeout.idle",
             ])
             .build()
+            .new_form_section()
+            .title("Rate Limiting")
+            .fields(["imap.rate-limit.requests", "imap.rate-limit.concurrent"])
+            .build()
             .build()
             // Folders
-            .new_schema("imap-folders")
+            .new_schema("email-folders")
             .new_field("email.folders.inbox.name")
             .label("Name")
             .help("Default name for the inbox folder")

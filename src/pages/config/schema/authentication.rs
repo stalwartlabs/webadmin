@@ -55,9 +55,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("authentication.master.secret")
             .label("Password")
-            .help(concat!(
-                "The master user secret to access any user account ",
-            ))
+            .help("The master user secret to access any user account ")
             .typ(Type::Secret)
             .input_check([Transformer::Trim, Transformer::HashSecret], [])
             .build()
@@ -166,9 +164,7 @@ impl Builder<Schemas, ()> {
             .new_schema("openid")
             .new_field("oauth.oidc.signature-algorithm")
             .label("Signature algorithm")
-            .help(concat!(
-                "JWT signature algorithm to use for OpenID Connect."
-            ))
+            .help("JWT signature algorithm to use for OpenID Connect.")
             .default("relaxed/relaxed")
             .typ(Type::Select {
                 typ: SelectType::Single,
@@ -182,9 +178,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_field("oauth.oidc.signature-key")
             .label("Signature Key")
-            .help(concat!(
-                "Contents of the private key PEM used to sign JWTs for OpenID Connect."
-            ))
+            .help("Contents of the private key PEM used to sign JWTs for OpenID Connect.")
             .typ(Type::Text)
             .input_check([], [Validator::Required])
             .build()

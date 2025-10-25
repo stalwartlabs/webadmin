@@ -7,6 +7,7 @@
 use crate::core::schema::*;
 
 impl Builder<Schemas, ()> {
+    #![allow(clippy::useless_concat)]
     pub fn build_webdav(self) -> Self {
         // WebDAV
         self.new_schema("webdav")
@@ -330,28 +331,43 @@ impl Builder<Schemas, ()> {
             ])
             .build()
             .build()
-            /*
-                        alarms_enabled: config.property("calendar.alarms.enabled").unwrap_or(true),
-            alarms_minimum_interval: config
-                .property_or_default::<Duration>("calendar.alarms.minimum-interval", "1h")
-                .unwrap_or(Duration::from_secs(60 * 60))
-                .as_secs() as i64,
-            alarms_allow_external_recipients: config
-                .property("calendar.alarms.allow-external-recipients")
-                .unwrap_or(false),
-            alarms_from_name: config
-                .value("calendar.alarms.from.name")
-                .unwrap_or("Stalwart Calendar")
-                .to_string(),
-            alarms_from_email: config
-                .value("calendar.alarms.from.email")
-                .map(|s| s.to_string()),
-            alarms_template: Template::parse(include_str!(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/../../resources/html-templates/calendar-alarm.html.min"
-            )))
-            .expect("Failed to parse calendar template"),
-             */
+            // Sharing
+            .new_schema("sharing")
+            .new_field("sharing.max-shares-per-item")
+            .label("Max Shares")
+            .help(concat!(
+                "Specifies the maximum number of sharees that can be added to a single ",
+                "shared item (calendar, address book or file)"
+            ))
+            .default("10")
+            .typ(Type::Input)
+            .input_check([], [Validator::Required, Validator::MinValue(1.into())])
+            .build()
+            .new_field("sharing.max-history")
+            .label("Sharing History")
+            .help(concat!(
+                "Specifies the duration for which the JMAP share notification history is retained ",
+                "before it is automatically purged."
+            ))
+            .default("30d")
+            .typ(Type::Duration)
+            .input_check([Transformer::Trim], [])
+            .build()
+            .new_field("sharing.allow-directory-query")
+            .label("Allow Directory Queries")
+            .help("Whether authenticated users can query the directory via WebDAV and JMAP")
+            .typ(Type::Boolean)
+            .default("false")
+            .build()
+            .new_form_section()
+            .title("Sharing Settings")
+            .fields([
+                "sharing.max-shares-per-item",
+                "sharing.max-history",
+                "sharing.allow-directory-query",
+            ])
+            .build()
+            .build()
             // Alarms
             .new_schema("alarms")
             .new_field("calendar.alarms.enabled")
