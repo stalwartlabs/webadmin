@@ -159,7 +159,7 @@ impl Builder<Schemas, ()> {
                 "e-mail address of the sender."
             ))
             .typ(Type::Input)
-            .input_check([Transformer::Trim], [Validator::IsEmail])
+            .input_check([Transformer::Trim], [])
             .build()
             .new_field("form.name.field")
             .label("Name field")
