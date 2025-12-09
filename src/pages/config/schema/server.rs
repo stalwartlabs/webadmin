@@ -483,6 +483,19 @@ impl Builder<Schemas, ()> {
             .typ(Type::Duration)
             .input_check([], [Validator::Required])
             .build()
+            .new_field("batch-size")
+            .label("Batch Size")
+            .help(concat!(
+                "Maximum number of events to include in each webhook request. ",
+                "Larger batches reduce HTTP overhead but increase payload size"
+            ))
+            .default("100")
+            .typ(Type::Input)
+            .input_check(
+                [Transformer::Trim],
+                [Validator::Required, Validator::MinValue(1.into())],
+            )
+            .build()
             .new_field("signature-key")
             .label("Signature Key")
             .help(concat!(
@@ -533,7 +546,7 @@ impl Builder<Schemas, ()> {
             .build()
             .new_form_section()
             .title("Options")
-            .fields(["throttle", "timeout", "headers"])
+            .fields(["throttle", "timeout", "batch-size", "headers"])
             .build()
             .list_title("Webhooks")
             .list_subtitle("Manage Webhooks")
