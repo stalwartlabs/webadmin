@@ -119,6 +119,7 @@ impl Builder<Schemas, ()> {
                     ("digitalocean", "DigitalOcean"),
                     ("desec", "DeSEC"),
                     ("ovh", "OVH"),
+                    ("porkbun", "Porkbun"),
                 ]),
                 typ: SelectType::Single,
             })
@@ -203,6 +204,14 @@ impl Builder<Schemas, ()> {
             .input_check([Transformer::Trim], [Validator::Required])
             .display_if_eq("provider", ["rfc2136-tsig", "ovh"])
             .build()
+            // API Key
+            .new_field("api-key")
+            .typ(Type::Secret)
+            .label("API Key")
+            .help("Porkbun's API key")
+            .input_check([Transformer::Trim], [Validator::Required])
+            .display_if_eq("provider", ["porkbun"])
+            .build()
             // OVH endpoint
             .new_field("ovh-endpoint")
             .typ(Type::Select {
@@ -283,6 +292,7 @@ impl Builder<Schemas, ()> {
                 "protocol",
                 "tsig-algorithm",
                 "key",
+                "api-key",
                 "secret",
                 "consumer-key",
                 "polling-interval",
