@@ -18,6 +18,7 @@ use crate::{
             input::{InputPassword, InputText},
             FormElement,
         },
+        icon::{IconMoon, IconSun},
         messages::alert::{use_alerts, Alert, Alerts},
     },
     core::{
@@ -128,8 +129,46 @@ pub fn Login() -> impl IntoView {
             && !show_totp.get()
     });
 
+    let is_dark = RwSignal::new(
+        web_sys::window()
+            .and_then(|w| w.document())
+            .and_then(|d| d.document_element())
+            .map(|el| el.class_list().contains("dark"))
+            .unwrap_or(false),
+    );
+
     view! {
         <Body class="dark:bg-slate-900 bg-gray-100 flex h-full items-center py-16"/>
+        <div class="fixed top-4 right-4 z-50">
+            <button
+                type="button"
+                class="size-[38px] inline-flex justify-center items-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-200 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                title=move || {
+                    if is_dark.get() { "Switch to light mode" } else { "Switch to dark mode" }
+                }
+                on:click=move |_| {
+                    let new_dark = !is_dark.get();
+                    is_dark.set(new_dark);
+                    if let Some(el) = web_sys::window()
+                        .and_then(|w| w.document())
+                        .and_then(|d| d.document_element())
+                    {
+                        let class_list = el.class_list();
+                        if new_dark {
+                            let _ = class_list.add_1("dark");
+                            let _ = LocalStorage::set("webadmin_theme", "dark");
+                        } else {
+                            let _ = class_list.remove_1("dark");
+                            let _ = LocalStorage::set("webadmin_theme", "light");
+                        }
+                    }
+                }
+            >
+                <Show when=move || !is_dark.get() fallback=move || view! { <IconSun/> }>
+                    <IconMoon/>
+                </Show>
+            </button>
+        </div>
         <main class="w-full max-w-md mx-auto p-6">
             <div class="mt-7 bg-white border border-gray-200 rounded-xl shadow-sm dark:bg-gray-800 dark:border-gray-700">
                 <div class="p-4 sm:p-7">

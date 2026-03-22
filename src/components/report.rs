@@ -57,7 +57,7 @@ pub fn ReportItem(
     if !hide {
         Some(view! {
             <div class="sm:col-span-3">
-                <label class="inline-block text-sm font-medium text-gray-500 mt-2.5">{label}</label>
+                <label class="inline-block text-sm font-medium text-gray-500 dark:text-gray-400 mt-2.5">{label}</label>
             </div>
 
             <div class="sm:col-span-9">{children()}</div>
@@ -70,7 +70,7 @@ pub fn ReportItem(
 #[component]
 pub fn ReportTextValue(#[prop(into)] value: MaybeSignal<String>) -> impl IntoView {
     view! {
-        <label class="inline-block text-sm font-semibold text-gray-500 mt-2.5">
+        <label class="inline-block text-sm font-semibold text-gray-500 dark:text-gray-400 mt-2.5">
             {move || value.get()}
         </label>
     }

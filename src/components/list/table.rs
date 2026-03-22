@@ -9,7 +9,7 @@ use leptos::*;
 #[component]
 pub fn Table(#[prop(into)] headers: MaybeSignal<Vec<String>>, children: Children) -> impl IntoView {
     view! {
-        <div class="flex flex-col bg-white">
+        <div class="flex flex-col bg-white dark:bg-slate-900">
             <div class="-m-1.5 overflow-x-auto">
                 <div class="p-1.5 min-w-full inline-block align-middle">
                     <div class="border rounded-lg shadow overflow-hidden dark:border-gray-700 dark:shadow-gray-900">
@@ -26,7 +26,7 @@ pub fn Table(#[prop(into)] headers: MaybeSignal<Vec<String>>, children: Children
                                             view! {
                                                 <th
                                                     scope="col"
-                                                    class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase"
+                                                    class="px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"
                                                 >
                                                     {header}
                                                 </th>

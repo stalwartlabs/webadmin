@@ -65,7 +65,7 @@ pub fn ToggleNavigation(menu_items: Vec<MenuItem>, show_sidebar: RwSignal<bool>)
             <div class="flex items-center py-4">
                 <button
                     type="button"
-                    class="text-gray-500 hover:text-gray-600"
+                    class="text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
                     data-hs-overlay="#application-sidebar"
                     aria-controls="application-sidebar"
                     aria-label="Toggle navigation"

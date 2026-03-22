@@ -4,13 +4,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use gloo_storage::{SessionStorage, Storage};
+use gloo_storage::{LocalStorage, SessionStorage, Storage};
 use leptos::*;
 use leptos_router::use_navigate;
 
 use crate::{
     components::icon::{
-        IconAdjustmentsHorizontal, IconHeart, IconPower, IconServer, IconUserCircle,
+        IconAdjustmentsHorizontal, IconHeart, IconMoon, IconPower, IconServer, IconSun,
+        IconUserCircle,
     },
     core::{oauth::use_authorization, url::UrlBuilder, AccessToken, Permission, Permissions},
     pages::config::edit::DEFAULT_SETTINGS_URL,
@@ -23,6 +24,14 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
     let show_action_dropdown = RwSignal::new(false);
     let show_account_dropdown = RwSignal::new(false);
     let auth_token = use_context::<RwSignal<AccessToken>>().unwrap();
+
+    let is_dark = RwSignal::new(
+        web_sys::window()
+            .and_then(|w| w.document())
+            .and_then(|d| d.document_element())
+            .map(|el| el.class_list().contains("dark"))
+            .unwrap_or(false),
+    );
 
     view! {
         <header class="sticky top-0 inset-x-0 flex flex-wrap sm:justify-start sm:flex-nowrap z-[48] w-full bg-white border-b text-sm py-2.5 sm:py-4 lg:ps-64 dark:bg-gray-800 dark:border-gray-700">
@@ -110,6 +119,36 @@ pub fn Header(permissions: Memo<Option<Permissions>>) -> impl IntoView {
                     <div class="flex flex-row items-center justify-end gap-2 ms-auto">
 
                         <div class="flex flex-row items-center justify-end gap-1">
+                            <button
+                                type="button"
+                                class="size-[38px] relative inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-neutral-700 dark:focus:bg-neutral-700"
+                                title=move || {
+                                    if is_dark.get() { "Switch to light mode" } else { "Switch to dark mode" }
+                                }
+                                on:click=move |_| {
+                                    let new_dark = !is_dark.get();
+                                    is_dark.set(new_dark);
+                                    if let Some(el) = web_sys::window()
+                                        .and_then(|w| w.document())
+                                        .and_then(|d| d.document_element())
+                                    {
+                                        let class_list = el.class_list();
+                                        if new_dark {
+                                            let _ = class_list.add_1("dark");
+                                            let _ = LocalStorage::set("webadmin_theme", "dark");
+                                        } else {
+                                            let _ = class_list.remove_1("dark");
+                                            let _ = LocalStorage::set("webadmin_theme", "light");
+                                        }
+                                    }
+                                }
+                            >
+                                <Show when=move || !is_dark.get() fallback=move || view! { <IconSun/> }>
+                                    <IconMoon/>
+                                </Show>
+                                <span class="sr-only">Toggle dark mode</span>
+                            </button>
+
                             <div class="hs-dropdown relative inline-flex">
 
                                 <button

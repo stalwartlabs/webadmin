@@ -276,7 +276,7 @@ pub fn InputSize(
                 disabled=move || { disabled.get() || display_value.get() == 0 }
             />
 
-            <div class="absolute inset-y-0 end-0 flex items-center text-gray-500 pe-px">
+            <div class="absolute inset-y-0 end-0 flex items-center text-gray-500 dark:text-gray-400 pe-px">
                 <select
                     class="block text-xs w-full border-transparent rounded-lg focus:ring-blue-600 focus:border-blue-600 dark:bg-gray-800"
                     on:change=move |ev| {
@@ -375,7 +375,7 @@ pub fn InputDuration(
                 disabled=move || { disabled.get() || value.get().unit.is_empty() }
             />
 
-            <div class="absolute inset-y-0 end-0 flex items-center text-gray-500 pe-px">
+            <div class="absolute inset-y-0 end-0 flex items-center text-gray-500 dark:text-gray-400 pe-px">
                 <select
                     class="block text-xs w-full border-transparent rounded-lg focus:ring-blue-600 focus:border-blue-600 dark:bg-gray-800"
                     on:change=move |ev| {
@@ -518,7 +518,7 @@ pub fn InputRate(
                     disabled=move || { disabled.get() || value.get().period.unit.is_empty() }
                 />
 
-                <div class="absolute inset-y-0 end-0 flex items-center text-gray-500 pe-px">
+                <div class="absolute inset-y-0 end-0 flex items-center text-gray-500 dark:text-gray-400 pe-px">
                     <select
                         class="block text-xs w-full border-transparent rounded-lg focus:ring-blue-600 focus:border-blue-600 dark:bg-gray-800"
                         on:change=move |ev| {

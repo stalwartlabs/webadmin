@@ -62,7 +62,7 @@ pub fn CardItem(
                 {contents}
             </h3>
             <div class="mt-1 flex justify-between items-center">
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
                     {subcontents}
                     <span class="font-semibold text-gray-800 dark:text-gray-200">
                         {subcontents_bold}
