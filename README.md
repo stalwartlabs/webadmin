@@ -41,6 +41,7 @@ Key features:
 - Configuration of every aspect of the mail server.
 - Log viewer with search and filtering capabilities.
 - Self-service password reset and encryption-at-rest key management.
+- Light and dark theme toggle with browser-persisted preference.
 
 ## Screenshots
 
@@ -56,6 +57,11 @@ Stalwart Webadmin is included with Stalwart Mail Server, to install Stalwart Mai
 
 All documentation is available at [stalw.art/docs/get-started](https://stalw.art/docs/get-started).
 
+## Interface Notes
+
+- The web interface includes a light/dark theme toggle on the login screen and in the authenticated header.
+- Theme preference is stored in browser local storage under `webadmin_theme`.
+
 ## Support
 
 If you are having problems running Stalwart Mail Server, you found a bug or just have a question,
@@ -67,11 +73,11 @@ Additionally you may purchase a subscription to obtain priority support from Sta
 
 This project is dual-licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0; as published by the Free Software Foundation) and the **Stalwart Enterprise License v1 (SELv1)**:
 
-- The [GNU Affero General Public License v3.0](./LICENSES/AGPL-3.0-only.txt) is a free software license that ensures your freedom to use, modify, and distribute the software, with the condition that any modified versions of the software must also be distributed under the same license. 
-- The [Stalwart Enterprise License v1 (SELv1)](./LICENSES/LicenseRef-SEL.txt) is a proprietary license designed for commercial use. It offers additional features and greater flexibility for businesses that do not wish to comply with the AGPL-3.0 license requirements. 
+- The [GNU Affero General Public License v3.0](./LICENSES/AGPL-3.0-only.txt) is a free software license that ensures your freedom to use, modify, and distribute the software, with the condition that any modified versions of the software must also be distributed under the same license.
+- The [Stalwart Enterprise License v1 (SELv1)](./LICENSES/LicenseRef-SEL.txt) is a proprietary license designed for commercial use. It offers additional features and greater flexibility for businesses that do not wish to comply with the AGPL-3.0 license requirements.
 
 Each file in this project contains a license notice at the top, indicating the applicable license(s). The license notice follows the [REUSE guidelines](https://reuse.software/) to ensure clarity and consistency. The full text of each license is available in the [LICENSES](./LICENSES/) directory.
-  
+
 ## Copyright
 
 Copyright (C) 2024, Stalwart Labs LLC

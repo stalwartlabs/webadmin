@@ -2,9 +2,20 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+## Added
+
+- Light and dark theme toggle with persisted browser preference.
+
+### Changed
+
+### Fixed
+
 ## [0.1.37] - 2025-12-28
 
 ## Added
+
 - Meilisearch task polling settings.
 
 ### Changed
@@ -18,6 +29,7 @@ All notable changes to this project will be documented in this file. This projec
 ### Changed
 
 ### Fixed
+
 - Meilisearch not available for selection as FTS store.
 
 ## [0.1.35] - 2025-12-22
@@ -25,6 +37,7 @@ All notable changes to this project will be documented in this file. This projec
 ## Added
 
 ### Changed
+
 - Auto-learn spam from spam traps and RBL hits settings.
 
 ### Fixed
@@ -32,6 +45,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.34] - 2025-12-16
 
 ## Added
+
 - New spam classifier.
 - New undelete interface.
 
@@ -42,6 +56,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.33] - 2025-10-22
 
 ## Added
+
 - Task cluster server roles.
 - Sharing settings.
 - Object storage quotas for email and groupware.
@@ -53,6 +68,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.32] - 2025-07-28
 
 ## Added
+
 - Allow administrators to add app passwords.
 - DeSEC DNS support.
 - OVH DNS support.
@@ -64,21 +80,25 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.31] - 2025-07-22
 
 ## Added
+
 - Danish and Catalan languages in dropdowns.
 
 ### Changed
 
 ### Fixed
+
 - FoundationDB `ids.datacenter` setting (fixes #89)
 
 ## [0.1.30] - 2025-07-16
 
 ## Added
+
 - ACME DigitalOcean provider.
 
 ### Changed
 
 ### Fixed
+
 - Queue serialization error.
 
 ## [0.1.29] - 2025-07-15
@@ -86,14 +106,17 @@ All notable changes to this project will be documented in this file. This projec
 ## Added
 
 ### Changed
+
 - MTA queue configuration and management.
 
 ### Fixed
+
 - Hash API key credentials.
 
 ## [0.1.28] - 2025-06-25
 
 ## Added
+
 - Calendar Scheduling and Notification configuration.
 - Locales.
 
@@ -104,17 +127,20 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.27] - 2025-06-04
 
 ## Added
+
 - Updated LDAP configuration.
 
 ### Changed
 
 ### Fixed
+
 - Correct `dav.lock.max-timeout` default value (stalwartlabs/stalwart#1575)
 - Hash secrets when updated via forms (credits to @denschub for the report).
 
 ## [0.1.26] - 2025-05-26
 
 ## Added
+
 - WebDAV, CalDAV amd CardDAV configuration.
 - NATS PubSub configuration.
 
@@ -125,11 +151,13 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.25] - 2024-03-40
 
 ## Added
+
 - LDAP attribute to indicate password change (stalwartlabs/mail-server#1156)
 
 ### Changed
 
 ### Fixed
+
 - Make Profile and Security token S3 settings optional (stalwartlabs/mail-server#1166)
 
 ## [0.1.24] - 2024-02-01
@@ -137,6 +165,7 @@ All notable changes to this project will be documented in this file. This projec
 ## Added
 
 ### Changed
+
 - Open source third party OIDC support.
 
 ### Fixed
@@ -146,21 +175,25 @@ All notable changes to this project will be documented in this file. This projec
 ## Added
 
 ### Changed
+
 - Removed free and disposable email providers sections.
 - `session.throttle.*` is now `queue.limiter.inbound.*`.
 - `queue.throttle.*` is now `queue.limiter.outbound.*`.
 
 ### Fixed
+
 - Invalid member counts (stalwartlabs/mail-server#1105).
 
 ## [0.1.22] - 2024-01-17
 
 ## Added
+
 - Top bar dropdowns.
 - Cluster node roles.
 - `config_get` expression support.
 
 ### Changed
+
 - Renamed to `lookup.default.[hostname|domain]` to `server.hostname` and `report.domain` settings.
 - Removed known DMARC list.
 
@@ -169,22 +202,26 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.21] - 2024-01-06
 
 ## Added
+
 - New Spam filter configuration sections and options.
 
 ### Changed
 
 ### Fixed
+
 - UI improvements handling large lists (stalwartlabs/mail-server#925).
 - Remove None from MTA-STS modes (#48).
 
 ## [0.1.20] - 2024-12-04
 
 ## Added
+
 - Delivery and DMARC troubleshooting.
 - Azure blob storage.
 - Support for external email addresses on mailing lists.
 
 ### Changed
+
 - LDAP/SQL simplified config.
 
 ### Fixed
@@ -192,6 +229,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.19] - 2024-11-07
 
 ## Added
+
 - `bind.auth.search` and `enterprise.api-key` settings.
 
 ### Changed
@@ -201,17 +239,20 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.18] - 2024-10-08
 
 ## Added
+
 - 'Automatic Ban' section.
 - Support for 'External Account Binding' in ACME providers.
 
 ### Changed
 
 ### Fixed
+
 - Include nonce in OAuth code request.
 
 ## [0.1.17] - 2024-10-07
 
 ## Added
+
 - AI model management.
 - LLM Classifier settings.
 - S3 `max-retries` setting.
@@ -219,6 +260,7 @@ All notable changes to this project will be documented in this file. This projec
 ### Changed
 
 ### Fixed
+
 - Allow non-HTTPS `redirect-uri` for OAuth clients.
 - Viewport and autocapitalize fixes for mobile devices.
 - Fix error reporting in array fields (#25).
@@ -226,14 +268,17 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.16] - 2024-10-01
 
 ## Added
+
 - OpenID Connect support.
 - API key and OAuth client management.
 - Form submission management.
 
 ### Changed
+
 - Improved Permission management UI.
 
 ### Fixed
+
 - Add permissions tab to group edit screen (stalwartlabs/mail-server#826)
 - Include account name in undelete pages (stalwartlabs/mail-server#808)
 - Include a Content-Type header when posting (#18).
@@ -242,6 +287,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.15] - 2024-09-20
 
 ## Added
+
 - Multi-tenancy support.
 - Role & permissions management.
 - FTS reindex management action.
@@ -250,6 +296,7 @@ All notable changes to this project will be documented in this file. This projec
 ### Changed
 
 ### Fixed
+
 - Display memory usage in MBs rather than bytes.
 
 ## [0.1.14] - 2024-09-09
@@ -257,9 +304,11 @@ All notable changes to this project will be documented in this file. This projec
 ## Added
 
 ### Changed
+
 - Add `config.local-keys.*` to default local keys.
 
 ### Fixed
+
 - Fix: Unable to disable optional duration and rate settings.
 - Fix: Externally update selected values.
 - Fix: Dashboard averages all chart values.
@@ -267,6 +316,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.13] - 2024-09-02
 
 ## Added
+
 - Untrusted Sieve script management.
 
 ### Changed
@@ -276,6 +326,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.12] - 2024-08-29
 
 ## Added
+
 - Dashboard (Enterprise edition only).
 - Alerts (Enterprise edition only).
 - Fail2ban on failed RCPT and loitering events.
@@ -285,11 +336,13 @@ All notable changes to this project will be documented in this file. This projec
 ### Changed
 
 ### Fixed
+
 - Super users can't be added to groups.
 
 ## [0.1.11] - 2024-08-20
 
 ## Added
+
 - SQL Read replicas (Enterprise edition only).
 - Distributed blob store (Enterprise edition only).
 - Message delivery history (Enterprise edition only).
@@ -298,22 +351,26 @@ All notable changes to this project will be documented in this file. This projec
 ### Changed
 
 ### Fixed
+
 - Manage account dropdown displayed on the wrong part of the page.
 
 ## [0.1.10] - 2024-08-08
 
 ## Added
+
 - Metrics configuration.
 - HTTP endpoint access controls.
 
 ### Changed
 
 ### Fixed
+
 - Unfiltered data store select options on SQL directory creation (fixes #17).
 
 ## [0.1.9] - 2024-08-01
 
 ## Added
+
 - More tracing configuration options.
 - Custom event levels.
 
@@ -324,6 +381,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.8] - 2024-07-07
 
 ## Added
+
 - Restore deleted emails (Enterprise edition only).
 - Option to purge accounts.
 
@@ -334,6 +392,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.7] - 2024-07-01
 
 ## Added
+
 - Two-factor authentication with TOTP.
 - Application passwords.
 - Option to disable accounts.
@@ -345,6 +404,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.6] - 2024-06-22
 
 ## Added
+
 - SPAM training and testing interfaces.
 - Webhooks management.
 - MTA Hooks management.
@@ -353,9 +413,11 @@ All notable changes to this project will be documented in this file. This projec
 - Logout button.
 
 ### Changed
+
 - Show a modal when settings are saved successfully instead of an alert.
 
 ### Fixed
+
 - Accept `reject` and `discard` as valid SPAM scores.
 - Redis cluster can't be configured.
 - Case-insensitive settings search.
@@ -363,6 +425,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [0.1.5] - 2024-05-23
 
 ## Added
+
 - HTTP Strict Transport Security option
 - Cleanup settings
 - Strict DKIM setting
@@ -370,6 +433,7 @@ All notable changes to this project will be documented in this file. This projec
 - Display disk usage even when quotas are disabled
 
 ### Changed
+
 - Discourage RSA-SHA1 key usage
 - Master user settings
 - Removed DKIM signature length option
@@ -377,11 +441,13 @@ All notable changes to this project will be documented in this file. This projec
 - Add server hostname to SMTP greetings
 
 ### Fixed
+
 - `session.auth.require` variable type
 
 ## [0.1.4] - 2024-05-13
 
 ## Added
+
 - Cluster management section.
 - MTA-STS policy management.
 - Queued message contents view.
@@ -399,17 +465,21 @@ All notable changes to this project will be documented in this file. This projec
 ### Changed
 
 ### Fixed
+
 - Missing space in accounts column of Domain list (#5)
 
 ## [0.1.2] - 2024-04-17
 
 ## Added
+
 - `DNS-01` and `HTTP-01` ACME challenge configuration.
 
 ### Changed
+
 - Use rust stable.
 
 ### Fixed
+
 - Properly escape URL path components.
 
 ## [0.1.1] - 2024-04-12
@@ -419,6 +489,7 @@ All notable changes to this project will be documented in this file. This projec
 ### Changed
 
 ### Fixed
+
 - IP address mask validation.
 - Wrap log if too long, to prevent overflow (#1)
 - Incorrect base64 alphabet is used in integrity hashes (trunk issue)
