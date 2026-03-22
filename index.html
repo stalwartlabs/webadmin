@@ -54,7 +54,17 @@
     <title>Stalwart Management</title>
     <script>
       (function () {
-        var theme = localStorage.getItem("webadmin_theme");
+        var storedTheme = localStorage.getItem("webadmin_theme");
+        var theme = storedTheme;
+
+        if (storedTheme) {
+          try {
+            theme = JSON.parse(storedTheme);
+          } catch (_err) {
+            theme = storedTheme;
+          }
+        }
+
         if (
           theme === "dark" ||
           (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches)
