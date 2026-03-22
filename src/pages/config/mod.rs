@@ -15,9 +15,9 @@ use crate::{
     components::{
         form::input::{Duration, Rate},
         icon::{
-            IconCalendarDays, IconCircleStack, IconCodeBracket, IconHandRaised, IconInbox,
-            IconInboxArrowDown, IconInboxStack, IconKey, IconServer, IconServerStack,
-            IconShieldCheck, IconSignal,
+            IconArrowRightCircle, IconCalendarDays, IconCircleStack, IconCodeBracket,
+            IconHandRaised, IconInbox, IconInboxArrowDown, IconInboxStack, IconKey, IconServer,
+            IconServerStack, IconShieldCheck, IconSignal,
         },
         layout::{LayoutBuilder, MenuItem},
     },

@@ -15,6 +15,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 
 pub mod dns;
 pub mod edit;
+pub mod forward;
 pub mod list;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

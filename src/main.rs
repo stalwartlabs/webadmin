@@ -27,7 +27,12 @@ use pages::{
         mfa::ManageMfa,
     },
     config::edit::DEFAULT_SETTINGS_URL,
-    directory::{dns::DnsDisplay, edit::PrincipalEdit, list::PrincipalList},
+    directory::{
+        dns::DnsDisplay,
+        edit::PrincipalEdit,
+        forward::{edit::ForwardEdit, list::ForwardList},
+        list::PrincipalList,
+    },
     manage::{
         spam::{SpamTest, SpamTrain},
         troubleshoot::{TroubleshootDelivery, TroubleshootDmarc},
@@ -76,9 +81,6 @@ pub const STATE_STORAGE_KEY: &str = "webadmin_state";
 pub const STATE_LOGIN_NAME_KEY: &str = "webadmin_login_name";
 
 fn main() {
-    core::schema::print_schemas(&build_schemas());
-    return;
-
     _ = console_log::init_with_level(log::Level::Debug);
     console_error_panic_hook::set_once();
     leptos::mount_to_body(|| view! { <App/> })
@@ -235,6 +237,28 @@ pub fn App() -> impl IntoView {
                                         ],
                                     )
                                 })
+                        }
+                    />
+
+                    <ProtectedRoute
+                        path="/directory/forwards"
+                        view=ForwardList
+                        redirect_path="/login"
+                        condition=move || {
+                            permissions
+                                .get()
+                                .is_some_and(|p| p.has_access(Permission::SettingsList))
+                        }
+                    />
+
+                    <ProtectedRoute
+                        path="/directory/forwards/:id/edit"
+                        view=ForwardEdit
+                        redirect_path="/login"
+                        condition=move || {
+                            permissions
+                                .get()
+                                .is_some_and(|p| p.has_access(Permission::SettingsUpdate))
                         }
                     />
 
@@ -591,6 +615,9 @@ impl LayoutBuilder {
                 .create("Accounts")
                 .route("/directory/accounts")
                 .insert(permissions.has_access(Permission::IndividualList))
+                .create("Forwards")
+                .route("/directory/forwards")
+                .insert(permissions.has_access(Permission::SettingsList))
                 .create("Groups")
                 .route("/directory/groups")
                 .insert(permissions.has_access(Permission::GroupList))
@@ -621,6 +648,7 @@ impl LayoutBuilder {
                     Permission::MailingListList,
                     Permission::OauthClientList,
                     Permission::ApiKeyList,
+                    Permission::SettingsList,
                 ]))
                 .create("Queues")
                 .icon(view! { <IconQueueList/> })
@@ -708,6 +736,9 @@ impl LayoutBuilder {
                 .create("Accounts")
                 .route("/directory/accounts")
                 .insert(permissions.has_access(Permission::IndividualList))
+                .create("Forwards")
+                .route("/directory/forwards")
+                .insert(permissions.has_access(Permission::SettingsList))
                 .create("Groups")
                 .route("/directory/groups")
                 .insert(permissions.has_access(Permission::GroupList))
@@ -735,6 +766,7 @@ impl LayoutBuilder {
                     Permission::MailingListList,
                     Permission::OauthClientList,
                     Permission::ApiKeyList,
+                    Permission::SettingsList,
                 ]))
                 .create("Queues")
                 .icon(view! { <IconQueueList/> })

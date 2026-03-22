@@ -44,7 +44,17 @@ use crate::{
     },
 };
 
-use super::{build_app_password, parse_app_password, SpecialSecrets};
+use crate::pages::config::UpdateSettings;
+
+use super::{
+    build_app_password,
+    forward::{
+        forward_prefix, list::{parse_forward_settings, rebuild_sieve_for_domains, SettingsList},
+        AccountForwardSection, ForwardRule,
+    },
+    parse_app_password,
+    SpecialSecrets,
+};
 
 type PrincipalMap = AHashMap<PrincipalType, Vec<(String, String)>>;
 
@@ -95,6 +105,47 @@ pub fn PrincipalEdit() -> impl IntoView {
     let data = expect_context::<Arc<Schemas>>()
         .build_form("principals")
         .into_signal();
+    let primary_email = Signal::derive(move || {
+        data.get().value::<String>("email").unwrap_or_default()
+    });
+
+    let forward_to: RwSignal<Vec<String>> = create_rw_signal(Vec::new());
+    let forward_keep_copy: RwSignal<bool> = create_rw_signal(false);
+
+    // Load forward rule whenever the account email changes
+    let load_forward = create_resource(
+        move || primary_email.get(),
+        move |addr| {
+            let auth = auth.get();
+            async move {
+                if addr.is_empty() || !addr.contains('@') {
+                    return Ok(ForwardRule::default());
+                }
+                let raw = HttpRequest::get("/api/settings/list")
+                    .with_parameter("prefix", format!("mail.forward.{addr}"))
+                    .with_authorization(&auth)
+                    .send::<SettingsList>()
+                    .await?;
+                let mut rule = ForwardRule { from: addr, keep_copy: false, to: Vec::new() };
+                for (key, value) in &raw.items {
+                    if key.starts_with("to.") {
+                        rule.to.push(value.clone());
+                    } else if key == "keep-copy" {
+                        rule.keep_copy = value == "true";
+                    }
+                }
+                rule.to.sort();
+                Ok::<ForwardRule, http::Error>(rule)
+            }
+        },
+    );
+    create_effect(move |_| {
+        if let Some(Ok(rule)) = load_forward.get() {
+            forward_to.set(rule.to);
+            forward_keep_copy.set(rule.keep_copy);
+        }
+    });
+
     let fetch_principal = create_resource(
         move || params.get().get("id").cloned().unwrap_or_default(),
         move |name| {
@@ -247,6 +298,9 @@ pub fn PrincipalEdit() -> impl IntoView {
         let changes = changes.clone();
         let auth = auth.get();
         let selected_type = selected_type.get();
+        let fwd_to = forward_to.get();
+        let fwd_keep = forward_keep_copy.get();
+        let fwd_email = primary_email.get();
 
         async move {
             set_pending.set(true);
@@ -297,9 +351,62 @@ pub fn PrincipalEdit() -> impl IntoView {
 
                 result
             };
+            // Also save forwarding rule for Individual accounts
+            let fwd_result = if selected_type == PrincipalType::Individual
+                && result.is_ok()
+                && !fwd_email.is_empty()
+                && fwd_email.contains('@')
+            {
+                use std::collections::HashSet;
+                let domain = fwd_email.splitn(2, '@').nth(1).unwrap_or("").to_string();
+                let affected = HashSet::from([domain]);
+                let mut updates: Vec<UpdateSettings> = vec![UpdateSettings::Clear {
+                    prefix: format!("{}.", forward_prefix(&fwd_email)),
+                    filter: None,
+                }];
+                let to_addrs: Vec<String> = fwd_to
+                    .iter()
+                    .map(|s| s.trim().to_lowercase())
+                    .filter(|s| s.contains('@'))
+                    .collect();
+                if !to_addrs.is_empty() {
+                    let mut values: Vec<(String, String)> = to_addrs
+                        .iter()
+                        .enumerate()
+                        .map(|(i, addr)| (format!("to.{i}"), addr.clone()))
+                        .collect();
+                    values.push(("keep-copy".to_string(), fwd_keep.to_string()));
+                    updates.push(UpdateSettings::Insert {
+                        prefix: Some(forward_prefix(&fwd_email)),
+                        values,
+                        assert_empty: false,
+                    });
+                }
+                let fwd_save = HttpRequest::post("/api/settings")
+                    .with_authorization(&auth)
+                    .with_body(updates)
+                    .unwrap()
+                    .send::<Option<String>>()
+                    .await;
+                if fwd_save.is_ok() {
+                    if let Ok(all_raw) = HttpRequest::get("/api/settings/list")
+                        .with_parameter("prefix", "mail.forward")
+                        .with_authorization(&auth)
+                        .send::<SettingsList>()
+                        .await
+                    {
+                        let all_rules = parse_forward_settings(&all_raw.items);
+                        let _ = rebuild_sieve_for_domains(&auth, &affected, &all_rules).await;
+                    }
+                }
+                fwd_save.map(|_| ())
+            } else {
+                Ok(())
+            };
+
             set_pending.set(false);
 
-            match result {
+            match result.and(fwd_result) {
                 Ok(_) => {
                     use_navigate()(
                         &format!("/manage/directory/{}", selected_type.resource_name()),
@@ -421,6 +528,8 @@ pub fn PrincipalEdit() -> impl IntoView {
                                             | PrincipalType::ApiKey
                                         )
                                             .then_some("Permissions".to_string()),
+                                        matches!(typ, PrincipalType::Individual)
+                                            .then_some("Forwarding".to_string()),
                                     ]
                                 })>
 
@@ -1063,6 +1172,11 @@ pub fn PrincipalEdit() -> impl IntoView {
                                         </FormItem>
 
                                     </FormSection>
+
+                                    <AccountForwardSection
+                                        forward_to=forward_to
+                                        forward_keep_copy=forward_keep_copy
+                                    />
 
                                 </Tab>
                             }
